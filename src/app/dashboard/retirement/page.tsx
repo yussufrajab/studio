@@ -12,6 +12,7 @@ import React, { useState, useEffect } from 'react';
 import type { Employee } from '@/lib/types';
 import { toast } from '@/hooks/use-toast';
 import { Loader2, Search, FileText, CalendarDays, ListFilter, Stethoscope } from 'lucide-react';
+import { addMonths, format, isBefore } from 'date-fns';
 
 export default function RetirementPage() {
   const { role } = useAuth();
@@ -24,10 +25,11 @@ export default function RetirementPage() {
   const [retirementDate, setRetirementDate] = useState('');
   const [medicalFormFile, setMedicalFormFile] = useState<FileList | null>(null);
   const [letterOfRequestFile, setLetterOfRequestFile] = useState<FileList | null>(null);
-  const [today, setToday] = useState('');
+  const [minRetirementDate, setMinRetirementDate] = useState('');
 
   useEffect(() => {
-    setToday(new Date().toISOString().split('T')[0]);
+    const sixMonthsFromNow = addMonths(new Date(), 6);
+    setMinRetirementDate(format(sixMonthsFromNow, 'yyyy-MM-dd'));
   }, []);
 
   const resetFormFields = () => {
@@ -69,10 +71,17 @@ export default function RetirementPage() {
       toast({ title: "Submission Error", description: "Retirement Type, Proposed Date, and Letter of Request are required.", variant: "destructive" });
       return;
     }
-    if (retirementDate < today) {
-      toast({ title: "Submission Error", description: "Proposed retirement date cannot be in the past.", variant: "destructive" });
+
+    const proposedDate = new Date(retirementDate);
+    const sixMonthsFromToday = addMonths(new Date(), 6);
+    // Adjust sixMonthsFromToday to the start of the day for fair comparison
+    sixMonthsFromToday.setHours(0, 0, 0, 0);
+
+    if (isBefore(proposedDate, sixMonthsFromToday)) {
+      toast({ title: "Submission Error", description: "Proposed retirement date must be at least 6 months from today.", variant: "destructive" });
       return;
     }
+
     if (retirementType === 'illness' && !medicalFormFile) {
       toast({ title: "Submission Error", description: "Medical Form is required for retirement due to illness.", variant: "destructive" });
       return;
@@ -159,7 +168,7 @@ export default function RetirementPage() {
                   </div>
                   <div>
                     <Label htmlFor="retirementDate" className="flex items-center"><CalendarDays className="mr-2 h-4 w-4 text-primary" />Proposed Retirement Date</Label>
-                    <Input id="retirementDate" type="date" value={retirementDate} onChange={(e) => setRetirementDate(e.target.value)} disabled={isSubmitting} min={today} />
+                    <Input id="retirementDate" type="date" value={retirementDate} onChange={(e) => setRetirementDate(e.target.value)} disabled={isSubmitting} min={minRetirementDate} />
                   </div>
                   
                   {retirementType === 'illness' && (
@@ -174,7 +183,7 @@ export default function RetirementPage() {
                     <Input id="letterOfRequestRetirement" type="file" onChange={(e) => setLetterOfRequestFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
                   </div>
                    <p className="text-xs text-muted-foreground">
-                    Note: For Compulsory retirement, employee must be 60 years old. For Voluntary, 55 years. Age validation based on Date of Birth is typically performed server-side.
+                    Note: Proposed retirement date must be at least 6 months from today. For Compulsory retirement, employee must be 60 years old. For Voluntary, 55 years. Age validation based on Date of Birth is typically performed server-side.
                   </p>
                 </div>
               </div>
@@ -213,3 +222,6 @@ export default function RetirementPage() {
     </div>
   );
 }
+
+
+    
