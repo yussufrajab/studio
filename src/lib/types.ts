@@ -15,6 +15,7 @@ export interface Employee {
   zanId: string;
   status?: string; // e.g., "Confirmed", "On Probation"
   cadre?: string;
+  department?: string; // Added department
   // Add other employee specific fields as needed
 }
 
