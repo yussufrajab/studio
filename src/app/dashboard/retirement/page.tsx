@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/hooks/use-auth';
 import { ROLES, EMPLOYEES } from '@/lib/constants';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { Employee } from '@/lib/types';
 import { toast } from '@/hooks/use-toast';
 import { Loader2, Search, FileText, CalendarDays, ListFilter, Stethoscope } from 'lucide-react';
@@ -24,6 +24,11 @@ export default function RetirementPage() {
   const [retirementDate, setRetirementDate] = useState('');
   const [medicalFormFile, setMedicalFormFile] = useState<FileList | null>(null);
   const [letterOfRequestFile, setLetterOfRequestFile] = useState<FileList | null>(null);
+  const [today, setToday] = useState('');
+
+  useEffect(() => {
+    setToday(new Date().toISOString().split('T')[0]);
+  }, []);
 
   const resetFormFields = () => {
     setRetirementType('');
@@ -32,8 +37,6 @@ export default function RetirementPage() {
     setLetterOfRequestFile(null);
     const fileInputs = document.querySelectorAll('input[type="file"]');
     fileInputs.forEach(input => (input as HTMLInputElement).value = '');
-    // To reset Select, setting its state (retirementType) to '' should be enough
-    // as its value is bound to this state.
   };
 
   const handleFetchEmployeeDetails = () => {
@@ -66,6 +69,10 @@ export default function RetirementPage() {
       toast({ title: "Submission Error", description: "Retirement Type, Proposed Date, and Letter of Request are required.", variant: "destructive" });
       return;
     }
+    if (retirementDate < today) {
+      toast({ title: "Submission Error", description: "Proposed retirement date cannot be in the past.", variant: "destructive" });
+      return;
+    }
     if (retirementType === 'illness' && !medicalFormFile) {
       toast({ title: "Submission Error", description: "Medical Form is required for retirement due to illness.", variant: "destructive" });
       return;
@@ -81,10 +88,6 @@ export default function RetirementPage() {
       toast({ title: "Submission Error", description: "Medical Form must be a PDF file.", variant: "destructive" });
       return;
     }
-
-    // Note: Age validation (Compulsory: 60 years, Voluntary: 55 years) is not implemented
-    // as employee's date of birth is not available in the current data model.
-    // This would typically be handled server-side or with more complete employee data.
 
     setIsSubmitting(true);
     console.log("Submitting Retirement Request:", {
@@ -156,7 +159,7 @@ export default function RetirementPage() {
                   </div>
                   <div>
                     <Label htmlFor="retirementDate" className="flex items-center"><CalendarDays className="mr-2 h-4 w-4 text-primary" />Proposed Retirement Date</Label>
-                    <Input id="retirementDate" type="date" value={retirementDate} onChange={(e) => setRetirementDate(e.target.value)} disabled={isSubmitting}/>
+                    <Input id="retirementDate" type="date" value={retirementDate} onChange={(e) => setRetirementDate(e.target.value)} disabled={isSubmitting} min={today} />
                   </div>
                   
                   {retirementType === 'illness' && (
@@ -204,7 +207,6 @@ export default function RetirementPage() {
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground">No retirement requests pending review.</p>
-            {/* Placeholder for actual list of requests */}
           </CardContent>
         </Card>
       )}
