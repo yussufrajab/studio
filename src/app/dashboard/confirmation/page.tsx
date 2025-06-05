@@ -33,8 +33,14 @@ export default function ConfirmationPage() {
       return;
     }
     setIsFetchingEmployee(true);
-    setEmployeeToConfirm(null); // Reset previous employee
-    // Simulate API call
+    setEmployeeToConfirm(null); 
+    setAnalysisResult(null);
+    setEvaluationFormFile(null);
+    setIpaCertificateFile(null);
+    setLetterOfRequestFile(null);
+    const fileInputs = document.querySelectorAll('input[type="file"]');
+    fileInputs.forEach(input => (input as HTMLInputElement).value = '');
+
     setTimeout(() => {
       const foundEmployee = EMPLOYEES.find(emp => emp.zanId === zanId);
       if (foundEmployee) {
@@ -79,7 +85,7 @@ export default function ConfirmationPage() {
       toast({ title: "Submission Error", description: "Please upload all required documents (PDF only).", variant: "destructive" });
       return;
     }
-    // Basic PDF type check (can be enhanced)
+    
     const checkPdf = (fileList: FileList | null) => fileList && fileList[0] && fileList[0].type === "application/pdf";
     if (!checkPdf(evaluationFormFile) || !checkPdf(ipaCertificateFile) || !checkPdf(letterOfRequestFile)) {
         toast({ title: "Submission Error", description: "All uploaded documents must be in PDF format.", variant: "destructive" });
@@ -87,7 +93,6 @@ export default function ConfirmationPage() {
     }
 
     setIsSubmitting(true);
-    // Simulate submission
     console.log("Submitting Confirmation Request:", {
       employee: employeeToConfirm,
       evaluationForm: evaluationFormFile[0]?.name,
@@ -97,7 +102,6 @@ export default function ConfirmationPage() {
     });
     setTimeout(() => {
       toast({ title: "Request Submitted", description: `Confirmation request for ${employeeToConfirm.name} submitted successfully.` });
-      // Reset form
       setZanId('');
       setEmployeeToConfirm(null);
       setEvaluationFormFile(null);
@@ -117,7 +121,7 @@ export default function ConfirmationPage() {
     <div>
       <PageHeader title="Employee Confirmation" description="Manage employee confirmation processes." />
       {role === ROLES.HRO && (
-        <Card className="mb-6">
+        <Card className="mb-6 shadow-lg">
           <CardHeader>
             <CardTitle>Submit Confirmation Request</CardTitle>
             <CardDescription>Enter employee's ZanID to fetch details and upload required PDF documents.</CardDescription>
@@ -126,8 +130,8 @@ export default function ConfirmationPage() {
             <div className="space-y-2">
               <Label htmlFor="zanId">Employee ZanID</Label>
               <div className="flex space-x-2">
-                <Input id="zanId" placeholder="Enter ZanID" value={zanId} onChange={(e) => setZanId(e.target.value)} disabled={isFetchingEmployee} />
-                <Button onClick={handleFetchEmployeeDetails} disabled={isFetchingEmployee || !zanId}>
+                <Input id="zanId" placeholder="Enter ZanID" value={zanId} onChange={(e) => setZanId(e.target.value)} disabled={isFetchingEmployee || isSubmitting} />
+                <Button onClick={handleFetchEmployeeDetails} disabled={isFetchingEmployee || !zanId || isSubmitting}>
                   {isFetchingEmployee ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
                   Fetch Details
                 </Button>
@@ -135,39 +139,39 @@ export default function ConfirmationPage() {
             </div>
 
             {employeeToConfirm && (
-              <Card className="bg-secondary/30 p-4">
-                <CardHeader className="p-0 pb-2">
-                  <CardTitle className="text-xl">Employee Details</CardTitle>
-                </CardHeader>
-                <CardContent className="p-0 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div><Label>Name:</Label> <p className="font-medium">{employeeToConfirm.name}</p></div>
-                  <div><Label>ZanID:</Label> <p className="font-medium">{employeeToConfirm.zanId}</p></div>
-                  <div><Label>Department:</Label> <p className="font-medium">{employeeToConfirm.department || 'N/A'}</p></div>
-                  <div><Label>Cadre/Position:</Label> <p className="font-medium">{employeeToConfirm.cadre || 'N/A'}</p></div>
-                  <div><Label>Current Status:</Label> <p className="font-medium">{employeeToConfirm.status || 'N/A'}</p></div>
-                </CardContent>
-              </Card>
-            )}
+              <div className="space-y-6 pt-2">
+                <div>
+                  <h3 className="text-lg font-medium mb-2 text-foreground">Employee Details</h3>
+                  <div className="p-4 rounded-md border bg-secondary/20 space-y-3 shadow-sm">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                      <div><Label className="text-muted-foreground">Name:</Label> <p className="font-semibold text-foreground">{employeeToConfirm.name}</p></div>
+                      <div><Label className="text-muted-foreground">ZanID:</Label> <p className="font-semibold text-foreground">{employeeToConfirm.zanId}</p></div>
+                      <div><Label className="text-muted-foreground">Department:</Label> <p className="font-semibold text-foreground">{employeeToConfirm.department || 'N/A'}</p></div>
+                      <div><Label className="text-muted-foreground">Cadre/Position:</Label> <p className="font-semibold text-foreground">{employeeToConfirm.cadre || 'N/A'}</p></div>
+                      <div className="md:col-span-2"><Label className="text-muted-foreground">Current Status:</Label> <p className="font-semibold text-foreground">{employeeToConfirm.status || 'N/A'}</p></div>
+                    </div>
+                  </div>
+                </div>
             
-            {employeeToConfirm && (
-              <div className="space-y-4 pt-4 border-t mt-4">
-                <p className="text-sm font-medium text-foreground">Required Documents (PDF Only)</p>
-                <div>
-                  <Label htmlFor="evaluationForm" className="flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" />Upload Evaluation Form</Label>
-                  <Input id="evaluationForm" type="file" onChange={(e) => setEvaluationFormFile(e.target.files)} accept=".pdf" />
-                </div>
-                <div>
-                  <Label htmlFor="ipaCertificate" className="flex items-center"><Award className="mr-2 h-4 w-4 text-primary" />Upload IPA Certificate</Label>
-                  <Input id="ipaCertificate" type="file" onChange={(e) => setIpaCertificateFile(e.target.files)} accept=".pdf" />
-                </div>
-                <div>
-                  <Label htmlFor="letterOfRequest" className="flex items-center"><CheckCircle className="mr-2 h-4 w-4 text-primary" />Upload Letter of Request</Label>
-                  <Input id="letterOfRequest" type="file" onChange={(e) => setLetterOfRequestFile(e.target.files)} accept=".pdf" />
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium text-foreground">Required Documents (PDF Only)</h3>
+                  <div>
+                    <Label htmlFor="evaluationForm" className="flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" />Upload Evaluation Form</Label>
+                    <Input id="evaluationForm" type="file" onChange={(e) => setEvaluationFormFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
+                  </div>
+                  <div>
+                    <Label htmlFor="ipaCertificate" className="flex items-center"><Award className="mr-2 h-4 w-4 text-primary" />Upload IPA Certificate</Label>
+                    <Input id="ipaCertificate" type="file" onChange={(e) => setIpaCertificateFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
+                  </div>
+                  <div>
+                    <Label htmlFor="letterOfRequest" className="flex items-center"><CheckCircle className="mr-2 h-4 w-4 text-primary" />Upload Letter of Request</Label>
+                    <Input id="letterOfRequest" type="file" onChange={(e) => setLetterOfRequestFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
+                  </div>
                 </div>
               </div>
             )}
 
-            {analysisResult && (
+            {analysisResult && employeeToConfirm && (
               <Card className="mt-4 bg-accent/10">
                 <CardHeader>
                   <CardTitle className="text-base">AI Analysis Suggestion</CardTitle>
@@ -180,27 +184,28 @@ export default function ConfirmationPage() {
               </Card>
             )}
           </CardContent>
-          <CardFooter className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={handleAnalyzeRequest} disabled={isAnalyzing || !employeeToConfirm || isSubmitting}>
-                {isAnalyzing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Analyze with AI
-              </Button>
-              <Button onClick={handleSubmitRequest} disabled={!employeeToConfirm || !evaluationFormFile || !ipaCertificateFile || !letterOfRequestFile || isSubmitting || isAnalyzing}>
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Submit Request
-              </Button>
-          </CardFooter>
+          {employeeToConfirm && (
+            <CardFooter className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2 pt-4 border-t">
+                <Button variant="outline" onClick={handleAnalyzeRequest} disabled={isAnalyzing || !employeeToConfirm || isSubmitting}>
+                  {isAnalyzing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Analyze with AI
+                </Button>
+                <Button onClick={handleSubmitRequest} disabled={!employeeToConfirm || !evaluationFormFile || !ipaCertificateFile || !letterOfRequestFile || isSubmitting || isAnalyzing}>
+                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Submit Request
+                </Button>
+            </CardFooter>
+          )}
         </Card>
       )}
 
       {(role === ROLES.HHRMD_HRMO || role === ROLES.DO) && (
-        <Card>
+        <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Review Confirmation Requests</CardTitle>
             <CardDescription>Approve or reject pending employee confirmation requests.</CardDescription>
           </CardHeader>
           <CardContent>
-            {/* Placeholder for list of requests to review */}
             <p className="text-muted-foreground">No confirmation requests pending review.</p>
           </CardContent>
         </Card>
@@ -208,3 +213,4 @@ export default function ConfirmationPage() {
     </div>
   );
 }
+
