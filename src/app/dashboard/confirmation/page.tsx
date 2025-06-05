@@ -76,9 +76,16 @@ export default function ConfirmationPage() {
       return;
     }
     if (!evaluationFormFile || !ipaCertificateFile || !letterOfRequestFile) {
-      toast({ title: "Submission Error", description: "Please upload all required documents.", variant: "destructive" });
+      toast({ title: "Submission Error", description: "Please upload all required documents (PDF only).", variant: "destructive" });
       return;
     }
+    // Basic PDF type check (can be enhanced)
+    const checkPdf = (fileList: FileList | null) => fileList && fileList[0] && fileList[0].type === "application/pdf";
+    if (!checkPdf(evaluationFormFile) || !checkPdf(ipaCertificateFile) || !checkPdf(letterOfRequestFile)) {
+        toast({ title: "Submission Error", description: "All uploaded documents must be in PDF format.", variant: "destructive" });
+        return;
+    }
+
     setIsSubmitting(true);
     // Simulate submission
     console.log("Submitting Confirmation Request:", {
@@ -97,8 +104,7 @@ export default function ConfirmationPage() {
       setIpaCertificateFile(null);
       setLetterOfRequestFile(null);
       setAnalysisResult(null);
-      // Clear file input fields visually (this is tricky with controlled file inputs, often requires direct DOM manipulation or unique keys)
-      // For simplicity, we're just resetting state. User might need to manually clear if they re-select.
+      
       const fileInputs = document.querySelectorAll('input[type="file"]');
       fileInputs.forEach(input => (input as HTMLInputElement).value = '');
 
@@ -114,7 +120,7 @@ export default function ConfirmationPage() {
         <Card className="mb-6">
           <CardHeader>
             <CardTitle>Submit Confirmation Request</CardTitle>
-            <CardDescription>Enter employee's ZanID to fetch details and upload required documents.</CardDescription>
+            <CardDescription>Enter employee's ZanID to fetch details and upload required PDF documents.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
@@ -144,18 +150,19 @@ export default function ConfirmationPage() {
             )}
             
             {employeeToConfirm && (
-              <div className="space-y-4">
+              <div className="space-y-4 pt-4 border-t mt-4">
+                <p className="text-sm font-medium text-foreground">Required Documents (PDF Only)</p>
                 <div>
                   <Label htmlFor="evaluationForm" className="flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" />Upload Evaluation Form</Label>
-                  <Input id="evaluationForm" type="file" onChange={(e) => setEvaluationFormFile(e.target.files)} accept=".pdf,.doc,.docx" />
+                  <Input id="evaluationForm" type="file" onChange={(e) => setEvaluationFormFile(e.target.files)} accept=".pdf" />
                 </div>
                 <div>
                   <Label htmlFor="ipaCertificate" className="flex items-center"><Award className="mr-2 h-4 w-4 text-primary" />Upload IPA Certificate</Label>
-                  <Input id="ipaCertificate" type="file" onChange={(e) => setIpaCertificateFile(e.target.files)} accept=".pdf,.jpg,.png" />
+                  <Input id="ipaCertificate" type="file" onChange={(e) => setIpaCertificateFile(e.target.files)} accept=".pdf" />
                 </div>
                 <div>
                   <Label htmlFor="letterOfRequest" className="flex items-center"><CheckCircle className="mr-2 h-4 w-4 text-primary" />Upload Letter of Request</Label>
-                  <Input id="letterOfRequest" type="file" onChange={(e) => setLetterOfRequestFile(e.target.files)} accept=".pdf,.doc,.docx" />
+                  <Input id="letterOfRequest" type="file" onChange={(e) => setLetterOfRequestFile(e.target.files)} accept=".pdf" />
                 </div>
               </div>
             )}
