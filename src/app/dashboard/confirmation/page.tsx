@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/use-auth';
 import { ROLES, EMPLOYEES } from '@/lib/constants';
-import { analyzeRequest } from '@/ai/flows/request-analyzer';
 import React, { useState } from 'react';
 import type { Employee } from '@/lib/types';
 import { toast }  from '@/hooks/use-toast';
@@ -23,8 +22,6 @@ export default function ConfirmationPage() {
   const [ipaCertificateFile, setIpaCertificateFile] = useState<FileList | null>(null);
   const [letterOfRequestFile, setLetterOfRequestFile] = useState<FileList | null>(null);
 
-  const [analysisResult, setAnalysisResult] = useState<{ suggestedCategory?: string; suggestedReviewer?: string; justification?: string } | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleFetchEmployeeDetails = () => {
@@ -34,7 +31,6 @@ export default function ConfirmationPage() {
     }
     setIsFetchingEmployee(true);
     setEmployeeToConfirm(null); 
-    setAnalysisResult(null);
     setEvaluationFormFile(null);
     setIpaCertificateFile(null);
     setLetterOfRequestFile(null);
@@ -51,29 +47,6 @@ export default function ConfirmationPage() {
       }
       setIsFetchingEmployee(false);
     }, 1000);
-  };
-
-  const handleAnalyzeRequest = async () => {
-    if (!employeeToConfirm) {
-      toast({ title: "Analysis Error", description: "Please fetch employee details first.", variant: "destructive" });
-      return;
-    }
-    setIsAnalyzing(true);
-    setAnalysisResult(null);
-    try {
-      const requestDescription = `Employee Confirmation Request for ${employeeToConfirm.name} (ZanID: ${employeeToConfirm.zanId}, Department: ${employeeToConfirm.department}, Cadre: ${employeeToConfirm.cadre}). Status: ${employeeToConfirm.status}.`;
-      const result = await analyzeRequest({ 
-        requestDescription, 
-        employeeDetails: `Name: ${employeeToConfirm.name}, ZanID: ${employeeToConfirm.zanId}, Department: ${employeeToConfirm.department}, Cadre: ${employeeToConfirm.cadre}`
-      });
-      setAnalysisResult(result);
-      toast({ title: "Analysis Complete", description: "AI suggestions are now available." });
-    } catch (error) {
-      console.error("AI Analysis Error:", error);
-      toast({ title: "Analysis Failed", description: "Could not get AI suggestions.", variant: "destructive" });
-    } finally {
-      setIsAnalyzing(false);
-    }
   };
 
   const handleSubmitRequest = () => {
@@ -98,7 +71,6 @@ export default function ConfirmationPage() {
       evaluationForm: evaluationFormFile[0]?.name,
       ipaCertificate: ipaCertificateFile[0]?.name,
       letterOfRequest: letterOfRequestFile[0]?.name,
-      analysis: analysisResult,
     });
     setTimeout(() => {
       toast({ title: "Request Submitted", description: `Confirmation request for ${employeeToConfirm.name} submitted successfully.` });
@@ -107,7 +79,6 @@ export default function ConfirmationPage() {
       setEvaluationFormFile(null);
       setIpaCertificateFile(null);
       setLetterOfRequestFile(null);
-      setAnalysisResult(null);
       
       const fileInputs = document.querySelectorAll('input[type="file"]');
       fileInputs.forEach(input => (input as HTMLInputElement).value = '');
@@ -170,27 +141,10 @@ export default function ConfirmationPage() {
                 </div>
               </div>
             )}
-
-            {analysisResult && employeeToConfirm && (
-              <Card className="mt-4 bg-accent/10">
-                <CardHeader>
-                  <CardTitle className="text-base">AI Analysis Suggestion</CardTitle>
-                </CardHeader>
-                <CardContent className="text-sm space-y-1">
-                  <p><strong>Suggested Category:</strong> {analysisResult.suggestedCategory}</p>
-                  <p><strong>Suggested Reviewer:</strong> {analysisResult.suggestedReviewer}</p>
-                  <p><strong>Justification:</strong> {analysisResult.justification}</p>
-                </CardContent>
-              </Card>
-            )}
           </CardContent>
           {employeeToConfirm && (
             <CardFooter className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2 pt-4 border-t">
-                <Button variant="outline" onClick={handleAnalyzeRequest} disabled={isAnalyzing || !employeeToConfirm || isSubmitting}>
-                  {isAnalyzing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Analyze with AI
-                </Button>
-                <Button onClick={handleSubmitRequest} disabled={!employeeToConfirm || !evaluationFormFile || !ipaCertificateFile || !letterOfRequestFile || isSubmitting || isAnalyzing}>
+                <Button onClick={handleSubmitRequest} disabled={!employeeToConfirm || !evaluationFormFile || !ipaCertificateFile || !letterOfRequestFile || isSubmitting }>
                   {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Submit Request
                 </Button>
