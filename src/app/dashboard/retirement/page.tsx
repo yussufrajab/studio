@@ -11,7 +11,7 @@ import { ROLES, EMPLOYEES } from '@/lib/constants';
 import React, { useState, useEffect } from 'react';
 import type { Employee } from '@/lib/types';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, Search, FileText, CalendarDays, ListFilter, Stethoscope } from 'lucide-react';
+import { Loader2, Search, FileText, CalendarDays, ListFilter, Stethoscope, ClipboardCheck } from 'lucide-react';
 import { addMonths, format, isBefore } from 'date-fns';
 
 export default function RetirementPage() {
@@ -24,6 +24,7 @@ export default function RetirementPage() {
   const [retirementType, setRetirementType] = useState('');
   const [retirementDate, setRetirementDate] = useState('');
   const [medicalFormFile, setMedicalFormFile] = useState<FileList | null>(null);
+  const [illnessLeaveLetterFile, setIllnessLeaveLetterFile] = useState<FileList | null>(null);
   const [letterOfRequestFile, setLetterOfRequestFile] = useState<FileList | null>(null);
   const [minRetirementDate, setMinRetirementDate] = useState('');
 
@@ -36,6 +37,7 @@ export default function RetirementPage() {
     setRetirementType('');
     setRetirementDate('');
     setMedicalFormFile(null);
+    setIllnessLeaveLetterFile(null);
     setLetterOfRequestFile(null);
     const fileInputs = document.querySelectorAll('input[type="file"]');
     fileInputs.forEach(input => (input as HTMLInputElement).value = '');
@@ -74,7 +76,6 @@ export default function RetirementPage() {
 
     const proposedDate = new Date(retirementDate);
     const sixMonthsFromToday = addMonths(new Date(), 6);
-    // Adjust sixMonthsFromToday to the start of the day for fair comparison
     sixMonthsFromToday.setHours(0, 0, 0, 0);
 
     if (isBefore(proposedDate, sixMonthsFromToday)) {
@@ -82,8 +83,8 @@ export default function RetirementPage() {
       return;
     }
 
-    if (retirementType === 'illness' && !medicalFormFile) {
-      toast({ title: "Submission Error", description: "Medical Form is required for retirement due to illness.", variant: "destructive" });
+    if (retirementType === 'illness' && (!medicalFormFile || !illnessLeaveLetterFile)) {
+      toast({ title: "Submission Error", description: "Medical Form and Leave Due to Illness Letter are required for retirement due to illness.", variant: "destructive" });
       return;
     }
 
@@ -93,10 +94,17 @@ export default function RetirementPage() {
       toast({ title: "Submission Error", description: "Letter of Request must be a PDF file.", variant: "destructive" });
       return;
     }
-    if (retirementType === 'illness' && medicalFormFile && !checkPdf(medicalFormFile)) {
-      toast({ title: "Submission Error", description: "Medical Form must be a PDF file.", variant: "destructive" });
-      return;
+    if (retirementType === 'illness') {
+      if (medicalFormFile && !checkPdf(medicalFormFile)) {
+        toast({ title: "Submission Error", description: "Medical Form must be a PDF file.", variant: "destructive" });
+        return;
+      }
+      if (illnessLeaveLetterFile && !checkPdf(illnessLeaveLetterFile)) {
+        toast({ title: "Submission Error", description: "Leave Due to Illness Letter must be a PDF file.", variant: "destructive" });
+        return;
+      }
     }
+    
 
     setIsSubmitting(true);
     console.log("Submitting Retirement Request:", {
@@ -104,6 +112,7 @@ export default function RetirementPage() {
       retirementType,
       retirementDate,
       medicalFormFile: medicalFormFile ? medicalFormFile[0]?.name : null,
+      illnessLeaveLetterFile: illnessLeaveLetterFile ? illnessLeaveLetterFile[0]?.name : null,
       letterOfRequestFile: letterOfRequestFile[0]?.name,
     });
 
@@ -172,10 +181,16 @@ export default function RetirementPage() {
                   </div>
                   
                   {retirementType === 'illness' && (
-                    <div>
-                      <Label htmlFor="medicalFormFile" className="flex items-center"><Stethoscope className="mr-2 h-4 w-4 text-primary" />Upload Medical Form</Label>
-                      <Input id="medicalFormFile" type="file" onChange={(e) => setMedicalFormFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
-                    </div>
+                    <>
+                      <div>
+                        <Label htmlFor="medicalFormFile" className="flex items-center"><Stethoscope className="mr-2 h-4 w-4 text-primary" />Upload Medical Form</Label>
+                        <Input id="medicalFormFile" type="file" onChange={(e) => setMedicalFormFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
+                      </div>
+                      <div>
+                        <Label htmlFor="illnessLeaveLetterFile" className="flex items-center"><ClipboardCheck className="mr-2 h-4 w-4 text-primary" />Upload Leave Due to Illness Letter</Label>
+                        <Input id="illnessLeaveLetterFile" type="file" onChange={(e) => setIllnessLeaveLetterFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
+                      </div>
+                    </>
                   )}
 
                   <div>
@@ -198,7 +213,7 @@ export default function RetirementPage() {
                     !retirementType || 
                     !retirementDate || 
                     !letterOfRequestFile || 
-                    (retirementType === 'illness' && !medicalFormFile) || 
+                    (retirementType === 'illness' && (!medicalFormFile || !illnessLeaveLetterFile)) || 
                     isSubmitting 
                 }>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -222,6 +237,3 @@ export default function RetirementPage() {
     </div>
   );
 }
-
-
-    
