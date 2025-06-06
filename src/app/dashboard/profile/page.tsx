@@ -8,12 +8,12 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/use-auth';
 import { EMPLOYEES, ROLES } from '@/lib/constants';
-import type { Employee } from '@/lib/types';
+import type { Employee, EmployeeCertificate } from '@/lib/types';
 import React, { useEffect, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, Search, FileText, UserCircle, Building, Briefcase } from 'lucide-react';
+import { Loader2, Search, FileText, UserCircle, Building, Briefcase, Award } from 'lucide-react';
 
 export default function ProfilePage() {
   const { user, role, isLoading: authLoading } = useAuth();
@@ -132,8 +132,11 @@ export default function ProfilePage() {
             <FileText className="h-6 w-6 mr-3 text-primary" />
             <h3 className="text-xl font-semibold font-headline text-foreground">Employee Documents</h3>
           </div>
-          <Card className="bg-secondary/20 shadow-sm">
-            <CardContent className="pt-6 space-y-3 text-sm">
+          <Card className="bg-secondary/20 shadow-sm mb-6">
+            <CardHeader className="pb-3 pt-4">
+                 <CardTitle className="text-base">Core Documents</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0 pb-4 space-y-3 text-sm">
               <div className="flex items-center justify-between p-3 rounded-md border bg-background">
                 <Label className="font-medium text-foreground">Ardhil-hali:</Label>
                 {emp.ardhilHaliUrl ? <Button asChild variant="link" size="sm"><a href={emp.ardhilHaliUrl} target="_blank" rel="noopener noreferrer">View Document</a></Button> : <span className="text-muted-foreground">Not Available</span>}
@@ -142,6 +145,29 @@ export default function ProfilePage() {
                 <Label className="font-medium text-foreground">Confirmation Letter:</Label>
                 {emp.confirmationLetterUrl ? <Button asChild variant="link" size="sm"><a href={emp.confirmationLetterUrl} target="_blank" rel="noopener noreferrer">View Document</a></Button> : <span className="text-muted-foreground">Not Available</span>}
               </div>
+            </CardContent>
+          </Card>
+           <Card className="bg-secondary/20 shadow-sm">
+             <CardHeader className="pb-3 pt-4">
+                 <div className="flex items-center">
+                    <Award className="h-5 w-5 mr-2 text-primary" />
+                    <CardTitle className="text-base">Employee Certificates</CardTitle>
+                 </div>
+            </CardHeader>
+            <CardContent className="pt-0 pb-4 space-y-3 text-sm">
+              {(emp.certificates && emp.certificates.length > 0) ? (
+                emp.certificates.map((cert: EmployeeCertificate, index: number) => (
+                  <div key={index} className="flex items-center justify-between p-3 rounded-md border bg-background">
+                    <div>
+                      <Label className="font-medium text-foreground">{cert.type}:</Label>
+                      <p className="text-muted-foreground text-xs">{cert.name}</p>
+                    </div>
+                    {cert.url ? <Button asChild variant="link" size="sm"><a href={cert.url} target="_blank" rel="noopener noreferrer">View Document</a></Button> : <span className="text-muted-foreground">Not Available</span>}
+                  </div>
+                ))
+              ) : (
+                <p className="text-muted-foreground p-3">No certificates available for this employee.</p>
+              )}
             </CardContent>
           </Card>
         </section>

@@ -9,6 +9,12 @@ export interface User {
   employeeId?: string; // Link to Employee if user is an employee
 }
 
+export interface EmployeeCertificate {
+  type: "Certificate" | "Diploma" | "Bachelor Degree" | "Master Degree" | "PhD" | "Other";
+  name: string; // e.g., "Advanced Certificate in HR", "BSc Computer Science"
+  url: string; // URL to the document
+}
+
 export interface Employee {
   id: string;
   employeeEntityId: string;
@@ -39,6 +45,7 @@ export interface Employee {
   // Employee Documents (URLs or identifiers)
   ardhilHaliUrl?: string;
   confirmationLetterUrl?: string;
+  certificates?: EmployeeCertificate[];
 }
 
 export type RequestType =

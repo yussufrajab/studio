@@ -1,5 +1,5 @@
 
-import type { User, Employee, Role } from './types';
+import type { User, Employee, Role, EmployeeCertificate } from './types';
 
 export const ROLES: Record<string, Role> = {
   HRO: "HRO",
@@ -44,7 +44,11 @@ export const EMPLOYEES: Employee[] = [
     confirmationDate: undefined, // Not yet confirmed
     ardhilHaliUrl: "https://placehold.co/ardhil-hali.pdf",
     confirmationLetterUrl: undefined,
-    profileImageUrl: "https://placehold.co/100x100.png?text=AJA"
+    profileImageUrl: "https://placehold.co/100x100.png?text=AJA",
+    certificates: [
+      { type: "Bachelor Degree", name: "B.A. Public Administration", url: "https://placehold.co/bachelor-ali.pdf" },
+      { type: "Certificate", name: "Certificate in Office Management", url: "https://placehold.co/cert-ali.pdf" },
+    ],
   },
   { 
     id: "emp2", 
@@ -71,7 +75,11 @@ export const EMPLOYEES: Employee[] = [
     confirmationDate: "2021-06-01",
     ardhilHaliUrl: "https://placehold.co/ardhil-hali-safia.pdf",
     confirmationLetterUrl: "https://placehold.co/confirmation-safia.pdf",
-    profileImageUrl: "https://placehold.co/100x100.png?text=SJA"
+    profileImageUrl: "https://placehold.co/100x100.png?text=SJA",
+    certificates: [
+      { type: "Master Degree", name: "MSc Human Resource Management", url: "https://placehold.co/masters-safia.pdf" },
+      { type: "Bachelor Degree", name: "BSc Business Administration", url: "https://placehold.co/bachelor-safia.pdf" },
+    ],
   },
   { 
     id: "emp3", 
@@ -98,6 +106,9 @@ export const EMPLOYEES: Employee[] = [
     confirmationDate: "2019-03-15",
     ardhilHaliUrl: "https://placehold.co/ardhil-hali-fatma.pdf",
     confirmationLetterUrl: "https://placehold.co/confirmation-fatma.pdf",
+    certificates: [
+      { type: "Diploma", name: "Diploma in Accountancy", url: "https://placehold.co/diploma-fatma.pdf" },
+    ],
   },
   { 
     id: "emp4", 
@@ -122,6 +133,7 @@ export const EMPLOYEES: Employee[] = [
     currentWorkplace: "Tech Park",
     employmentDate: "2017-01-20",
     confirmationDate: "2017-07-20",
+    certificates: [], // No certificates listed for this employee
   },
   { 
     id: "emp5", 
