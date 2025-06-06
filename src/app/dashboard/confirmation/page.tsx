@@ -12,6 +12,37 @@ import type { Employee } from '@/lib/types';
 import { toast }  from '@/hooks/use-toast';
 import { Loader2, Search, FileText, CheckCircle, Award } from 'lucide-react';
 
+interface MockPendingConfirmationRequest {
+  id: string;
+  employeeName: string;
+  zanId: string;
+  department: string;
+  submissionDate: string;
+  submittedBy: string;
+  status: string;
+}
+
+const mockPendingConfirmationRequests: MockPendingConfirmationRequest[] = [
+  {
+    id: 'CONF001',
+    employeeName: 'Ali Juma Ali',
+    zanId: '221458232',
+    department: 'Administration',
+    submissionDate: '2024-07-28',
+    submittedBy: 'A. Juma (HRO)',
+    status: 'Pending HHRMD Review',
+  },
+  {
+    id: 'CONF002',
+    employeeName: 'Safia Juma Ali',
+    zanId: '125468957',
+    department: 'Human Resources',
+    submissionDate: '2024-07-27',
+    submittedBy: 'A. Juma (HRO)',
+    status: 'Pending DO Review',
+  },
+];
+
 export default function ConfirmationPage() {
   const { role } = useAuth();
   const [zanId, setZanId] = useState('');
@@ -157,10 +188,26 @@ export default function ConfirmationPage() {
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Review Confirmation Requests</CardTitle>
-            <CardDescription>Approve or reject pending employee confirmation requests.</CardDescription>
+            <CardDescription>Review, approve, or reject pending employee confirmation requests.</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground">No confirmation requests pending review.</p>
+            {mockPendingConfirmationRequests.length > 0 ? (
+              mockPendingConfirmationRequests.map((request) => (
+                <div key={request.id} className="mb-4 border p-4 rounded-md space-y-2 shadow-sm bg-background hover:shadow-md transition-shadow">
+                  <h3 className="font-semibold text-base">Confirmation for: {request.employeeName} (ZanID: {request.zanId})</h3>
+                  <p className="text-sm text-muted-foreground">Department: {request.department}</p>
+                  <p className="text-sm text-muted-foreground">Submitted: {request.submissionDate} by {request.submittedBy}</p>
+                  <p className="text-sm"><span className="font-medium">Status:</span> <span className="text-primary">{request.status}</span></p>
+                  <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+                    <Button size="sm" variant="outline">View Details</Button>
+                    <Button size="sm">Approve</Button>
+                    <Button size="sm" variant="destructive">Reject</Button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-muted-foreground">No confirmation requests pending review.</p>
+            )}
           </CardContent>
         </Card>
       )}

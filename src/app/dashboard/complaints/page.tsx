@@ -1,3 +1,4 @@
+
 'use client';
 import { PageHeader } from '@/components/shared/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,6 +23,40 @@ const complaintSchema = z.object({
   category: z.string().optional(),
   // evidence: typeof window === 'undefined' ? z.any() : z.instanceof(FileList).optional(), // File upload handling is complex for RSC, simplifying
 });
+
+interface MockPendingComplaint {
+  id: string;
+  employeeName: string; // Can be "Anonymous" or employee name
+  zanId?: string; // Optional if anonymous or from external
+  category: string;
+  details: string;
+  submissionDate: string;
+  submittedBy: string; // Could be "Employee Direct" or "HRO Forwarded"
+  status: string;
+}
+
+const mockPendingComplaints: MockPendingComplaint[] = [
+  {
+    id: 'COMP001',
+    employeeName: 'Fatma Said Omar',
+    zanId: '334589123',
+    category: 'Unfair Treatment',
+    details: 'Employee states that they were unfairly overlooked for a training opportunity despite meeting all criteria.',
+    submissionDate: '2024-07-20',
+    submittedBy: 'Fatma Said Omar (Employee)',
+    status: 'Pending DO Review',
+  },
+  {
+    id: 'COMP002',
+    employeeName: 'Ali Juma Ali',
+    zanId: '221458232',
+    category: 'Workplace Safety',
+    details: 'Complaint regarding inadequate safety equipment in the workshop, leading to a minor preventable incident.',
+    submissionDate: '2024-07-18',
+    submittedBy: 'Ali Juma Ali (Employee)',
+    status: 'Pending HHRMD Review',
+  },
+];
 
 
 export default function ComplaintsPage() {
@@ -132,28 +167,36 @@ export default function ComplaintsPage() {
       )}
 
       {(role === ROLES.DO || role === ROLES.HHRMD_HRMO) && (
-         <Card>
+         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Review Complaints</CardTitle>
             <CardDescription>Resolve or reject pending employee complaints.</CardDescription>
           </CardHeader>
           <CardContent>
-            {/* Placeholder for list of complaints to review */}
-            <p className="text-muted-foreground">No complaints pending review.</p>
-            {/* Example of a complaint item - to be dynamic */}
-            <div className="mt-4 border p-4 rounded-md">
-                <h3 className="font-semibold">Complaint #C001 - Unconfirmed Employee</h3>
-                <p className="text-sm text-muted-foreground">Submitted by: Fatma Said Omar (emp3)</p>
-                <p className="text-sm mt-2">Details: Employee has completed probation but not yet confirmed...</p>
-                <div className="mt-3 space-x-2">
-                    <Button size="sm">View Details</Button>
-                    <Button size="sm" variant="outline">Resolve</Button>
+            {mockPendingComplaints.length > 0 ? (
+              mockPendingComplaints.map((complaint) => (
+                <div key={complaint.id} className="mb-4 border p-4 rounded-md space-y-2 shadow-sm bg-background hover:shadow-md transition-shadow">
+                  <h3 className="font-semibold text-base">Complaint #{complaint.id} - {complaint.category}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Employee: {complaint.employeeName} {complaint.zanId ? `(ZanID: ${complaint.zanId})` : ''}
+                  </p>
+                  <p className="text-sm text-muted-foreground">Submitted: {complaint.submissionDate} by {complaint.submittedBy}</p>
+                  <p className="text-sm mt-1"><strong>Details:</strong> {complaint.details}</p>
+                  <p className="text-sm"><span className="font-medium">Status:</span> <span className="text-primary">{complaint.status}</span></p>
+                  <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+                    <Button size="sm" variant="outline">View Details</Button>
+                    <Button size="sm">Resolve</Button>
                     <Button size="sm" variant="destructive">Reject</Button>
+                  </div>
                 </div>
-            </div>
+              ))
+            ) : (
+              <p className="text-muted-foreground">No complaints pending review.</p>
+            )}
           </CardContent>
         </Card>
       )}
     </div>
   );
 }
+

@@ -14,6 +14,40 @@ import { toast } from '@/hooks/use-toast';
 import { Loader2, Search, FileText, CalendarDays, Paperclip, ShieldAlert } from 'lucide-react';
 import { format } from 'date-fns';
 
+interface MockPendingTerminationRequest {
+  id: string;
+  employeeName: string;
+  zanId: string;
+  reasonSummary: string;
+  proposedDate: string;
+  submissionDate: string;
+  submittedBy: string;
+  status: string;
+}
+
+const mockPendingTerminationRequests: MockPendingTerminationRequest[] = [
+  {
+    id: 'TERM001',
+    employeeName: 'Ali Juma Ali', // Example
+    zanId: '221458232',
+    reasonSummary: 'Repeated unauthorized absence and failure to perform duties.',
+    proposedDate: '2024-09-01',
+    submissionDate: '2024-07-25',
+    submittedBy: 'A. Juma (HRO)',
+    status: 'Pending DO Review',
+  },
+  {
+    id: 'TERM002',
+    employeeName: 'Safia Juma Ali', // Example
+    zanId: '125468957',
+    reasonSummary: 'Gross misconduct: Violation of code of conduct (details in report).',
+    proposedDate: '2024-08-20',
+    submissionDate: '2024-07-22',
+    submittedBy: 'A. Juma (HRO)',
+    status: 'Pending HHRMD Review',
+  },
+];
+
 export default function TerminationPage() {
   const { role } = useAuth();
   const [zanId, setZanId] = useState('');
@@ -191,10 +225,27 @@ export default function TerminationPage() {
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Review Termination Requests</CardTitle>
-            <CardDescription>Approve or reject termination requests.</CardDescription>
+            <CardDescription>Review, approve, or reject pending termination requests.</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground">No termination requests pending review.</p>
+            {mockPendingTerminationRequests.length > 0 ? (
+              mockPendingTerminationRequests.map((request) => (
+                <div key={request.id} className="mb-4 border p-4 rounded-md space-y-2 shadow-sm bg-background hover:shadow-md transition-shadow">
+                  <h3 className="font-semibold text-base">Termination for: {request.employeeName} (ZanID: {request.zanId})</h3>
+                  <p className="text-sm text-muted-foreground">Reason: {request.reasonSummary}</p>
+                  <p className="text-sm text-muted-foreground">Proposed Date: {request.proposedDate}</p>
+                  <p className="text-sm text-muted-foreground">Submitted: {request.submissionDate} by {request.submittedBy}</p>
+                  <p className="text-sm"><span className="font-medium">Status:</span> <span className="text-primary">{request.status}</span></p>
+                  <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+                    <Button size="sm" variant="outline">View Details</Button>
+                    <Button size="sm">Approve</Button>
+                    <Button size="sm" variant="destructive">Reject</Button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-muted-foreground">No termination requests pending review.</p>
+            )}
           </CardContent>
         </Card>
       )}

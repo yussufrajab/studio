@@ -14,6 +14,41 @@ import type { Employee } from '@/lib/types';
 import { toast } from '@/hooks/use-toast';
 import { Loader2, Search, FileText, Award, ChevronsUpDown } from 'lucide-react';
 
+interface MockPendingCadreChangeRequest {
+  id: string;
+  employeeName: string;
+  zanId: string;
+  currentCadre: string;
+  newCadre: string;
+  submissionDate: string;
+  submittedBy: string;
+  status: string;
+}
+
+const mockPendingCadreChangeRequests: MockPendingCadreChangeRequest[] = [
+  {
+    id: 'CADRE001',
+    employeeName: 'Ali Juma Ali',
+    zanId: '221458232',
+    currentCadre: 'Administrative Officer',
+    newCadre: 'Senior Administrative Officer',
+    submissionDate: '2024-07-29',
+    submittedBy: 'A. Juma (HRO)',
+    status: 'Pending HHRMD Review',
+  },
+  {
+    id: 'CADRE002',
+    employeeName: 'Safia Juma Ali',
+    zanId: '125468957',
+    currentCadre: 'HR Officer',
+    newCadre: 'HR Specialist (Training)',
+    submissionDate: '2024-07-27',
+    submittedBy: 'A. Juma (HRO)',
+    status: 'Pending DO Review',
+  },
+];
+
+
 export default function CadreChangePage() {
   const { role } = useAuth();
   const [zanId, setZanId] = useState('');
@@ -195,14 +230,31 @@ export default function CadreChangePage() {
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Review Cadre Change Requests</CardTitle>
-            <CardDescription>Approve or reject cadre change requests.</CardDescription>
+            <CardDescription>Review, approve, or reject pending cadre change requests.</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground">No cadre change requests pending review.</p>
-            {/* Placeholder for actual list of requests */}
+            {mockPendingCadreChangeRequests.length > 0 ? (
+              mockPendingCadreChangeRequests.map((request) => (
+                <div key={request.id} className="mb-4 border p-4 rounded-md space-y-2 shadow-sm bg-background hover:shadow-md transition-shadow">
+                  <h3 className="font-semibold text-base">Cadre Change for: {request.employeeName} (ZanID: {request.zanId})</h3>
+                  <p className="text-sm text-muted-foreground">From Cadre: {request.currentCadre}</p>
+                  <p className="text-sm text-muted-foreground">To Cadre: {request.newCadre}</p>
+                  <p className="text-sm text-muted-foreground">Submitted: {request.submissionDate} by {request.submittedBy}</p>
+                  <p className="text-sm"><span className="font-medium">Status:</span> <span className="text-primary">{request.status}</span></p>
+                  <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+                    <Button size="sm" variant="outline">View Details</Button>
+                    <Button size="sm">Approve</Button>
+                    <Button size="sm" variant="destructive">Reject</Button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-muted-foreground">No cadre change requests pending review.</p>
+            )}
           </CardContent>
         </Card>
       )}
     </div>
   );
 }
+

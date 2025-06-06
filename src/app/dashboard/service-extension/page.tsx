@@ -13,6 +13,43 @@ import type { Employee } from '@/lib/types';
 import { toast } from '@/hooks/use-toast';
 import { Loader2, Search, FileText, CalendarDays, Paperclip } from 'lucide-react';
 
+interface MockPendingServiceExtensionRequest {
+  id: string;
+  employeeName: string;
+  zanId: string;
+  currentRetirementDate: string;
+  requestedExtensionPeriod: string;
+  justification: string;
+  submissionDate: string;
+  submittedBy: string;
+  status: string;
+}
+
+const mockPendingServiceExtensionRequests: MockPendingServiceExtensionRequest[] = [
+  {
+    id: 'SEXT001',
+    employeeName: 'Hamid Khalfan Abdalla',
+    zanId: '778901234',
+    currentRetirementDate: '2025-03-25',
+    requestedExtensionPeriod: '1 Year',
+    justification: 'Critical project completion, possesses unique skills.',
+    submissionDate: '2024-07-20',
+    submittedBy: 'A. Juma (HRO)',
+    status: 'Pending HHRMD Review',
+  },
+  {
+    id: 'SEXT002',
+    employeeName: 'Juma Omar Ali',
+    zanId: '667890456',
+    currentRetirementDate: '2025-06-18',
+    requestedExtensionPeriod: '6 Months',
+    justification: 'To mentor and handover duties to a new Principal Officer.',
+    submissionDate: '2024-07-18',
+    submittedBy: 'A. Juma (HRO)',
+    status: 'Pending DO Review',
+  },
+];
+
 export default function ServiceExtensionPage() {
   const { role } = useAuth();
   const [zanId, setZanId] = useState('');
@@ -181,14 +218,32 @@ export default function ServiceExtensionPage() {
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Review Service Extension Requests</CardTitle>
-            <CardDescription>Approve or reject service extension requests.</CardDescription>
+            <CardDescription>Review, approve, or reject pending service extension requests.</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground">No service extension requests pending review.</p>
-            {/* Placeholder for actual list of requests */}
+            {mockPendingServiceExtensionRequests.length > 0 ? (
+              mockPendingServiceExtensionRequests.map((request) => (
+                <div key={request.id} className="mb-4 border p-4 rounded-md space-y-2 shadow-sm bg-background hover:shadow-md transition-shadow">
+                  <h3 className="font-semibold text-base">Service Extension for: {request.employeeName} (ZanID: {request.zanId})</h3>
+                  <p className="text-sm text-muted-foreground">Current Retirement: {request.currentRetirementDate}</p>
+                  <p className="text-sm text-muted-foreground">Extension Requested: {request.requestedExtensionPeriod}</p>
+                  <p className="text-sm text-muted-foreground">Justification: {request.justification}</p>
+                  <p className="text-sm text-muted-foreground">Submitted: {request.submissionDate} by {request.submittedBy}</p>
+                  <p className="text-sm"><span className="font-medium">Status:</span> <span className="text-primary">{request.status}</span></p>
+                  <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+                    <Button size="sm" variant="outline">View Details</Button>
+                    <Button size="sm">Approve</Button>
+                    <Button size="sm" variant="destructive">Reject</Button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-muted-foreground">No service extension requests pending review.</p>
+            )}
           </CardContent>
         </Card>
       )}
     </div>
   );
 }
+

@@ -14,6 +14,41 @@ import { toast } from '@/hooks/use-toast';
 import { Loader2, Search, FileText, CalendarDays, ListFilter, Stethoscope, ClipboardCheck } from 'lucide-react';
 import { addMonths, format, isBefore } from 'date-fns';
 
+interface MockPendingRetirementRequest {
+  id: string;
+  employeeName: string;
+  zanId: string;
+  retirementType: string;
+  proposedDate: string;
+  submissionDate: string;
+  submittedBy: string;
+  status: string;
+}
+
+const mockPendingRetirementRequests: MockPendingRetirementRequest[] = [
+  {
+    id: 'RETIRE001',
+    employeeName: 'Hamid Khalfan Abdalla', // Assuming he is nearing retirement based on mock data
+    zanId: '778901234',
+    retirementType: 'Compulsory (Age 60)',
+    proposedDate: '2025-03-25',
+    submissionDate: '2024-07-30',
+    submittedBy: 'A. Juma (HRO)',
+    status: 'Pending HHRMD Review',
+  },
+  {
+    id: 'RETIRE002',
+    employeeName: 'Juma Omar Ali', // Assuming voluntary retirement
+    zanId: '667890456',
+    retirementType: 'Voluntary (Age 55+)',
+    proposedDate: '2025-06-18',
+    submissionDate: '2024-07-28',
+    submittedBy: 'A. Juma (HRO)',
+    status: 'Pending DO Review',
+  },
+];
+
+
 export default function RetirementPage() {
   const { role } = useAuth();
   const [zanId, setZanId] = useState('');
@@ -29,6 +64,7 @@ export default function RetirementPage() {
   const [minRetirementDate, setMinRetirementDate] = useState('');
 
   useEffect(() => {
+    // Set min retirement date to 6 months from today
     const sixMonthsFromNow = addMonths(new Date(), 6);
     setMinRetirementDate(format(sixMonthsFromNow, 'yyyy-MM-dd'));
   }, []);
@@ -74,9 +110,9 @@ export default function RetirementPage() {
       return;
     }
 
-    const proposedDate = new Date(retirementDate);
+    const proposedDate = new Date(retirementDate + "T00:00:00"); // Ensure it's start of day for comparison
     const sixMonthsFromToday = addMonths(new Date(), 6);
-    sixMonthsFromToday.setHours(0, 0, 0, 0);
+    sixMonthsFromToday.setHours(0, 0, 0, 0); // Normalize to start of day
 
     if (isBefore(proposedDate, sixMonthsFromToday)) {
       toast({ title: "Submission Error", description: "Proposed retirement date must be at least 6 months from today.", variant: "destructive" });
@@ -227,13 +263,31 @@ export default function RetirementPage() {
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Review Retirement Requests</CardTitle>
-            <CardDescription>Approve or reject retirement requests.</CardDescription>
+            <CardDescription>Review, approve, or reject pending retirement requests.</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground">No retirement requests pending review.</p>
+            {mockPendingRetirementRequests.length > 0 ? (
+              mockPendingRetirementRequests.map((request) => (
+                <div key={request.id} className="mb-4 border p-4 rounded-md space-y-2 shadow-sm bg-background hover:shadow-md transition-shadow">
+                  <h3 className="font-semibold text-base">Retirement Request for: {request.employeeName} (ZanID: {request.zanId})</h3>
+                  <p className="text-sm text-muted-foreground">Type: {request.retirementType}</p>
+                  <p className="text-sm text-muted-foreground">Proposed Date: {request.proposedDate}</p>
+                  <p className="text-sm text-muted-foreground">Submitted: {request.submissionDate} by {request.submittedBy}</p>
+                  <p className="text-sm"><span className="font-medium">Status:</span> <span className="text-primary">{request.status}</span></p>
+                  <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+                    <Button size="sm" variant="outline">View Details</Button>
+                    <Button size="sm">Approve</Button>
+                    <Button size="sm" variant="destructive">Reject</Button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-muted-foreground">No retirement requests pending review.</p>
+            )}
           </CardContent>
         </Card>
       )}
     </div>
   );
 }
+

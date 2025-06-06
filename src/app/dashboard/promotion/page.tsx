@@ -13,6 +13,40 @@ import type { Employee } from '@/lib/types';
 import { toast } from '@/hooks/use-toast';
 import { Loader2, Search, FileText, Award, ChevronsUpDown } from 'lucide-react';
 
+interface MockPendingPromotionRequest {
+  id: string;
+  employeeName: string;
+  zanId: string;
+  currentCadre: string;
+  proposedCadre: string;
+  submissionDate: string;
+  submittedBy: string;
+  status: string;
+}
+
+const mockPendingPromotionRequests: MockPendingPromotionRequest[] = [
+  {
+    id: 'PROM001',
+    employeeName: 'Zainab Ali Khamis',
+    zanId: '556789345',
+    currentCadre: 'Planning Officer',
+    proposedCadre: 'Senior Planning Officer',
+    submissionDate: '2024-07-29',
+    submittedBy: 'A. Juma (HRO)',
+    status: 'Pending HHRMD Review',
+  },
+  {
+    id: 'PROM002',
+    employeeName: 'Juma Omar Ali',
+    zanId: '667890456',
+    currentCadre: 'Procurement Officer',
+    proposedCadre: 'Principal Procurement Officer',
+    submissionDate: '2024-07-26',
+    submittedBy: 'A. Juma (HRO)',
+    status: 'Pending DO Review',
+  },
+];
+
 export default function PromotionPage() {
   const { role } = useAuth();
   const [zanId, setZanId] = useState('');
@@ -194,11 +228,27 @@ export default function PromotionPage() {
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Review Promotion Requests</CardTitle>
-            <CardDescription>Approve or reject pending promotion requests.</CardDescription>
+            <CardDescription>Review, approve, or reject pending promotion requests.</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground">No promotion requests pending review.</p>
-            {/* Placeholder for actual list of requests */}
+            {mockPendingPromotionRequests.length > 0 ? (
+              mockPendingPromotionRequests.map((request) => (
+                <div key={request.id} className="mb-4 border p-4 rounded-md space-y-2 shadow-sm bg-background hover:shadow-md transition-shadow">
+                  <h3 className="font-semibold text-base">Promotion for: {request.employeeName} (ZanID: {request.zanId})</h3>
+                  <p className="text-sm text-muted-foreground">Current Cadre: {request.currentCadre}</p>
+                  <p className="text-sm text-muted-foreground">Proposed Cadre: {request.proposedCadre}</p>
+                  <p className="text-sm text-muted-foreground">Submitted: {request.submissionDate} by {request.submittedBy}</p>
+                  <p className="text-sm"><span className="font-medium">Status:</span> <span className="text-primary">{request.status}</span></p>
+                  <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+                    <Button size="sm" variant="outline">View Details</Button>
+                    <Button size="sm">Approve</Button>
+                    <Button size="sm" variant="destructive">Reject</Button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-muted-foreground">No promotion requests pending review.</p>
+            )}
           </CardContent>
         </Card>
       )}

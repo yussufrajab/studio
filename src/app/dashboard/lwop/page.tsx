@@ -13,6 +13,40 @@ import type { Employee } from '@/lib/types';
 import { toast } from '@/hooks/use-toast';
 import { Loader2, Search, FileText } from 'lucide-react';
 
+interface MockPendingLWOPRequest {
+  id: string;
+  employeeName: string;
+  zanId: string;
+  duration: string;
+  reason: string;
+  submissionDate: string;
+  submittedBy: string;
+  status: string;
+}
+
+const mockPendingLWOPRequests: MockPendingLWOPRequest[] = [
+  {
+    id: 'LWOP001',
+    employeeName: 'Fatma Said Omar',
+    zanId: '334589123',
+    duration: '6 Months',
+    reason: 'Further studies abroad.',
+    submissionDate: '2024-07-25',
+    submittedBy: 'A. Juma (HRO)',
+    status: 'Pending HHRMD Review',
+  },
+  {
+    id: 'LWOP002',
+    employeeName: 'Hassan Mzee Juma',
+    zanId: '445678912',
+    duration: '1 Year',
+    reason: 'Personal family matters requiring extended leave.',
+    submissionDate: '2024-07-22',
+    submittedBy: 'A. Juma (HRO)',
+    status: 'Pending DO Review',
+  },
+];
+
 export default function LwopPage() {
   const { role } = useAuth();
   const [zanId, setZanId] = useState('');
@@ -154,16 +188,31 @@ export default function LwopPage() {
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Review LWOP Requests</CardTitle>
-            <CardDescription>Approve or reject pending LWOP requests.</CardDescription>
+            <CardDescription>Review, approve, or reject pending LWOP requests.</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground">No LWOP requests pending review.</p>
-            {/* Placeholder for actual list of requests */}
+            {mockPendingLWOPRequests.length > 0 ? (
+              mockPendingLWOPRequests.map((request) => (
+                <div key={request.id} className="mb-4 border p-4 rounded-md space-y-2 shadow-sm bg-background hover:shadow-md transition-shadow">
+                  <h3 className="font-semibold text-base">LWOP Request for: {request.employeeName} (ZanID: {request.zanId})</h3>
+                  <p className="text-sm text-muted-foreground">Duration: {request.duration}</p>
+                  <p className="text-sm text-muted-foreground">Reason: {request.reason}</p>
+                  <p className="text-sm text-muted-foreground">Submitted: {request.submissionDate} by {request.submittedBy}</p>
+                  <p className="text-sm"><span className="font-medium">Status:</span> <span className="text-primary">{request.status}</span></p>
+                  <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+                    <Button size="sm" variant="outline">View Details</Button>
+                    <Button size="sm">Approve</Button>
+                    <Button size="sm" variant="destructive">Reject</Button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-muted-foreground">No LWOP requests pending review.</p>
+            )}
           </CardContent>
         </Card>
       )}
     </div>
   );
 }
-
     

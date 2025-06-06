@@ -14,6 +14,30 @@ import { toast } from '@/hooks/use-toast';
 import { Loader2, Search, FileText, CalendarDays, Paperclip, ClipboardCheck, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 
+interface MockPendingDismissalRequest {
+  id: string;
+  employeeName: string;
+  zanId: string;
+  reasonSummary: string;
+  proposedDate: string;
+  submissionDate: string;
+  submittedBy: string;
+  status: string;
+}
+
+const mockPendingDismissalRequests: MockPendingDismissalRequest[] = [
+  {
+    id: 'DISMISS001',
+    employeeName: 'Ali Juma Ali', // Assuming Ali Juma Ali is 'On Probation'
+    zanId: '221458232',
+    reasonSummary: 'Failure to meet performance standards during probation period.',
+    proposedDate: '2024-08-15',
+    submissionDate: '2024-07-29',
+    submittedBy: 'A. Juma (HRO)',
+    status: 'Pending DO Review',
+  },
+];
+
 export default function DismissalPage() {
   const { role } = useAuth();
   const [zanId, setZanId] = useState('');
@@ -213,10 +237,27 @@ export default function DismissalPage() {
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Review Dismissal Requests</CardTitle>
-            <CardDescription>Approve or reject dismissal requests.</CardDescription>
+            <CardDescription>Review, approve, or reject pending dismissal requests.</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground">No dismissal requests pending review.</p>
+            {mockPendingDismissalRequests.length > 0 ? (
+              mockPendingDismissalRequests.map((request) => (
+                <div key={request.id} className="mb-4 border p-4 rounded-md space-y-2 shadow-sm bg-background hover:shadow-md transition-shadow">
+                  <h3 className="font-semibold text-base">Dismissal for: {request.employeeName} (ZanID: {request.zanId})</h3>
+                  <p className="text-sm text-muted-foreground">Reason: {request.reasonSummary}</p>
+                  <p className="text-sm text-muted-foreground">Proposed Date: {request.proposedDate}</p>
+                  <p className="text-sm text-muted-foreground">Submitted: {request.submissionDate} by {request.submittedBy}</p>
+                  <p className="text-sm"><span className="font-medium">Status:</span> <span className="text-primary">{request.status}</span></p>
+                  <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+                    <Button size="sm" variant="outline">View Details</Button>
+                    <Button size="sm">Approve</Button>
+                    <Button size="sm" variant="destructive">Reject</Button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-muted-foreground">No dismissal requests pending review.</p>
+            )}
           </CardContent>
         </Card>
       )}

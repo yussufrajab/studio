@@ -14,6 +14,40 @@ import { toast } from '@/hooks/use-toast';
 import { Loader2, Search, FileText, CalendarDays, Paperclip } from 'lucide-react';
 import { format } from 'date-fns';
 
+interface MockPendingResignationRequest {
+  id: string;
+  employeeName: string;
+  zanId: string;
+  effectiveDate: string;
+  reason?: string;
+  submissionDate: string;
+  submittedBy: string;
+  status: string;
+}
+
+const mockPendingResignationRequests: MockPendingResignationRequest[] = [
+  {
+    id: 'RESIGN001',
+    employeeName: 'Zainab Ali Khamis',
+    zanId: '556789345',
+    effectiveDate: '2024-09-30',
+    reason: 'Relocating to another country.',
+    submissionDate: '2024-07-20',
+    submittedBy: 'A. Juma (HRO)',
+    status: 'Pending HHRMD Acknowledgement',
+  },
+  {
+    id: 'RESIGN002',
+    employeeName: 'Hassan Mzee Juma',
+    zanId: '445678912',
+    effectiveDate: '2024-08-15',
+    submissionDate: '2024-07-15',
+    submittedBy: 'A. Juma (HRO)',
+    status: 'Pending DO Acknowledgement',
+  },
+];
+
+
 export default function ResignationPage() {
   const { role } = useAuth();
   const [zanId, setZanId] = useState('');
@@ -178,13 +212,31 @@ export default function ResignationPage() {
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Review Resignation Requests</CardTitle>
-            <CardDescription>Acknowledge and process resignations.</CardDescription>
+            <CardDescription>Acknowledge and process resignation requests.</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground">No resignation requests pending review.</p>
+            {mockPendingResignationRequests.length > 0 ? (
+              mockPendingResignationRequests.map((request) => (
+                <div key={request.id} className="mb-4 border p-4 rounded-md space-y-2 shadow-sm bg-background hover:shadow-md transition-shadow">
+                  <h3 className="font-semibold text-base">Resignation for: {request.employeeName} (ZanID: {request.zanId})</h3>
+                  <p className="text-sm text-muted-foreground">Effective Date: {request.effectiveDate}</p>
+                  {request.reason && <p className="text-sm text-muted-foreground">Reason: {request.reason}</p>}
+                  <p className="text-sm text-muted-foreground">Submitted: {request.submissionDate} by {request.submittedBy}</p>
+                  <p className="text-sm"><span className="font-medium">Status:</span> <span className="text-primary">{request.status}</span></p>
+                  <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+                    <Button size="sm" variant="outline">View Letter</Button>
+                    <Button size="sm">Acknowledge</Button>
+                    <Button size="sm" variant="destructive">Flag Issue</Button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-muted-foreground">No resignation requests pending review.</p>
+            )}
           </CardContent>
         </Card>
       )}
     </div>
   );
 }
+
