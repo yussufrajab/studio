@@ -1,3 +1,4 @@
+
 export type Role = "HRO" | "HHRMD_HRMO" | "DO" | "EMPLOYEE" | null;
 
 export interface User {
@@ -9,14 +10,35 @@ export interface User {
 }
 
 export interface Employee {
-  id: string; // e.g., emp1
-  employeeEntityId: string; // e.g., emp1_id
+  id: string;
+  employeeEntityId: string;
   name: string;
+  profileImageUrl?: string; // URL for profile image
+  dateOfBirth?: string; // e.g., "1985-07-20"
+  placeOfBirth?: string;
+  region?: string;
+  countryOfBirth?: string;
   zanId: string;
+  zssfNumber?: string;
+  payrollNumber?: string;
+
+  // Employment Summary
+  cadre?: string; // Rank
+  ministry?: string;
+  institution?: string;
+  department?: string;
+  appointmentType?: string; // e.g., "Permanent", "Contract"
+  contractType?: string; // e.g., "Full-time", "Part-time"
+  recentTitleDate?: string; // Date of last promotion/title change
+  currentReportingOffice?: string;
+  currentWorkplace?: string;
+  employmentDate?: string; // Initial date of employment
+  confirmationDate?: string; // Date of confirmation
   status?: string; // e.g., "Confirmed", "On Probation"
-  cadre?: string;
-  department?: string; // Added department
-  // Add other employee specific fields as needed
+
+  // Employee Documents (URLs or identifiers)
+  ardhilHaliUrl?: string;
+  confirmationLetterUrl?: string;
 }
 
 export type RequestType =

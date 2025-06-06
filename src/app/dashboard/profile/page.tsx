@@ -1,3 +1,4 @@
+
 'use client';
 import { PageHeader } from '@/components/shared/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,23 +11,34 @@ import { EMPLOYEES, ROLES } from '@/lib/constants';
 import type { Employee } from '@/lib/types';
 import React, { useEffect, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { toast } from '@/hooks/use-toast';
+import { Loader2, Search, FileText, UserCircle, Building, Briefcase } from 'lucide-react';
 
 export default function ProfilePage() {
   const { user, role, isLoading: authLoading } = useAuth();
-  const [employee, setEmployee] = useState<Employee | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [profileData, setProfileData] = useState<Employee | null>(null);
+  const [pageLoading, setPageLoading] = useState(true);
+
+  // HRO Search State
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchType, setSearchType] = useState<'zanId' | 'zssfNumber' | 'payrollNumber'>('zanId');
+  const [isSearching, setIsSearching] = useState(false);
 
   useEffect(() => {
+    setPageLoading(true);
     if (!authLoading && user) {
-      if (user.employeeId) {
+      if (role === ROLES.EMPLOYEE && user.employeeId) {
         const foundEmployee = EMPLOYEES.find(e => e.id === user.employeeId);
-        setEmployee(foundEmployee || null);
+        setProfileData(foundEmployee || null);
+        if (!foundEmployee) {
+          toast({ title: "Profile Not Found", description: "Your employee profile could not be loaded. Please contact HR.", variant: "destructive" });
+        }
       } else if (role === ROLES.HRO) {
-        // HRO might see a list or search, for now, show first employee as example if no specific context
-        setEmployee(EMPLOYEES[0] || null);
+        setProfileData(null); // HRO must search
       }
     }
-    setLoading(false);
+    setPageLoading(false);
   }, [user, role, authLoading]);
 
   const getInitials = (name?: string) => {
@@ -36,7 +48,108 @@ export default function ProfilePage() {
     return (names[0][0] + names[names.length - 1][0]).toUpperCase();
   };
 
-  if (authLoading || loading) {
+  const handleSearch = () => {
+    if (!searchTerm.trim()) {
+      toast({ title: "Search Term Required", description: "Please enter a search term.", variant: "destructive" });
+      return;
+    }
+    setIsSearching(true);
+    setProfileData(null);
+    setTimeout(() => { // Simulate API call
+      const found = EMPLOYEES.find(emp => {
+        if (searchType === 'zanId') return emp.zanId === searchTerm.trim();
+        if (searchType === 'zssfNumber') return emp.zssfNumber === searchTerm.trim();
+        if (searchType === 'payrollNumber') return emp.payrollNumber === searchTerm.trim();
+        return false;
+      });
+      setProfileData(found || null);
+      if (found) {
+        toast({ title: "Employee Found", description: `Details for ${found.name} loaded.` });
+      } else {
+        toast({ title: "Employee Not Found", description: `No employee found with the provided ${searchType}: ${searchTerm}.`, variant: "destructive" });
+      }
+      setIsSearching(false);
+    }, 1000);
+  };
+
+  const renderEmployeeDetails = (emp: Employee) => (
+    <Card className="mt-6 shadow-lg">
+      <CardHeader className="items-center text-center border-b pb-6">
+        <Avatar className="h-24 w-24 mb-4 shadow-md">
+          <AvatarImage src={emp.profileImageUrl || `https://placehold.co/100x100.png?text=${getInitials(emp.name)}`} alt={emp.name} data-ai-hint="employee photo" />
+          <AvatarFallback>{getInitials(emp.name)}</AvatarFallback>
+        </Avatar>
+        <CardTitle className="text-2xl font-headline">{emp.name}</CardTitle>
+        <CardDescription>ZanID: {emp.zanId} | Status: <span className={`font-semibold ${emp.status === 'Confirmed' ? 'text-green-600' : 'text-orange-500'}`}>{emp.status || 'N/A'}</span></CardDescription>
+      </CardHeader>
+      <CardContent className="pt-6 space-y-8">
+        {/* Personal Information Section */}
+        <section>
+          <div className="flex items-center mb-4">
+            <UserCircle className="h-6 w-6 mr-3 text-primary" />
+            <h3 className="text-xl font-semibold font-headline text-foreground">Personal Information</h3>
+          </div>
+          <Card className="bg-secondary/20 shadow-sm">
+            <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4 text-sm">
+              <div><Label className="text-muted-foreground">Full Name:</Label><p className="font-medium text-foreground">{emp.name}</p></div>
+              <div><Label className="text-muted-foreground">ZanID:</Label><p className="font-medium text-foreground">{emp.zanId}</p></div>
+              <div><Label className="text-muted-foreground">ZSSF Number:</Label><p className="font-medium text-foreground">{emp.zssfNumber || 'N/A'}</p></div>
+              <div><Label className="text-muted-foreground">Payroll Number:</Label><p className="font-medium text-foreground">{emp.payrollNumber || 'N/A'}</p></div>
+              <div><Label className="text-muted-foreground">Date of Birth:</Label><p className="font-medium text-foreground">{emp.dateOfBirth ? new Date(emp.dateOfBirth).toLocaleDateString() : 'N/A'}</p></div>
+              <div><Label className="text-muted-foreground">Place of Birth:</Label><p className="font-medium text-foreground">{emp.placeOfBirth || 'N/A'}</p></div>
+              <div><Label className="text-muted-foreground">Region:</Label><p className="font-medium text-foreground">{emp.region || 'N/A'}</p></div>
+              <div><Label className="text-muted-foreground">Country of Birth:</Label><p className="font-medium text-foreground">{emp.countryOfBirth || 'N/A'}</p></div>
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* Employment Summary Section */}
+        <section>
+           <div className="flex items-center mb-4">
+            <Briefcase className="h-6 w-6 mr-3 text-primary" />
+            <h3 className="text-xl font-semibold font-headline text-foreground">Employment Summary</h3>
+          </div>
+          <Card className="bg-secondary/20 shadow-sm">
+            <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4 text-sm">
+              <div><Label className="text-muted-foreground">Rank (Cadre):</Label><p className="font-medium text-foreground">{emp.cadre || 'N/A'}</p></div>
+              <div><Label className="text-muted-foreground">Ministry:</Label><p className="font-medium text-foreground">{emp.ministry || 'N/A'}</p></div>
+              <div><Label className="text-muted-foreground">Institution:</Label><p className="font-medium text-foreground">{emp.institution || 'N/A'}</p></div>
+              <div><Label className="text-muted-foreground">Department:</Label><p className="font-medium text-foreground">{emp.department || 'N/A'}</p></div>
+              <div><Label className="text-muted-foreground">Appointment Type:</Label><p className="font-medium text-foreground">{emp.appointmentType || 'N/A'}</p></div>
+              <div><Label className="text-muted-foreground">Contract Type:</Label><p className="font-medium text-foreground">{emp.contractType || 'N/A'}</p></div>
+              <div><Label className="text-muted-foreground">Recent Title Date:</Label><p className="font-medium text-foreground">{emp.recentTitleDate ? new Date(emp.recentTitleDate).toLocaleDateString() : 'N/A'}</p></div>
+              <div><Label className="text-muted-foreground">Current Reporting Office:</Label><p className="font-medium text-foreground">{emp.currentReportingOffice || 'N/A'}</p></div>
+              <div><Label className="text-muted-foreground">Current Workplace:</Label><p className="font-medium text-foreground">{emp.currentWorkplace || 'N/A'}</p></div>
+              <div><Label className="text-muted-foreground">Employment Date:</Label><p className="font-medium text-foreground">{emp.employmentDate ? new Date(emp.employmentDate).toLocaleDateString() : 'N/A'}</p></div>
+              <div><Label className="text-muted-foreground">Confirmation Date:</Label><p className="font-medium text-foreground">{emp.confirmationDate ? new Date(emp.confirmationDate).toLocaleDateString() : 'N/A'}</p></div>
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* Employee Documents Section */}
+        <section>
+          <div className="flex items-center mb-4">
+            <FileText className="h-6 w-6 mr-3 text-primary" />
+            <h3 className="text-xl font-semibold font-headline text-foreground">Employee Documents</h3>
+          </div>
+          <Card className="bg-secondary/20 shadow-sm">
+            <CardContent className="pt-6 space-y-3 text-sm">
+              <div className="flex items-center justify-between p-3 rounded-md border bg-background">
+                <Label className="font-medium text-foreground">Ardhil-hali:</Label>
+                {emp.ardhilHaliUrl ? <Button asChild variant="link" size="sm"><a href={emp.ardhilHaliUrl} target="_blank" rel="noopener noreferrer">View Document</a></Button> : <span className="text-muted-foreground">Not Available</span>}
+              </div>
+              <div className="flex items-center justify-between p-3 rounded-md border bg-background">
+                <Label className="font-medium text-foreground">Confirmation Letter:</Label>
+                {emp.confirmationLetterUrl ? <Button asChild variant="link" size="sm"><a href={emp.confirmationLetterUrl} target="_blank" rel="noopener noreferrer">View Document</a></Button> : <span className="text-muted-foreground">Not Available</span>}
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+      </CardContent>
+    </Card>
+  );
+
+  if (authLoading || pageLoading) {
     return (
       <div>
         <PageHeader title="Employee Profile" />
@@ -47,102 +160,91 @@ export default function ProfilePage() {
             <Skeleton className="h-4 w-1/3 mx-auto mt-2" />
           </CardHeader>
           <CardContent className="space-y-4">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="space-y-1">
-                <Skeleton className="h-4 w-1/4" />
-                <Skeleton className="h-8 w-full" />
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="space-y-3 mt-4">
+                <Skeleton className="h-5 w-1/4 mb-2" />
+                <Skeleton className="h-20 w-full" />
               </div>
             ))}
-            <Skeleton className="h-10 w-24 mt-4" />
           </CardContent>
         </Card>
       </div>
     );
   }
-
-  if (!employee && role === ROLES.EMPLOYEE) {
-    return (
-      <div>
-        <PageHeader title="Employee Profile" />
-        <Card>
-          <CardHeader>
-            <CardTitle>Profile Not Found</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p>Your employee profile could not be loaded. Please contact HR.</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-  
-  // For HRO, if no employee is selected yet (future feature: employee list/search for HRO)
-  if (!employee && role === ROLES.HRO) {
-    return (
-      <div>
-        <PageHeader title="Employee Profile Management" description="Search or select an employee to view/manage their profile."/>
-         <Card>
-          <CardContent className="pt-6">
-            <p className="text-muted-foreground">Select an employee to view their profile. (Functionality to search/select employee to be added)</p>
-            {/* Display first employee for demo purposes */}
-            {EMPLOYEES.length > 0 && (
-              <Button onClick={() => setEmployee(EMPLOYEES[0])} className="mt-4">View Sample Profile ({EMPLOYEES[0].name})</Button>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
 
   return (
     <div>
-      <PageHeader title={role === ROLES.EMPLOYEE ? "My Profile" : `Profile: ${employee?.name || 'N/A'}`} description="View and manage employee information." />
-      {employee ? (
-        <Card>
-          <CardHeader className="items-center text-center">
-             <Avatar className="h-24 w-24 mb-4">
-              <AvatarImage src={`https://placehold.co/100x100.png?text=${getInitials(employee.name)}`} alt={employee.name} data-ai-hint="employee photo" />
-              <AvatarFallback>{getInitials(employee.name)}</AvatarFallback>
-            </Avatar>
-            <CardTitle className="text-2xl">{employee.name}</CardTitle>
-            <CardDescription>ZanID: {employee.zanId} | Status: {employee.status || 'N/A'}</CardDescription>
+      <PageHeader 
+        title={role === ROLES.HRO ? "Employee Profile Management" : "My Profile"} 
+        description={role === ROLES.HRO ? "Search for an employee to view their detailed profile." : "View your comprehensive employee information."} 
+      />
+
+      {role === ROLES.HRO && (
+        <Card className="mb-6 shadow-lg">
+          <CardHeader>
+            <CardTitle>Search Employee</CardTitle>
+            <CardDescription>Enter ZanID, ZSSF number, or Payroll number to find an employee.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="fullName">Full Name</Label>
-              <Input id="fullName" value={employee.name} readOnly={role !== ROLES.HRO} />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+              <div className="md:col-span-2 space-y-2">
+                <Label htmlFor="searchTerm">Search Term</Label>
+                <Input 
+                  id="searchTerm" 
+                  placeholder={`Enter ${searchType.replace(/([A-Z])/g, ' $1')}`}
+                  value={searchTerm} 
+                  onChange={(e) => setSearchTerm(e.target.value)} 
+                  disabled={isSearching} 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="searchType">Search By</Label>
+                <Select value={searchType} onValueChange={(value) => setSearchType(value as typeof searchType)} disabled={isSearching}>
+                  <SelectTrigger id="searchTypeSelect">
+                    <SelectValue placeholder="Select search type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="zanId">ZanID</SelectItem>
+                    <SelectItem value="zssfNumber">ZSSF Number</SelectItem>
+                    <SelectItem value="payrollNumber">Payroll Number</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div>
-              <Label htmlFor="zanId">ZanID</Label>
-              <Input id="zanId" value={employee.zanId} readOnly />
-            </div>
-            <div>
-              <Label htmlFor="cadre">Cadre</Label>
-              <Input id="cadre" value={employee.cadre || 'Not Specified'} readOnly={role !== ROLES.HRO} />
-            </div>
-            <div>
-              <Label htmlFor="employeeStatus">Employment Status</Label>
-              <Input id="employeeStatus" value={employee.status || 'N/A'} readOnly={role !== ROLES.HRO} />
-            </div>
-            {/* Add more fields as needed */}
-            {(role === ROLES.EMPLOYEE || role === ROLES.HRO) && (
-              <Button disabled={role === ROLES.EMPLOYEE}> {/* Enable for HRO if editing is allowed */}
-                {role === ROLES.HRO ? 'Save Changes' : 'Update Profile (Disabled)'}
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>No Employee Data</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p>Employee data is not available.</p>
+            <Button onClick={handleSearch} disabled={isSearching || !searchTerm.trim()}>
+              {isSearching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
+              Search Employee
+            </Button>
           </CardContent>
         </Card>
       )}
+
+      {profileData ? (
+        renderEmployeeDetails(profileData)
+      ) : (
+        role === ROLES.EMPLOYEE && !authLoading && !pageLoading && ( // Show only if employee tried to load their own profile and it failed
+          <Card>
+            <CardHeader>
+              <CardTitle>Profile Not Found</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p>Your employee profile could not be loaded. Please contact HR.</p>
+            </CardContent>
+          </Card>
+        )
+      )}
+      
+      {role === ROLES.HRO && !isSearching && !profileData && searchTerm && ( // HRO searched but no result
+         <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>No Results</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">No employee found matching your search criteria. Please try again with different details.</p>
+            </CardContent>
+          </Card>
+      )}
+
     </div>
   );
 }
