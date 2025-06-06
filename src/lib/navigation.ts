@@ -28,6 +28,12 @@ export const NAV_ITEMS: NavItem[] = [
     roles: [ROLES.HRO, ROLES.HHRMD_HRMO, ROLES.DO, ROLES.EMPLOYEE],
   },
   {
+    title: 'Employee Profiles',
+    href: '/dashboard/profile', // Could be /dashboard/profiles for HRO listing
+    icon: UserCog,
+    roles: [ROLES.HRO, ROLES.EMPLOYEE],
+  },
+  {
     title: 'Employee Confirmation',
     href: '/dashboard/confirmation',
     icon: UserCheck,
@@ -86,12 +92,6 @@ export const NAV_ITEMS: NavItem[] = [
     href: '/dashboard/dismissal',
     icon: Ban,
     roles: [ROLES.HRO, ROLES.DO],
-  },
-  {
-    title: 'Employee Profiles',
-    href: '/dashboard/profile', // Could be /dashboard/profiles for HRO listing
-    icon: UserCog,
-    roles: [ROLES.HRO, ROLES.EMPLOYEE],
   },
   {
     title: 'Reports & Analytics',
