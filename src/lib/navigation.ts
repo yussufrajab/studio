@@ -119,7 +119,6 @@ export const NAV_ITEMS: NavItem[] = [
     href: '/dashboard/reports',
     icon: BarChart3,
     roles: [ROLES.HRO, ROLES.HHRMD_HRMO, ROLES.DO],
-    disabled: true, 
     description: 'Generate and view various system reports (coming soon).',
   },
   {
