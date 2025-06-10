@@ -41,70 +41,70 @@ export const NAV_ITEMS: NavItem[] = [
     title: 'Employee Confirmation',
     href: '/dashboard/confirmation',
     icon: UserCheck,
-    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO, ROLES.DO],
+    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO], // DO Removed
     description: 'Manage employee confirmation processes.',
   },
   {
     title: 'Leave Without Pay (LWOP)',
     href: '/dashboard/lwop',
     icon: CalendarOff,
-    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO, ROLES.DO],
+    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO], // DO Removed
     description: 'Process and manage LWOP requests for employees.',
   },
   {
     title: 'Promotion',
     href: '/dashboard/promotion',
     icon: TrendingUp,
-    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO, ROLES.DO],
+    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO], // DO Removed
     description: 'Handle employee promotion applications and approvals.',
   },
   {
     title: 'Complaints',
     href: '/dashboard/complaints',
     icon: MessageSquareWarning,
-    roles: [ROLES.EMPLOYEE, ROLES.DO, ROLES.HHRMD], // HRMO excluded
+    roles: [ROLES.EMPLOYEE, ROLES.DO, ROLES.HHRMD],
     description: 'Submit, view, and manage employee complaints.',
   },
   {
     title: 'Change of Cadre',
     href: '/dashboard/cadre-change',
     icon: Replace,
-    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO, ROLES.DO],
+    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO], // DO Removed
     description: 'Manage requests for change of employee cadre.',
   },
   {
     title: 'Retirement',
     href: '/dashboard/retirement',
     icon: UserMinus,
-    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO, ROLES.DO],
+    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO], // DO Removed
     description: 'Process employee retirement applications.',
   },
   {
     title: 'Resignation',
     href: '/dashboard/resignation',
     icon: UserX, 
-    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO, ROLES.DO],
+    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO], // DO Removed
     description: 'Handle employee resignation submissions.',
   },
   {
     title: 'Service Extension',
     href: '/dashboard/service-extension',
     icon: CalendarPlus,
-    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO, ROLES.DO],
+    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO], // DO Removed
     description: 'Manage requests for employee service extensions.',
   },
   {
     title: 'Termination',
     href: '/dashboard/termination',
     icon: ShieldAlert,
-    roles: [ROLES.HRO, ROLES.DO, ROLES.HHRMD], // HRMO excluded
+    roles: [ROLES.HRO, ROLES.DO, ROLES.HHRMD], 
     description: 'Process employee terminations due to misconduct or other reasons.',
   },
   {
     title: 'Dismissal',
     href: '/dashboard/dismissal',
     icon: Ban,
-    roles: [ROLES.HRO, ROLES.DO, ROLES.HHRMD], // HRMO excluded
+    roles: [ROLES.HRO, ROLES.DO, ROLES.HHRMD], 
     description: 'Handle dismissal of unconfirmed employees.',
   },
   {
@@ -125,7 +125,7 @@ export const NAV_ITEMS: NavItem[] = [
     title: 'Audit Trail',
     href: '/dashboard/audit-trail',
     icon: ClipboardList,
-    roles: [ROLES.HRO, ROLES.DO], // HHRMD and HRMO excluded
+    roles: [ROLES.HRO], // HHRMD, HRMO, DO Removed
     disabled: true, 
     description: 'View a log of system activities and changes (coming soon).',
   },

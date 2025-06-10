@@ -38,7 +38,7 @@ const mockPendingServiceExtensionRequests: MockPendingServiceExtensionRequest[] 
     submissionDate: '2024-07-20',
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending HHRMD Review',
-    documents: ['Letter of Request', 'Project Completion Plan'],
+    documents: ['Letter of Request', 'Project Completion Plan', 'Performance Review'],
   },
   {
     id: 'SEXT002',
@@ -49,8 +49,8 @@ const mockPendingServiceExtensionRequests: MockPendingServiceExtensionRequest[] 
     justification: 'To mentor and handover duties to a new Principal Officer.',
     submissionDate: '2024-07-18',
     submittedBy: 'K. Mnyonge (HRO)',
-    status: 'Pending DO Review',
-    documents: ['Letter of Request'],
+    status: 'Pending HRMO Review',
+    documents: ['Letter of Request', 'Mentorship Plan'],
   },
 ];
 
@@ -221,7 +221,7 @@ export default function ServiceExtensionPage() {
           )}
         </Card>
       )}
-      {(role === ROLES.HHRMD || role === ROLES.HRMO || role === ROLES.DO) && (
+      {(role === ROLES.HHRMD || role === ROLES.HRMO) && ( // DO removed
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Review Service Extension Requests</CardTitle>

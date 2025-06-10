@@ -42,7 +42,7 @@ const mockPendingConfirmationRequests: MockPendingConfirmationRequest[] = [
     department: 'Human Resources',
     submissionDate: '2024-07-27',
     submittedBy: 'K. Mnyonge (HRO)',
-    status: 'Pending DO Review',
+    status: 'Pending HRMO Review', // Changed status for variety
     documents: ['Evaluation Form', 'IPA Certificate', 'Letter of Request'],
   },
 ];
@@ -191,7 +191,7 @@ export default function ConfirmationPage() {
         </Card>
       )}
 
-      {(role === ROLES.HHRMD || role === ROLES.HRMO || role === ROLES.DO) && (
+      {(role === ROLES.HHRMD || role === ROLES.HRMO) && ( // DO removed from this view
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Review Confirmation Requests</CardTitle>

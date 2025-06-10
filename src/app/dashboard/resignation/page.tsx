@@ -47,7 +47,7 @@ const mockPendingResignationRequests: MockPendingResignationRequest[] = [
     reason: 'Pursuing further studies.',
     submissionDate: '2024-07-15',
     submittedBy: 'K. Mnyonge (HRO)',
-    status: 'Pending DO Acknowledgement',
+    status: 'Pending HRMO Acknowledgement',
     documents: ['Letter of Request'],
   },
 ];
@@ -216,7 +216,7 @@ export default function ResignationPage() {
           )}
         </Card>
       )}
-      {(role === ROLES.HHRMD || role === ROLES.HRMO || role === ROLES.DO) && (
+      {(role === ROLES.HHRMD || role === ROLES.HRMO) && ( // DO removed
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Review Resignation Requests</CardTitle>

@@ -37,7 +37,7 @@ const mockPendingPromotionRequests: MockPendingPromotionRequest[] = [
     submissionDate: '2024-07-29',
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending HHRMD Review',
-    documents: ['Performance Appraisal Form', 'Certificate', 'Letter of Request'],
+    documents: ['Performance Appraisal Form', 'Certificate (Degree)', 'Letter of Request'],
     studiedOutsideCountry: false,
   },
   {
@@ -48,7 +48,7 @@ const mockPendingPromotionRequests: MockPendingPromotionRequest[] = [
     proposedCadre: 'Principal Procurement Officer',
     submissionDate: '2024-07-26',
     submittedBy: 'K. Mnyonge (HRO)',
-    status: 'Pending DO Review',
+    status: 'Pending HRMO Review',
     documents: ['Performance Appraisal Form', 'Certificate (Masters)', 'TCU Form', 'Letter of Request'],
     studiedOutsideCountry: true,
   },
@@ -235,7 +235,7 @@ export default function PromotionPage() {
         </Card>
       )}
 
-      {(role === ROLES.HHRMD || role === ROLES.HRMO || role === ROLES.DO) && (
+      {(role === ROLES.HHRMD || role === ROLES.HRMO) && ( // DO removed
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Review Promotion Requests</CardTitle>

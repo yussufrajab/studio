@@ -37,7 +37,7 @@ const mockPendingRetirementRequests: MockPendingRetirementRequest[] = [
     submissionDate: '2024-07-30',
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending HHRMD Review',
-    documents: ['Letter of Request'],
+    documents: ['Letter of Request', 'Birth Certificate Copy'],
   },
   {
     id: 'RETIRE002',
@@ -47,8 +47,8 @@ const mockPendingRetirementRequests: MockPendingRetirementRequest[] = [
     proposedDate: '2025-06-18',
     submissionDate: '2024-07-28',
     submittedBy: 'K. Mnyonge (HRO)',
-    status: 'Pending DO Review',
-    documents: ['Letter of Request'],
+    status: 'Pending HRMO Review',
+    documents: ['Letter of Request', 'Service Record Summary'],
   },
   {
     id: 'RETIRE003',
@@ -276,7 +276,7 @@ export default function RetirementPage() {
           )}
         </Card>
       )}
-      {(role === ROLES.HHRMD || role === ROLES.HRMO || role === ROLES.DO) && (
+      {(role === ROLES.HHRMD || role === ROLES.HRMO) && ( // DO removed
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Review Retirement Requests</CardTitle>

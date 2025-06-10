@@ -36,7 +36,7 @@ const mockPendingLWOPRequests: MockPendingLWOPRequest[] = [
     submissionDate: '2024-07-25',
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending HHRMD Review',
-    documents: ['Letter of Request'],
+    documents: ['Letter of Request', 'Admission Letter Scan'],
   },
   {
     id: 'LWOP002',
@@ -46,7 +46,7 @@ const mockPendingLWOPRequests: MockPendingLWOPRequest[] = [
     reason: 'Personal family matters requiring extended leave.',
     submissionDate: '2024-07-22',
     submittedBy: 'K. Mnyonge (HRO)',
-    status: 'Pending DO Review',
+    status: 'Pending HRMO Review',
     documents: ['Letter of Request'],
   },
 ];
@@ -189,7 +189,7 @@ export default function LwopPage() {
         </Card>
       )}
 
-       {(role === ROLES.HHRMD || role === ROLES.HRMO || role === ROLES.DO) && (
+       {(role === ROLES.HHRMD || role === ROLES.HRMO) && ( // DO removed
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Review LWOP Requests</CardTitle>

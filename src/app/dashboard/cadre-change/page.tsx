@@ -51,7 +51,7 @@ const mockPendingCadreChangeRequests: MockPendingCadreChangeRequest[] = [
     newCadre: 'HR Specialist (Training)',
     submissionDate: '2024-07-27',
     submittedBy: 'K. Mnyonge (HRO)',
-    status: 'Pending DO Review',
+    status: 'Pending HRMO Review',
     reason: "Obtained professional certification in Training and Development from recognized institution abroad.",
     documents: ['Professional Certificate', 'TCU Form', 'Letter of Request'],
     studiedOutsideCountry: true,
@@ -239,7 +239,7 @@ export default function CadreChangePage() {
           )}
         </Card>
       )}
-      {(role === ROLES.HHRMD || role === ROLES.HRMO || role === ROLES.DO) && (
+      {(role === ROLES.HHRMD || role === ROLES.HRMO) && ( // DO removed
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Review Cadre Change Requests</CardTitle>
