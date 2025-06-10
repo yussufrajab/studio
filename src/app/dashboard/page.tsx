@@ -8,7 +8,7 @@ import { getNavItemsForRole } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ROLES } from '@/lib/constants'; // Added import for ROLES
+import { ROLES } from '@/lib/constants'; 
 
 export default function DashboardPage() {
   const { user, role, isLoading } = useAuth();
@@ -45,8 +45,8 @@ export default function DashboardPage() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {roleNavItems.map((item) => {
           let description = item.description || `Manage ${item.title.toLowerCase()}.`;
-          // Conditional description for Complaints module for DO role
-          if (item.href === '/dashboard/complaints' && role === ROLES.DO) {
+          // Conditional description for Complaints module for roles that manage complaints
+          if (item.href === '/dashboard/complaints' && (role === ROLES.DO || role === ROLES.HHRMD_HRMO)) {
             description = 'View and Manage employee complaints.';
           }
 
@@ -115,3 +115,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+
