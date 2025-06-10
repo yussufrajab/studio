@@ -119,7 +119,7 @@ export const NAV_ITEMS: NavItem[] = [
     href: '/dashboard/reports',
     icon: BarChart3,
     roles: [ROLES.HRO, ROLES.HHRMD_HRMO, ROLES.DO],
-    description: 'Generate and view various system reports (coming soon).',
+    description: 'Generate and view various system reports.',
   },
   {
     title: 'Audit Trail',
@@ -135,3 +135,4 @@ export function getNavItemsForRole(role: Role | null): NavItem[] {
   if (!role) return [];
   return NAV_ITEMS.filter(item => item.roles.includes(role));
 }
+
