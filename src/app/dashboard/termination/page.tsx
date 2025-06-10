@@ -13,6 +13,7 @@ import type { Employee } from '@/lib/types';
 import { toast } from '@/hooks/use-toast';
 import { Loader2, Search, FileText, CalendarDays, Paperclip, ShieldAlert } from 'lucide-react';
 import { format } from 'date-fns';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 
 interface MockPendingTerminationRequest {
   id: string;
@@ -23,28 +24,31 @@ interface MockPendingTerminationRequest {
   submissionDate: string;
   submittedBy: string;
   status: string;
+  documents?: string[];
 }
 
 const mockPendingTerminationRequests: MockPendingTerminationRequest[] = [
   {
     id: 'TERM001',
-    employeeName: 'Ali Juma Ali', // Example
+    employeeName: 'Ali Juma Ali', 
     zanId: '221458232',
     reasonSummary: 'Repeated unauthorized absence and failure to perform duties.',
     proposedDate: '2024-09-01',
     submissionDate: '2024-07-25',
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending DO Review',
+    documents: ['Misconduct Evidence & Investigation Report', 'Warning Letters', 'Letter of Request'],
   },
   {
     id: 'TERM002',
-    employeeName: 'Safia Juma Ali', // Example
+    employeeName: 'Safia Juma Ali', 
     zanId: '125468957',
     reasonSummary: 'Gross misconduct: Violation of code of conduct (details in report).',
     proposedDate: '2024-08-20',
     submissionDate: '2024-07-22',
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending HHRMD Review',
+    documents: ['Misconduct Investigation Report', 'Code of Conduct Violation Details', 'Letter of Request'],
   },
 ];
 
@@ -61,6 +65,9 @@ export default function TerminationPage() {
   const [supportingDocumentsFile, setSupportingDocumentsFile] = useState<FileList | null>(null);
   const [letterOfRequestFile, setLetterOfRequestFile] = useState<FileList | null>(null);
   const [minProposedDate, setMinProposedDate] = useState('');
+
+  const [selectedRequest, setSelectedRequest] = useState<MockPendingTerminationRequest | null>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
   useEffect(() => {
     setMinProposedDate(format(new Date(), 'yyyy-MM-dd'));
@@ -237,7 +244,7 @@ export default function TerminationPage() {
                   <p className="text-sm text-muted-foreground">Submitted: {request.submissionDate} by {request.submittedBy}</p>
                   <p className="text-sm"><span className="font-medium">Status:</span> <span className="text-primary">{request.status}</span></p>
                   <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-                    <Button size="sm" variant="outline">View Details</Button>
+                    <Button size="sm" variant="outline" onClick={() => { setSelectedRequest(request); setIsDetailsModalOpen(true); }}>View Details</Button>
                     <Button size="sm">Approve</Button>
                     <Button size="sm" variant="destructive">Reject</Button>
                   </div>
@@ -248,6 +255,54 @@ export default function TerminationPage() {
             )}
           </CardContent>
         </Card>
+      )}
+
+      {selectedRequest && (
+        <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Request Details: {selectedRequest.id}</DialogTitle>
+              <DialogDescription>
+                Termination request for <strong>{selectedRequest.employeeName}</strong> (ZanID: {selectedRequest.zanId}).
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4 text-sm">
+               <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold pt-1">Reason Summary:</Label>
+                <p className="col-span-2">{selectedRequest.reasonSummary}</p>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold">Proposed Date:</Label>
+                <p className="col-span-2">{selectedRequest.proposedDate}</p>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold">Submitted:</Label>
+                <p className="col-span-2">{selectedRequest.submissionDate} by {selectedRequest.submittedBy}</p>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold">Status:</Label>
+                <p className="col-span-2 text-primary">{selectedRequest.status}</p>
+              </div>
+              <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold pt-1">Documents:</Label>
+                 <div className="col-span-2">
+                  {selectedRequest.documents && selectedRequest.documents.length > 0 ? (
+                    <ul className="list-disc pl-5 text-muted-foreground">
+                      {selectedRequest.documents.map((doc, index) => <li key={index}>{doc}</li>)}
+                    </ul>
+                  ) : (
+                    <p className="text-muted-foreground">No documents listed.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant="outline">Close</Button>
+              </DialogClose>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

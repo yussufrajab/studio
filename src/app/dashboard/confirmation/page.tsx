@@ -11,6 +11,7 @@ import React, { useState } from 'react';
 import type { Employee } from '@/lib/types';
 import { toast }  from '@/hooks/use-toast';
 import { Loader2, Search, FileText, CheckCircle, Award } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 
 interface MockPendingConfirmationRequest {
   id: string;
@@ -20,6 +21,7 @@ interface MockPendingConfirmationRequest {
   submissionDate: string;
   submittedBy: string;
   status: string;
+  documents?: string[];
 }
 
 const mockPendingConfirmationRequests: MockPendingConfirmationRequest[] = [
@@ -31,6 +33,7 @@ const mockPendingConfirmationRequests: MockPendingConfirmationRequest[] = [
     submissionDate: '2024-07-28',
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending HHRMD Review',
+    documents: ['Evaluation Form', 'IPA Certificate', 'Letter of Request'],
   },
   {
     id: 'CONF002',
@@ -40,6 +43,7 @@ const mockPendingConfirmationRequests: MockPendingConfirmationRequest[] = [
     submissionDate: '2024-07-27',
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending DO Review',
+    documents: ['Evaluation Form', 'IPA Certificate', 'Letter of Request'],
   },
 ];
 
@@ -54,6 +58,9 @@ export default function ConfirmationPage() {
   const [letterOfRequestFile, setLetterOfRequestFile] = useState<FileList | null>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [selectedRequest, setSelectedRequest] = useState<MockPendingConfirmationRequest | null>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
   const handleFetchEmployeeDetails = () => {
     if (!zanId) {
@@ -199,7 +206,7 @@ export default function ConfirmationPage() {
                   <p className="text-sm text-muted-foreground">Submitted: {request.submissionDate} by {request.submittedBy}</p>
                   <p className="text-sm"><span className="font-medium">Status:</span> <span className="text-primary">{request.status}</span></p>
                   <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-                    <Button size="sm" variant="outline">View Details</Button>
+                    <Button size="sm" variant="outline" onClick={() => { setSelectedRequest(request); setIsDetailsModalOpen(true); }}>View Details</Button>
                     <Button size="sm">Approve</Button>
                     <Button size="sm" variant="destructive">Reject</Button>
                   </div>
@@ -210,6 +217,50 @@ export default function ConfirmationPage() {
             )}
           </CardContent>
         </Card>
+      )}
+
+      {selectedRequest && (
+        <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Request Details: {selectedRequest.id}</DialogTitle>
+              <DialogDescription>
+                Confirmation request for <strong>{selectedRequest.employeeName}</strong> (ZanID: {selectedRequest.zanId}).
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4 text-sm">
+              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold">Department:</Label>
+                <p className="col-span-2">{selectedRequest.department}</p>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold">Submitted:</Label>
+                <p className="col-span-2">{selectedRequest.submissionDate} by {selectedRequest.submittedBy}</p>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold">Status:</Label>
+                <p className="col-span-2 text-primary">{selectedRequest.status}</p>
+              </div>
+              <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold pt-1">Documents:</Label>
+                <div className="col-span-2">
+                  {selectedRequest.documents && selectedRequest.documents.length > 0 ? (
+                    <ul className="list-disc pl-5 text-muted-foreground">
+                      {selectedRequest.documents.map((doc, index) => <li key={index}>{doc}</li>)}
+                    </ul>
+                  ) : (
+                    <p className="text-muted-foreground">No documents listed for this mock request.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant="outline">Close</Button>
+              </DialogClose>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

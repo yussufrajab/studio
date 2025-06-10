@@ -13,6 +13,7 @@ import type { Employee } from '@/lib/types';
 import { toast } from '@/hooks/use-toast';
 import { Loader2, Search, FileText, CalendarDays, Paperclip } from 'lucide-react';
 import { format } from 'date-fns';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 
 interface MockPendingResignationRequest {
   id: string;
@@ -23,6 +24,7 @@ interface MockPendingResignationRequest {
   submissionDate: string;
   submittedBy: string;
   status: string;
+  documents?: string[];
 }
 
 const mockPendingResignationRequests: MockPendingResignationRequest[] = [
@@ -35,15 +37,18 @@ const mockPendingResignationRequests: MockPendingResignationRequest[] = [
     submissionDate: '2024-07-20',
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending HHRMD Acknowledgement',
+    documents: ['Letter of Request', 'Supporting Document (Visa Copy)'],
   },
   {
     id: 'RESIGN002',
     employeeName: 'Hassan Mzee Juma',
     zanId: '445678912',
     effectiveDate: '2024-08-15',
+    reason: 'Pursuing further studies.',
     submissionDate: '2024-07-15',
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending DO Acknowledgement',
+    documents: ['Letter of Request'],
   },
 ];
 
@@ -60,6 +65,9 @@ export default function ResignationPage() {
   const [supportingDocumentFile, setSupportingDocumentFile] = useState<FileList | null>(null);
   const [letterOfRequestFile, setLetterOfRequestFile] = useState<FileList | null>(null);
   const [minEffectiveDate, setMinEffectiveDate] = useState('');
+
+  const [selectedRequest, setSelectedRequest] = useState<MockPendingResignationRequest | null>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
   useEffect(() => {
     setMinEffectiveDate(format(new Date(), 'yyyy-MM-dd'));
@@ -224,7 +232,7 @@ export default function ResignationPage() {
                   <p className="text-sm text-muted-foreground">Submitted: {request.submissionDate} by {request.submittedBy}</p>
                   <p className="text-sm"><span className="font-medium">Status:</span> <span className="text-primary">{request.status}</span></p>
                   <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-                    <Button size="sm" variant="outline">View Letter</Button>
+                    <Button size="sm" variant="outline" onClick={() => { setSelectedRequest(request); setIsDetailsModalOpen(true); }}>View Details</Button>
                     <Button size="sm">Acknowledge</Button>
                     <Button size="sm" variant="destructive">Flag Issue</Button>
                   </div>
@@ -235,6 +243,54 @@ export default function ResignationPage() {
             )}
           </CardContent>
         </Card>
+      )}
+
+      {selectedRequest && (
+        <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Request Details: {selectedRequest.id}</DialogTitle>
+              <DialogDescription>
+                Resignation request for <strong>{selectedRequest.employeeName}</strong> (ZanID: {selectedRequest.zanId}).
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4 text-sm">
+              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold">Effective Date:</Label>
+                <p className="col-span-2">{selectedRequest.effectiveDate}</p>
+              </div>
+               <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold pt-1">Reason:</Label>
+                <p className="col-span-2">{selectedRequest.reason || 'Not specified'}</p>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold">Submitted:</Label>
+                <p className="col-span-2">{selectedRequest.submissionDate} by {selectedRequest.submittedBy}</p>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold">Status:</Label>
+                <p className="col-span-2 text-primary">{selectedRequest.status}</p>
+              </div>
+              <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold pt-1">Documents:</Label>
+                 <div className="col-span-2">
+                  {selectedRequest.documents && selectedRequest.documents.length > 0 ? (
+                    <ul className="list-disc pl-5 text-muted-foreground">
+                      {selectedRequest.documents.map((doc, index) => <li key={index}>{doc}</li>)}
+                    </ul>
+                  ) : (
+                    <p className="text-muted-foreground">No documents listed.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant="outline">Close</Button>
+              </DialogClose>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

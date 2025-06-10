@@ -17,22 +17,23 @@ import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { toast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 
 const complaintSchema = z.object({
   complaintText: z.string().min(10, "Complaint text must be at least 10 characters."),
   category: z.string().optional(),
-  // evidence: typeof window === 'undefined' ? z.any() : z.instanceof(FileList).optional(), // File upload handling is complex for RSC, simplifying
 });
 
 interface MockPendingComplaint {
   id: string;
-  employeeName: string; // Can be "Anonymous" or employee name
-  zanId?: string; // Optional if anonymous or from external
+  employeeName: string; 
+  zanId?: string; 
   category: string;
   details: string;
   submissionDate: string;
-  submittedBy: string; // Could be "Employee Direct" or "HRO Forwarded"
+  submittedBy: string; 
   status: string;
+  documents?: string[]; // Assuming evidence files might be summarized here
 }
 
 const mockPendingComplaints: MockPendingComplaint[] = [
@@ -45,6 +46,7 @@ const mockPendingComplaints: MockPendingComplaint[] = [
     submissionDate: '2024-07-20',
     submittedBy: 'Fatma Said Omar (Employee)',
     status: 'Pending DO Review',
+    documents: ['Evidence_Screenshot.png', 'Criteria_Doc.pdf'],
   },
   {
     id: 'COMP002',
@@ -63,6 +65,9 @@ export default function ComplaintsPage() {
   const { role } = useAuth();
   const [rewrittenComplaint, setRewrittenComplaint] = useState<string | null>(null);
   const [isRewriting, setIsRewriting] = useState(false);
+
+  const [selectedRequest, setSelectedRequest] = useState<MockPendingComplaint | null>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
   const form = useForm<ComplaintFormValues>({
     resolver: zodResolver(complaintSchema),
@@ -83,7 +88,7 @@ export default function ComplaintsPage() {
     try {
       const result = await standardizeComplaintFormatting({ complaintText });
       setRewrittenComplaint(result.rewrittenComplaint);
-      form.setValue("complaintText", result.rewrittenComplaint); // Update form with rewritten text
+      form.setValue("complaintText", result.rewrittenComplaint); 
       toast({ title: "Complaint Standardized", description: "AI has rewritten your complaint for clarity and compliance." });
     } catch (error) {
       console.error("AI Rewrite Error:", error);
@@ -140,8 +145,8 @@ export default function ComplaintsPage() {
                   )}
                 />
                 <div>
-                  <Label htmlFor="evidence">Upload Evidence (Optional)</Label>
-                  <Input id="evidence" type="file" multiple />
+                  <Label htmlFor="evidence">Upload Evidence (Optional, PDF/Images)</Label>
+                  <Input id="evidence" type="file" multiple accept=".pdf,.png,.jpg,.jpeg"/>
                 </div>
                  <div className="flex space-x-2">
                   <Button type="button" variant="outline" onClick={handleStandardizeComplaint} disabled={isRewriting}>
@@ -184,7 +189,7 @@ export default function ComplaintsPage() {
                   <p className="text-sm mt-1"><strong>Details:</strong> {complaint.details}</p>
                   <p className="text-sm"><span className="font-medium">Status:</span> <span className="text-primary">{complaint.status}</span></p>
                   <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-                    <Button size="sm" variant="outline">View Details</Button>
+                    <Button size="sm" variant="outline" onClick={() => { setSelectedRequest(complaint); setIsDetailsModalOpen(true); }}>View Details</Button>
                     <Button size="sm">Resolve</Button>
                     <Button size="sm" variant="destructive">Reject</Button>
                   </div>
@@ -195,6 +200,54 @@ export default function ComplaintsPage() {
             )}
           </CardContent>
         </Card>
+      )}
+
+      {selectedRequest && (
+        <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Complaint Details: {selectedRequest.id}</DialogTitle>
+              <DialogDescription>
+                Complaint from <strong>{selectedRequest.employeeName}</strong> {selectedRequest.zanId ? `(ZanID: ${selectedRequest.zanId})` : '(Anonymous/External)'}.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4 text-sm">
+              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold">Category:</Label>
+                <p className="col-span-2">{selectedRequest.category}</p>
+              </div>
+               <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold pt-1">Details:</Label>
+                <p className="col-span-2">{selectedRequest.details}</p>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold">Submitted:</Label>
+                <p className="col-span-2">{selectedRequest.submissionDate} by {selectedRequest.submittedBy}</p>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold">Status:</Label>
+                <p className="col-span-2 text-primary">{selectedRequest.status}</p>
+              </div>
+              <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold pt-1">Evidence Files:</Label>
+                 <div className="col-span-2">
+                  {selectedRequest.documents && selectedRequest.documents.length > 0 ? (
+                    <ul className="list-disc pl-5 text-muted-foreground">
+                      {selectedRequest.documents.map((doc, index) => <li key={index}>{doc}</li>)}
+                    </ul>
+                  ) : (
+                    <p className="text-muted-foreground">No specific evidence files listed for this mock complaint.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant="outline">Close</Button>
+              </DialogClose>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

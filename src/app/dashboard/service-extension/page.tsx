@@ -12,6 +12,7 @@ import React, { useState } from 'react';
 import type { Employee } from '@/lib/types';
 import { toast } from '@/hooks/use-toast';
 import { Loader2, Search, FileText, CalendarDays, Paperclip } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 
 interface MockPendingServiceExtensionRequest {
   id: string;
@@ -23,6 +24,7 @@ interface MockPendingServiceExtensionRequest {
   submissionDate: string;
   submittedBy: string;
   status: string;
+  documents?: string[];
 }
 
 const mockPendingServiceExtensionRequests: MockPendingServiceExtensionRequest[] = [
@@ -36,6 +38,7 @@ const mockPendingServiceExtensionRequests: MockPendingServiceExtensionRequest[] 
     submissionDate: '2024-07-20',
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending HHRMD Review',
+    documents: ['Letter of Request', 'Project Completion Plan'],
   },
   {
     id: 'SEXT002',
@@ -47,6 +50,7 @@ const mockPendingServiceExtensionRequests: MockPendingServiceExtensionRequest[] 
     submissionDate: '2024-07-18',
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending DO Review',
+    documents: ['Letter of Request'],
   },
 ];
 
@@ -62,6 +66,9 @@ export default function ServiceExtensionPage() {
   const [justification, setJustification] = useState('');
   const [supportingDocumentsFile, setSupportingDocumentsFile] = useState<FileList | null>(null);
   const [letterOfRequestFile, setLetterOfRequestFile] = useState<FileList | null>(null);
+
+  const [selectedRequest, setSelectedRequest] = useState<MockPendingServiceExtensionRequest | null>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
   const resetFormFields = () => {
     setCurrentRetirementDate('');
@@ -231,7 +238,7 @@ export default function ServiceExtensionPage() {
                   <p className="text-sm text-muted-foreground">Submitted: {request.submissionDate} by {request.submittedBy}</p>
                   <p className="text-sm"><span className="font-medium">Status:</span> <span className="text-primary">{request.status}</span></p>
                   <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-                    <Button size="sm" variant="outline">View Details</Button>
+                    <Button size="sm" variant="outline" onClick={() => { setSelectedRequest(request); setIsDetailsModalOpen(true); }}>View Details</Button>
                     <Button size="sm">Approve</Button>
                     <Button size="sm" variant="destructive">Reject</Button>
                   </div>
@@ -242,6 +249,58 @@ export default function ServiceExtensionPage() {
             )}
           </CardContent>
         </Card>
+      )}
+
+      {selectedRequest && (
+        <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Request Details: {selectedRequest.id}</DialogTitle>
+              <DialogDescription>
+                Service Extension request for <strong>{selectedRequest.employeeName}</strong> (ZanID: {selectedRequest.zanId}).
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4 text-sm">
+              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold">Current Retirement:</Label>
+                <p className="col-span-2">{selectedRequest.currentRetirementDate}</p>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold">Extension Period:</Label>
+                <p className="col-span-2">{selectedRequest.requestedExtensionPeriod}</p>
+              </div>
+              <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold pt-1">Justification:</Label>
+                <p className="col-span-2">{selectedRequest.justification}</p>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold">Submitted:</Label>
+                <p className="col-span-2">{selectedRequest.submissionDate} by {selectedRequest.submittedBy}</p>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold">Status:</Label>
+                <p className="col-span-2 text-primary">{selectedRequest.status}</p>
+              </div>
+              <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold pt-1">Documents:</Label>
+                 <div className="col-span-2">
+                  {selectedRequest.documents && selectedRequest.documents.length > 0 ? (
+                    <ul className="list-disc pl-5 text-muted-foreground">
+                      {selectedRequest.documents.map((doc, index) => <li key={index}>{doc}</li>)}
+                    </ul>
+                  ) : (
+                    <p className="text-muted-foreground">No supporting documents listed.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant="outline">Close</Button>
+              </DialogClose>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

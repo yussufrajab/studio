@@ -13,6 +13,7 @@ import React, { useState } from 'react';
 import type { Employee } from '@/lib/types';
 import { toast } from '@/hooks/use-toast';
 import { Loader2, Search, FileText, Award, ChevronsUpDown } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 
 interface MockPendingCadreChangeRequest {
   id: string;
@@ -23,6 +24,9 @@ interface MockPendingCadreChangeRequest {
   submissionDate: string;
   submittedBy: string;
   status: string;
+  reason?: string;
+  documents?: string[];
+  studiedOutsideCountry?: boolean;
 }
 
 const mockPendingCadreChangeRequests: MockPendingCadreChangeRequest[] = [
@@ -35,6 +39,9 @@ const mockPendingCadreChangeRequests: MockPendingCadreChangeRequest[] = [
     submissionDate: '2024-07-29',
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending HHRMD Review',
+    reason: "Completed Masters in Public Admin and has 5 years experience.",
+    documents: ['Certificate (Masters)', 'Letter of Request'],
+    studiedOutsideCountry: false,
   },
   {
     id: 'CADRE002',
@@ -45,6 +52,9 @@ const mockPendingCadreChangeRequests: MockPendingCadreChangeRequest[] = [
     submissionDate: '2024-07-27',
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending DO Review',
+    reason: "Obtained professional certification in Training and Development from recognized institution abroad.",
+    documents: ['Professional Certificate', 'TCU Form', 'Letter of Request'],
+    studiedOutsideCountry: true,
   },
 ];
 
@@ -62,6 +72,9 @@ export default function CadreChangePage() {
   const [studiedOutsideCountry, setStudiedOutsideCountry] = useState(false);
   const [tcuFormFile, setTcuFormFile] = useState<FileList | null>(null);
   const [letterOfRequestFile, setLetterOfRequestFile] = useState<FileList | null>(null);
+
+  const [selectedRequest, setSelectedRequest] = useState<MockPendingCadreChangeRequest | null>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
   const resetFormFields = () => {
     setNewCadre('');
@@ -242,7 +255,7 @@ export default function CadreChangePage() {
                   <p className="text-sm text-muted-foreground">Submitted: {request.submissionDate} by {request.submittedBy}</p>
                   <p className="text-sm"><span className="font-medium">Status:</span> <span className="text-primary">{request.status}</span></p>
                   <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-                    <Button size="sm" variant="outline">View Details</Button>
+                    <Button size="sm" variant="outline" onClick={() => { setSelectedRequest(request); setIsDetailsModalOpen(true); }}>View Details</Button>
                     <Button size="sm">Approve</Button>
                     <Button size="sm" variant="destructive">Reject</Button>
                   </div>
@@ -253,6 +266,62 @@ export default function CadreChangePage() {
             )}
           </CardContent>
         </Card>
+      )}
+
+      {selectedRequest && (
+        <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Request Details: {selectedRequest.id}</DialogTitle>
+              <DialogDescription>
+                Change of Cadre request for <strong>{selectedRequest.employeeName}</strong> (ZanID: {selectedRequest.zanId}).
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4 text-sm">
+              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold">Current Cadre:</Label>
+                <p className="col-span-2">{selectedRequest.currentCadre}</p>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold">New Cadre:</Label>
+                <p className="col-span-2">{selectedRequest.newCadre}</p>
+              </div>
+              <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold pt-1">Reason:</Label>
+                <p className="col-span-2">{selectedRequest.reason || 'Not specified'}</p>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold">Studied Outside?:</Label>
+                <p className="col-span-2">{selectedRequest.studiedOutsideCountry ? 'Yes' : 'No'}</p>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold">Submitted:</Label>
+                <p className="col-span-2">{selectedRequest.submissionDate} by {selectedRequest.submittedBy}</p>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold">Status:</Label>
+                <p className="col-span-2 text-primary">{selectedRequest.status}</p>
+              </div>
+              <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold pt-1">Documents:</Label>
+                 <div className="col-span-2">
+                  {selectedRequest.documents && selectedRequest.documents.length > 0 ? (
+                    <ul className="list-disc pl-5 text-muted-foreground">
+                      {selectedRequest.documents.map((doc, index) => <li key={index}>{doc}</li>)}
+                    </ul>
+                  ) : (
+                    <p className="text-muted-foreground">No documents listed.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant="outline">Close</Button>
+              </DialogClose>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

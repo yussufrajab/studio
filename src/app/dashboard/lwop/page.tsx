@@ -12,6 +12,7 @@ import React, { useState } from 'react';
 import type { Employee } from '@/lib/types';
 import { toast } from '@/hooks/use-toast';
 import { Loader2, Search, FileText } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 
 interface MockPendingLWOPRequest {
   id: string;
@@ -22,6 +23,7 @@ interface MockPendingLWOPRequest {
   submissionDate: string;
   submittedBy: string;
   status: string;
+  documents?: string[];
 }
 
 const mockPendingLWOPRequests: MockPendingLWOPRequest[] = [
@@ -34,6 +36,7 @@ const mockPendingLWOPRequests: MockPendingLWOPRequest[] = [
     submissionDate: '2024-07-25',
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending HHRMD Review',
+    documents: ['Letter of Request'],
   },
   {
     id: 'LWOP002',
@@ -44,6 +47,7 @@ const mockPendingLWOPRequests: MockPendingLWOPRequest[] = [
     submissionDate: '2024-07-22',
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending DO Review',
+    documents: ['Letter of Request'],
   },
 ];
 
@@ -58,6 +62,9 @@ export default function LwopPage() {
   const [reason, setReason] = useState('');
   const [letterOfRequestFile, setLetterOfRequestFile] = useState<FileList | null>(null);
 
+  const [selectedRequest, setSelectedRequest] = useState<MockPendingLWOPRequest | null>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+
   const handleFetchEmployeeDetails = () => {
     if (!zanId) {
       toast({ title: "ZanID Required", description: "Please enter an employee's ZanID.", variant: "destructive" });
@@ -65,7 +72,6 @@ export default function LwopPage() {
     }
     setIsFetchingEmployee(true);
     setEmployeeDetails(null);
-    // Reset form fields when fetching new employee
     setDuration('');
     setReason('');
     setLetterOfRequestFile(null);
@@ -108,7 +114,6 @@ export default function LwopPage() {
     });
     setTimeout(() => {
       toast({ title: "LWOP Request Submitted", description: `LWOP request for ${employeeDetails.name} submitted successfully.` });
-      // Reset all fields
       setZanId('');
       setEmployeeDetails(null);
       setDuration('');
@@ -200,7 +205,7 @@ export default function LwopPage() {
                   <p className="text-sm text-muted-foreground">Submitted: {request.submissionDate} by {request.submittedBy}</p>
                   <p className="text-sm"><span className="font-medium">Status:</span> <span className="text-primary">{request.status}</span></p>
                   <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-                    <Button size="sm" variant="outline">View Details</Button>
+                    <Button size="sm" variant="outline" onClick={() => { setSelectedRequest(request); setIsDetailsModalOpen(true); }}>View Details</Button>
                     <Button size="sm">Approve</Button>
                     <Button size="sm" variant="destructive">Reject</Button>
                   </div>
@@ -212,7 +217,54 @@ export default function LwopPage() {
           </CardContent>
         </Card>
       )}
+
+      {selectedRequest && (
+        <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Request Details: {selectedRequest.id}</DialogTitle>
+              <DialogDescription>
+                LWOP request for <strong>{selectedRequest.employeeName}</strong> (ZanID: {selectedRequest.zanId}).
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4 text-sm">
+              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold">Duration:</Label>
+                <p className="col-span-2">{selectedRequest.duration}</p>
+              </div>
+               <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold pt-1">Reason:</Label>
+                <p className="col-span-2">{selectedRequest.reason}</p>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold">Submitted:</Label>
+                <p className="col-span-2">{selectedRequest.submissionDate} by {selectedRequest.submittedBy}</p>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold">Status:</Label>
+                <p className="col-span-2 text-primary">{selectedRequest.status}</p>
+              </div>
+              <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold pt-1">Documents:</Label>
+                 <div className="col-span-2">
+                  {selectedRequest.documents && selectedRequest.documents.length > 0 ? (
+                    <ul className="list-disc pl-5 text-muted-foreground">
+                      {selectedRequest.documents.map((doc, index) => <li key={index}>{doc}</li>)}
+                    </ul>
+                  ) : (
+                    <p className="text-muted-foreground">No documents listed.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant="outline">Close</Button>
+              </DialogClose>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
-    

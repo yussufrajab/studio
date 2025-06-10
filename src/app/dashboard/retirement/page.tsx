@@ -13,6 +13,7 @@ import type { Employee } from '@/lib/types';
 import { toast } from '@/hooks/use-toast';
 import { Loader2, Search, FileText, CalendarDays, ListFilter, Stethoscope, ClipboardCheck } from 'lucide-react';
 import { addMonths, format, isBefore } from 'date-fns';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 
 interface MockPendingRetirementRequest {
   id: string;
@@ -23,28 +24,42 @@ interface MockPendingRetirementRequest {
   submissionDate: string;
   submittedBy: string;
   status: string;
+  documents?: string[];
 }
 
 const mockPendingRetirementRequests: MockPendingRetirementRequest[] = [
   {
     id: 'RETIRE001',
-    employeeName: 'Hamid Khalfan Abdalla', // Assuming he is nearing retirement based on mock data
+    employeeName: 'Hamid Khalfan Abdalla', 
     zanId: '778901234',
     retirementType: 'Compulsory (Age 60)',
     proposedDate: '2025-03-25',
     submissionDate: '2024-07-30',
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending HHRMD Review',
+    documents: ['Letter of Request'],
   },
   {
     id: 'RETIRE002',
-    employeeName: 'Juma Omar Ali', // Assuming voluntary retirement
+    employeeName: 'Juma Omar Ali', 
     zanId: '667890456',
     retirementType: 'Voluntary (Age 55+)',
     proposedDate: '2025-06-18',
     submissionDate: '2024-07-28',
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending DO Review',
+    documents: ['Letter of Request'],
+  },
+  {
+    id: 'RETIRE003',
+    employeeName: 'Asha Juma Khalfan', 
+    zanId: 'ASHA_ZANID_PLACEHOLDER', // Placeholder ZanID for mock
+    retirementType: 'Illness',
+    proposedDate: '2025-01-15',
+    submissionDate: '2024-07-22',
+    submittedBy: 'K. Mnyonge (HRO)',
+    status: 'Pending HHRMD Review',
+    documents: ['Medical Form', 'Leave Due to Illness Letter', 'Letter of Request'],
   },
 ];
 
@@ -63,8 +78,10 @@ export default function RetirementPage() {
   const [letterOfRequestFile, setLetterOfRequestFile] = useState<FileList | null>(null);
   const [minRetirementDate, setMinRetirementDate] = useState('');
 
+  const [selectedRequest, setSelectedRequest] = useState<MockPendingRetirementRequest | null>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+
   useEffect(() => {
-    // Set min retirement date to 6 months from today
     const sixMonthsFromNow = addMonths(new Date(), 6);
     setMinRetirementDate(format(sixMonthsFromNow, 'yyyy-MM-dd'));
   }, []);
@@ -110,9 +127,9 @@ export default function RetirementPage() {
       return;
     }
 
-    const proposedDate = new Date(retirementDate + "T00:00:00"); // Ensure it's start of day for comparison
+    const proposedDate = new Date(retirementDate + "T00:00:00"); 
     const sixMonthsFromToday = addMonths(new Date(), 6);
-    sixMonthsFromToday.setHours(0, 0, 0, 0); // Normalize to start of day
+    sixMonthsFromToday.setHours(0, 0, 0, 0); 
 
     if (isBefore(proposedDate, sixMonthsFromToday)) {
       toast({ title: "Submission Error", description: "Proposed retirement date must be at least 6 months from today.", variant: "destructive" });
@@ -275,7 +292,7 @@ export default function RetirementPage() {
                   <p className="text-sm text-muted-foreground">Submitted: {request.submissionDate} by {request.submittedBy}</p>
                   <p className="text-sm"><span className="font-medium">Status:</span> <span className="text-primary">{request.status}</span></p>
                   <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-                    <Button size="sm" variant="outline">View Details</Button>
+                    <Button size="sm" variant="outline" onClick={() => { setSelectedRequest(request); setIsDetailsModalOpen(true); }}>View Details</Button>
                     <Button size="sm">Approve</Button>
                     <Button size="sm" variant="destructive">Reject</Button>
                   </div>
@@ -286,6 +303,54 @@ export default function RetirementPage() {
             )}
           </CardContent>
         </Card>
+      )}
+
+      {selectedRequest && (
+        <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Request Details: {selectedRequest.id}</DialogTitle>
+              <DialogDescription>
+                Retirement request for <strong>{selectedRequest.employeeName}</strong> (ZanID: {selectedRequest.zanId}).
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4 text-sm">
+              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold">Retirement Type:</Label>
+                <p className="col-span-2">{selectedRequest.retirementType}</p>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold">Proposed Date:</Label>
+                <p className="col-span-2">{selectedRequest.proposedDate}</p>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold">Submitted:</Label>
+                <p className="col-span-2">{selectedRequest.submissionDate} by {selectedRequest.submittedBy}</p>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold">Status:</Label>
+                <p className="col-span-2 text-primary">{selectedRequest.status}</p>
+              </div>
+              <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold pt-1">Documents:</Label>
+                 <div className="col-span-2">
+                  {selectedRequest.documents && selectedRequest.documents.length > 0 ? (
+                    <ul className="list-disc pl-5 text-muted-foreground">
+                      {selectedRequest.documents.map((doc, index) => <li key={index}>{doc}</li>)}
+                    </ul>
+                  ) : (
+                    <p className="text-muted-foreground">No documents listed.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant="outline">Close</Button>
+              </DialogClose>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

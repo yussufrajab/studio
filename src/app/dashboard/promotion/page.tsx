@@ -12,6 +12,7 @@ import React, { useState } from 'react';
 import type { Employee } from '@/lib/types';
 import { toast } from '@/hooks/use-toast';
 import { Loader2, Search, FileText, Award, ChevronsUpDown } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 
 interface MockPendingPromotionRequest {
   id: string;
@@ -22,6 +23,8 @@ interface MockPendingPromotionRequest {
   submissionDate: string;
   submittedBy: string;
   status: string;
+  documents?: string[];
+  studiedOutsideCountry?: boolean;
 }
 
 const mockPendingPromotionRequests: MockPendingPromotionRequest[] = [
@@ -34,6 +37,8 @@ const mockPendingPromotionRequests: MockPendingPromotionRequest[] = [
     submissionDate: '2024-07-29',
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending HHRMD Review',
+    documents: ['Performance Appraisal Form', 'Certificate', 'Letter of Request'],
+    studiedOutsideCountry: false,
   },
   {
     id: 'PROM002',
@@ -44,6 +49,8 @@ const mockPendingPromotionRequests: MockPendingPromotionRequest[] = [
     submissionDate: '2024-07-26',
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending DO Review',
+    documents: ['Performance Appraisal Form', 'Certificate (Masters)', 'TCU Form', 'Letter of Request'],
+    studiedOutsideCountry: true,
   },
 ];
 
@@ -61,6 +68,9 @@ export default function PromotionPage() {
   const [tcuFormFile, setTcuFormFile] = useState<FileList | null>(null);
   const [letterOfRequestFile, setLetterOfRequestFile] = useState<FileList | null>(null);
 
+  const [selectedRequest, setSelectedRequest] = useState<MockPendingPromotionRequest | null>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+
   const resetFormFields = () => {
     setProposedCadre('');
     setPerformanceAppraisalFile(null);
@@ -68,9 +78,10 @@ export default function PromotionPage() {
     setStudiedOutsideCountry(false);
     setTcuFormFile(null);
     setLetterOfRequestFile(null);
-    // Clear file input values
     const fileInputs = document.querySelectorAll('input[type="file"]');
     fileInputs.forEach(input => (input as HTMLInputElement).value = '');
+    const checkboxInput = document.getElementById('studiedOutsideCountry') as HTMLInputElement;
+    if (checkboxInput) checkboxInput.checked = false;
   };
 
   const handleFetchEmployeeDetails = () => {
@@ -240,7 +251,7 @@ export default function PromotionPage() {
                   <p className="text-sm text-muted-foreground">Submitted: {request.submissionDate} by {request.submittedBy}</p>
                   <p className="text-sm"><span className="font-medium">Status:</span> <span className="text-primary">{request.status}</span></p>
                   <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-                    <Button size="sm" variant="outline">View Details</Button>
+                    <Button size="sm" variant="outline" onClick={() => { setSelectedRequest(request); setIsDetailsModalOpen(true); }}>View Details</Button>
                     <Button size="sm">Approve</Button>
                     <Button size="sm" variant="destructive">Reject</Button>
                   </div>
@@ -252,8 +263,58 @@ export default function PromotionPage() {
           </CardContent>
         </Card>
       )}
+
+      {selectedRequest && (
+        <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Request Details: {selectedRequest.id}</DialogTitle>
+              <DialogDescription>
+                Promotion request for <strong>{selectedRequest.employeeName}</strong> (ZanID: {selectedRequest.zanId}).
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4 text-sm">
+              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold">Current Cadre:</Label>
+                <p className="col-span-2">{selectedRequest.currentCadre}</p>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold">Proposed Cadre:</Label>
+                <p className="col-span-2">{selectedRequest.proposedCadre}</p>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold">Studied Outside?:</Label>
+                <p className="col-span-2">{selectedRequest.studiedOutsideCountry ? 'Yes' : 'No'}</p>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold">Submitted:</Label>
+                <p className="col-span-2">{selectedRequest.submissionDate} by {selectedRequest.submittedBy}</p>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold">Status:</Label>
+                <p className="col-span-2 text-primary">{selectedRequest.status}</p>
+              </div>
+              <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold pt-1">Documents:</Label>
+                 <div className="col-span-2">
+                  {selectedRequest.documents && selectedRequest.documents.length > 0 ? (
+                    <ul className="list-disc pl-5 text-muted-foreground">
+                      {selectedRequest.documents.map((doc, index) => <li key={index}>{doc}</li>)}
+                    </ul>
+                  ) : (
+                    <p className="text-muted-foreground">No documents listed.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant="outline">Close</Button>
+              </DialogClose>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
-    
-    
