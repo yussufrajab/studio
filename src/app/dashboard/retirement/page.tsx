@@ -33,7 +33,7 @@ const mockPendingRetirementRequests: MockPendingRetirementRequest[] = [
     retirementType: 'Compulsory (Age 60)',
     proposedDate: '2025-03-25',
     submissionDate: '2024-07-30',
-    submittedBy: 'A. Juma (HRO)',
+    submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending HHRMD Review',
   },
   {
@@ -43,7 +43,7 @@ const mockPendingRetirementRequests: MockPendingRetirementRequest[] = [
     retirementType: 'Voluntary (Age 55+)',
     proposedDate: '2025-06-18',
     submissionDate: '2024-07-28',
-    submittedBy: 'A. Juma (HRO)',
+    submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending DO Review',
   },
 ];

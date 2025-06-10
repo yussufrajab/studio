@@ -32,7 +32,7 @@ const mockPendingLWOPRequests: MockPendingLWOPRequest[] = [
     duration: '6 Months',
     reason: 'Further studies abroad.',
     submissionDate: '2024-07-25',
-    submittedBy: 'A. Juma (HRO)',
+    submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending HHRMD Review',
   },
   {
@@ -42,7 +42,7 @@ const mockPendingLWOPRequests: MockPendingLWOPRequest[] = [
     duration: '1 Year',
     reason: 'Personal family matters requiring extended leave.',
     submissionDate: '2024-07-22',
-    submittedBy: 'A. Juma (HRO)',
+    submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending DO Review',
   },
 ];

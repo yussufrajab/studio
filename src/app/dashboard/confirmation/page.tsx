@@ -29,7 +29,7 @@ const mockPendingConfirmationRequests: MockPendingConfirmationRequest[] = [
     zanId: '221458232',
     department: 'Administration',
     submissionDate: '2024-07-28',
-    submittedBy: 'A. Juma (HRO)',
+    submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending HHRMD Review',
   },
   {
@@ -38,7 +38,7 @@ const mockPendingConfirmationRequests: MockPendingConfirmationRequest[] = [
     zanId: '125468957',
     department: 'Human Resources',
     submissionDate: '2024-07-27',
-    submittedBy: 'A. Juma (HRO)',
+    submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending DO Review',
   },
 ];

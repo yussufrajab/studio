@@ -33,7 +33,7 @@ const mockPendingResignationRequests: MockPendingResignationRequest[] = [
     effectiveDate: '2024-09-30',
     reason: 'Relocating to another country.',
     submissionDate: '2024-07-20',
-    submittedBy: 'A. Juma (HRO)',
+    submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending HHRMD Acknowledgement',
   },
   {
@@ -42,7 +42,7 @@ const mockPendingResignationRequests: MockPendingResignationRequest[] = [
     zanId: '445678912',
     effectiveDate: '2024-08-15',
     submissionDate: '2024-07-15',
-    submittedBy: 'A. Juma (HRO)',
+    submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending DO Acknowledgement',
   },
 ];

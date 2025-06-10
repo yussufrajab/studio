@@ -33,7 +33,7 @@ const mockPendingTerminationRequests: MockPendingTerminationRequest[] = [
     reasonSummary: 'Repeated unauthorized absence and failure to perform duties.',
     proposedDate: '2024-09-01',
     submissionDate: '2024-07-25',
-    submittedBy: 'A. Juma (HRO)',
+    submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending DO Review',
   },
   {
@@ -43,7 +43,7 @@ const mockPendingTerminationRequests: MockPendingTerminationRequest[] = [
     reasonSummary: 'Gross misconduct: Violation of code of conduct (details in report).',
     proposedDate: '2024-08-20',
     submissionDate: '2024-07-22',
-    submittedBy: 'A. Juma (HRO)',
+    submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending HHRMD Review',
   },
 ];

@@ -33,7 +33,7 @@ const mockPendingDismissalRequests: MockPendingDismissalRequest[] = [
     reasonSummary: 'Failure to meet performance standards during probation period.',
     proposedDate: '2024-08-15',
     submissionDate: '2024-07-29',
-    submittedBy: 'A. Juma (HRO)',
+    submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending DO Review',
   },
 ];

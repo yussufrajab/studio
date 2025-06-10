@@ -32,7 +32,7 @@ const mockPendingPromotionRequests: MockPendingPromotionRequest[] = [
     currentCadre: 'Planning Officer',
     proposedCadre: 'Senior Planning Officer',
     submissionDate: '2024-07-29',
-    submittedBy: 'A. Juma (HRO)',
+    submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending HHRMD Review',
   },
   {
@@ -42,7 +42,7 @@ const mockPendingPromotionRequests: MockPendingPromotionRequest[] = [
     currentCadre: 'Procurement Officer',
     proposedCadre: 'Principal Procurement Officer',
     submissionDate: '2024-07-26',
-    submittedBy: 'A. Juma (HRO)',
+    submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending DO Review',
   },
 ];

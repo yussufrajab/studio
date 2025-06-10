@@ -34,7 +34,7 @@ const mockPendingServiceExtensionRequests: MockPendingServiceExtensionRequest[] 
     requestedExtensionPeriod: '1 Year',
     justification: 'Critical project completion, possesses unique skills.',
     submissionDate: '2024-07-20',
-    submittedBy: 'A. Juma (HRO)',
+    submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending HHRMD Review',
   },
   {
@@ -45,7 +45,7 @@ const mockPendingServiceExtensionRequests: MockPendingServiceExtensionRequest[] 
     requestedExtensionPeriod: '6 Months',
     justification: 'To mentor and handover duties to a new Principal Officer.',
     submissionDate: '2024-07-18',
-    submittedBy: 'A. Juma (HRO)',
+    submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending DO Review',
   },
 ];

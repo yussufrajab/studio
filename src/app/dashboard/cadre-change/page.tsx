@@ -33,7 +33,7 @@ const mockPendingCadreChangeRequests: MockPendingCadreChangeRequest[] = [
     currentCadre: 'Administrative Officer',
     newCadre: 'Senior Administrative Officer',
     submissionDate: '2024-07-29',
-    submittedBy: 'A. Juma (HRO)',
+    submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending HHRMD Review',
   },
   {
@@ -43,7 +43,7 @@ const mockPendingCadreChangeRequests: MockPendingCadreChangeRequest[] = [
     currentCadre: 'HR Officer',
     newCadre: 'HR Specialist (Training)',
     submissionDate: '2024-07-27',
-    submittedBy: 'A. Juma (HRO)',
+    submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending DO Review',
   },
 ];
