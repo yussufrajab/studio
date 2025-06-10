@@ -1,3 +1,4 @@
+
 'use client';
 
 import { PageHeader } from '@/components/shared/page-header';
@@ -7,6 +8,7 @@ import { getNavItemsForRole } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ROLES } from '@/lib/constants'; // Added import for ROLES
 
 export default function DashboardPage() {
   const { user, role, isLoading } = useAuth();
@@ -41,25 +43,33 @@ export default function DashboardPage() {
         description={`Your ${role} dashboard. Access your modules below.`}
       />
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {roleNavItems.map((item) => (
-          <Link href={item.href} key={item.href} passHref legacyBehavior>
-            <a className="block hover:no-underline">
-              <Card className="h-full hover:shadow-lg transition-shadow duration-200 ease-in-out hover:border-primary">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-lg font-medium font-headline">
-                    {item.title}
-                  </CardTitle>
-                  <item.icon className="h-6 w-6 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    {item.description || `Manage ${item.title.toLowerCase()}.`}
-                  </p>
-                </CardContent>
-              </Card>
-            </a>
-          </Link>
-        ))}
+        {roleNavItems.map((item) => {
+          let description = item.description || `Manage ${item.title.toLowerCase()}.`;
+          // Conditional description for Complaints module for DO role
+          if (item.href === '/dashboard/complaints' && role === ROLES.DO) {
+            description = 'View and Manage employee complaints.';
+          }
+
+          return (
+            <Link href={item.href} key={item.href} passHref legacyBehavior>
+              <a className="block hover:no-underline">
+                <Card className="h-full hover:shadow-lg transition-shadow duration-200 ease-in-out hover:border-primary">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-lg font-medium font-headline">
+                      {item.title}
+                    </CardTitle>
+                    <item.icon className="h-6 w-6 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                      {description}
+                    </p>
+                  </CardContent>
+                </Card>
+              </a>
+            </Link>
+          );
+        })}
         {roleNavItems.length === 0 && (
           <Card>
             <CardHeader>
