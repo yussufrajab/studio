@@ -48,7 +48,7 @@ export default function TrackStatusPage() {
   const [searchAttempted, setSearchAttempted] = useState(false);
   const [foundRequests, setFoundRequests] = useState<MockRequest[]>([]);
 
-  const canAccessModule = role === ROLES.HRO || role === ROLES.HHRMD || role === ROLES.HRMO;
+  const canAccessModule = role === ROLES.HRO || role === ROLES.HHRMD || role === ROLES.HRMO || role === ROLES.DO;
 
   const handleSearchRequests = () => {
     if (!zanId.trim()) {

@@ -25,7 +25,7 @@ export default function ProfilePage() {
   const [searchType, setSearchType] = useState<'zanId' | 'zssfNumber' | 'payrollNumber'>('zanId');
   const [isSearching, setIsSearching] = useState(false);
 
-  const canSearch = role === ROLES.HRO || role === ROLES.HHRMD || role === ROLES.HRMO;
+  const canSearch = role === ROLES.HRO || role === ROLES.HHRMD || role === ROLES.HRMO || role === ROLES.DO;
 
   useEffect(() => {
     setPageLoading(true);
@@ -37,7 +37,7 @@ export default function ProfilePage() {
           toast({ title: "Profile Not Found", description: "Your employee profile could not be loaded. Please contact HR.", variant: "destructive" });
         }
       } else if (canSearch) {
-        setProfileData(null); // HRO, HHRMD, HRMO must search
+        setProfileData(null); // HRO, HHRMD, HRMO, DO must search
       }
     }
     setPageLoading(false);
@@ -262,7 +262,7 @@ export default function ProfilePage() {
         )
       )}
       
-      {canSearch && !isSearching && !profileData && searchTerm && ( // HRO/HHRMD/HRMO searched but no result
+      {canSearch && !isSearching && !profileData && searchTerm && ( // HRO/HHRMD/HRMO/DO searched but no result
          <Card className="mt-6">
             <CardHeader>
               <CardTitle>No Results</CardTitle>

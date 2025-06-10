@@ -34,28 +34,28 @@ export const NAV_ITEMS: NavItem[] = [
     title: 'Employee Profiles',
     href: '/dashboard/profile',
     icon: UserCog,
-    roles: [ROLES.HRO, ROLES.EMPLOYEE, ROLES.HHRMD, ROLES.HRMO],
+    roles: [ROLES.HRO, ROLES.EMPLOYEE, ROLES.HHRMD, ROLES.HRMO, ROLES.DO],
     description: 'View and manage employee profile information.',
   },
   {
     title: 'Employee Confirmation',
     href: '/dashboard/confirmation',
     icon: UserCheck,
-    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO], // DO Removed
+    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO],
     description: 'Manage employee confirmation processes.',
   },
   {
     title: 'Leave Without Pay (LWOP)',
     href: '/dashboard/lwop',
     icon: CalendarOff,
-    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO], // DO Removed
+    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO],
     description: 'Process and manage LWOP requests for employees.',
   },
   {
     title: 'Promotion',
     href: '/dashboard/promotion',
     icon: TrendingUp,
-    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO], // DO Removed
+    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO],
     description: 'Handle employee promotion applications and approvals.',
   },
   {
@@ -69,28 +69,28 @@ export const NAV_ITEMS: NavItem[] = [
     title: 'Change of Cadre',
     href: '/dashboard/cadre-change',
     icon: Replace,
-    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO], // DO Removed
+    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO],
     description: 'Manage requests for change of employee cadre.',
   },
   {
     title: 'Retirement',
     href: '/dashboard/retirement',
     icon: UserMinus,
-    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO], // DO Removed
+    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO],
     description: 'Process employee retirement applications.',
   },
   {
     title: 'Resignation',
     href: '/dashboard/resignation',
     icon: UserX, 
-    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO], // DO Removed
+    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO],
     description: 'Handle employee resignation submissions.',
   },
   {
     title: 'Service Extension',
     href: '/dashboard/service-extension',
     icon: CalendarPlus,
-    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO], // DO Removed
+    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO],
     description: 'Manage requests for employee service extensions.',
   },
   {
@@ -111,7 +111,7 @@ export const NAV_ITEMS: NavItem[] = [
     title: 'Track Status',
     href: '/dashboard/track-status',
     icon: ListChecks,
-    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO],
+    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO, ROLES.DO],
     description: 'Track the status of your submitted requests.',
   },
   {
@@ -125,7 +125,7 @@ export const NAV_ITEMS: NavItem[] = [
     title: 'Audit Trail',
     href: '/dashboard/audit-trail',
     icon: ClipboardList,
-    roles: [ROLES.HRO], // HHRMD, HRMO, DO Removed
+    roles: [ROLES.HRO],
     disabled: true, 
     description: 'View a log of system activities and changes (coming soon).',
   },
