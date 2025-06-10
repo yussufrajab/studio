@@ -208,7 +208,7 @@ export default function ResignationPage() {
           )}
         </Card>
       )}
-      {(role === ROLES.HHRMD_HRMO || role === ROLES.DO) && (
+      {(role === ROLES.HHRMD || role === ROLES.HRMO || role === ROLES.DO) && (
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Review Resignation Requests</CardTitle>
@@ -239,4 +239,3 @@ export default function ResignationPage() {
     </div>
   );
 }
-

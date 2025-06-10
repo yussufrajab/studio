@@ -46,7 +46,7 @@ export default function DashboardPage() {
         {roleNavItems.map((item) => {
           let description = item.description || `Manage ${item.title.toLowerCase()}.`;
           // Conditional description for Complaints module for roles that manage complaints
-          if (item.href === '/dashboard/complaints' && (role === ROLES.DO || role === ROLES.HHRMD_HRMO)) {
+          if (item.href === '/dashboard/complaints' && (role === ROLES.DO || role === ROLES.HHRMD)) {
             description = 'View and Manage employee complaints.';
           }
 
@@ -115,4 +115,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-

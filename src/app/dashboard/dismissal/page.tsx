@@ -233,7 +233,7 @@ export default function DismissalPage() {
           )}
         </Card>
       )}
-      {(role === ROLES.DO || role === ROLES.HHRMD_HRMO ) && (
+      {(role === ROLES.DO || role === ROLES.HHRMD ) && (
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Review Dismissal Requests</CardTitle>
@@ -264,6 +264,3 @@ export default function DismissalPage() {
     </div>
   );
 }
-
-
-    

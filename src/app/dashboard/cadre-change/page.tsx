@@ -226,7 +226,7 @@ export default function CadreChangePage() {
           )}
         </Card>
       )}
-      {(role === ROLES.HHRMD_HRMO || role === ROLES.DO) && (
+      {(role === ROLES.HHRMD || role === ROLES.HRMO || role === ROLES.DO) && (
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Review Cadre Change Requests</CardTitle>
@@ -257,4 +257,3 @@ export default function CadreChangePage() {
     </div>
   );
 }
-

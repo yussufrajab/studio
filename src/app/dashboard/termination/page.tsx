@@ -221,7 +221,7 @@ export default function TerminationPage() {
           )}
         </Card>
       )}
-      {(role === ROLES.DO || role === ROLES.HHRMD_HRMO ) && (
+      {(role === ROLES.DO || role === ROLES.HHRMD ) && (
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Review Termination Requests</CardTitle>
@@ -252,5 +252,3 @@ export default function TerminationPage() {
     </div>
   );
 }
-
-    

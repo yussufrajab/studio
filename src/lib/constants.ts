@@ -3,13 +3,15 @@ import type { User, Employee, Role, EmployeeCertificate } from './types';
 
 export const ROLES: Record<string, Role> = {
   HRO: "HRO",
-  HHRMD_HRMO: "HHRMD_HRMO",
+  HHRMD: "HHRMD", // Renamed from HHRMD_HRMO
+  HRMO: "HRMO",   // New role
   DO: "DO",
   EMPLOYEE: "EMPLOYEE",
 };
 
 export const USERS: User[] = [
-  { id: "user2", username: "msmith", name: "M. Smith", role: ROLES.HHRMD_HRMO as Role },
+  { id: "user2", username: "msmith", name: "M. Smith", role: ROLES.HHRMD as Role }, // Updated role
+  { id: "user_hrmo", username: "jdoe", name: "J. Doe", role: ROLES.HRMO as Role }, // New HRMO user
   { id: "user3", username: "ajuma", name: "A. Juma", role: ROLES.HRO as Role },
   { id: "user5", username: "kabdul", name: "K. Abdul", role: ROLES.DO as Role },
   { id: "user7", username: "hmohamed", name: "Hamid Mohamed", role: ROLES.EMPLOYEE as Role, employeeId: "emp7" },

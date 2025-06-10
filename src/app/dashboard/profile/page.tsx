@@ -25,6 +25,8 @@ export default function ProfilePage() {
   const [searchType, setSearchType] = useState<'zanId' | 'zssfNumber' | 'payrollNumber'>('zanId');
   const [isSearching, setIsSearching] = useState(false);
 
+  const canSearch = role === ROLES.HRO || role === ROLES.HHRMD || role === ROLES.HRMO;
+
   useEffect(() => {
     setPageLoading(true);
     if (!authLoading && user) {
@@ -34,12 +36,12 @@ export default function ProfilePage() {
         if (!foundEmployee) {
           toast({ title: "Profile Not Found", description: "Your employee profile could not be loaded. Please contact HR.", variant: "destructive" });
         }
-      } else if (role === ROLES.HRO) {
-        setProfileData(null); // HRO must search
+      } else if (canSearch) {
+        setProfileData(null); // HRO, HHRMD, HRMO must search
       }
     }
     setPageLoading(false);
-  }, [user, role, authLoading]);
+  }, [user, role, authLoading, canSearch]);
 
   const getInitials = (name?: string) => {
     if (!name) return '??';
@@ -76,7 +78,7 @@ export default function ProfilePage() {
     <Card className="mt-6 shadow-lg">
       <CardHeader className="items-center text-center border-b pb-6">
         <Avatar className="h-24 w-24 mb-4 shadow-md">
-          <AvatarImage src={emp.profileImageUrl || `https://placehold.co/100x100.png?text=${getInitials(emp.name)}`} alt={emp.name} data-ai-hint="employee photo" />
+          <AvatarImage src={emp.profileImageUrl || `https://placehold.co/100x100.png?text=${getInitials(emp.name)}`} alt={emp.name} data-ai-hint="employee photo"/>
           <AvatarFallback>{getInitials(emp.name)}</AvatarFallback>
         </Avatar>
         <CardTitle className="text-2xl font-headline">{emp.name}</CardTitle>
@@ -201,11 +203,11 @@ export default function ProfilePage() {
   return (
     <div>
       <PageHeader 
-        title={role === ROLES.HRO ? "Employee Profile Management" : "My Profile"} 
-        description={role === ROLES.HRO ? "Search for an employee to view their detailed profile." : "View your comprehensive employee information."} 
+        title={canSearch ? "Employee Profile Management" : "My Profile"} 
+        description={canSearch ? "Search for an employee to view their detailed profile." : "View your comprehensive employee information."} 
       />
 
-      {role === ROLES.HRO && (
+      {canSearch && (
         <Card className="mb-6 shadow-lg">
           <CardHeader>
             <CardTitle>Search Employee</CardTitle>
@@ -260,7 +262,7 @@ export default function ProfilePage() {
         )
       )}
       
-      {role === ROLES.HRO && !isSearching && !profileData && searchTerm && ( // HRO searched but no result
+      {canSearch && !isSearching && !profileData && searchTerm && ( // HRO/HHRMD/HRMO searched but no result
          <Card className="mt-6">
             <CardHeader>
               <CardTitle>No Results</CardTitle>
@@ -270,7 +272,6 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
       )}
-
     </div>
   );
 }

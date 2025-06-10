@@ -48,6 +48,8 @@ export default function TrackStatusPage() {
   const [searchAttempted, setSearchAttempted] = useState(false);
   const [foundRequests, setFoundRequests] = useState<MockRequest[]>([]);
 
+  const canAccessModule = role === ROLES.HRO || role === ROLES.HHRMD || role === ROLES.HRMO;
+
   const handleSearchRequests = () => {
     if (!zanId.trim()) {
       toast({ title: "ZanID Required", description: "Please enter an employee's ZanID to search.", variant: "destructive" });
@@ -79,94 +81,94 @@ export default function TrackStatusPage() {
   return (
     <div>
       <PageHeader title="Track Request Status" description="Monitor the status of requests submitted to the Civil Service Commission." />
-      {role === ROLES.HRO && (
-        <Card className="shadow-lg mb-6">
-          <CardHeader>
-            <CardTitle>Search Employee Requests</CardTitle>
-            <CardDescription>
-              Enter an employee's ZanID to view the status of their submitted requests.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-end sm:space-x-2 space-y-2 sm:space-y-0">
-              <div className="flex-grow space-y-1">
-                <Label htmlFor="zanIdTrack">Employee ZanID</Label>
-                <Input 
-                  id="zanIdTrack" 
-                  placeholder="Enter ZanID" 
-                  value={zanId} 
-                  onChange={(e) => setZanId(e.target.value)} 
-                  disabled={isSearching}
-                />
+      {canAccessModule ? (
+        <>
+          <Card className="shadow-lg mb-6">
+            <CardHeader>
+              <CardTitle>Search Employee Requests</CardTitle>
+              <CardDescription>
+                Enter an employee's ZanID to view the status of their submitted requests.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-end sm:space-x-2 space-y-2 sm:space-y-0">
+                <div className="flex-grow space-y-1">
+                  <Label htmlFor="zanIdTrack">Employee ZanID</Label>
+                  <Input 
+                    id="zanIdTrack" 
+                    placeholder="Enter ZanID" 
+                    value={zanId} 
+                    onChange={(e) => setZanId(e.target.value)} 
+                    disabled={isSearching}
+                  />
+                </div>
+                <Button onClick={handleSearchRequests} disabled={isSearching || !zanId.trim()}>
+                  {isSearching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
+                  Search Requests
+                </Button>
               </div>
-              <Button onClick={handleSearchRequests} disabled={isSearching || !zanId.trim()}>
-                {isSearching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
-                Search Requests
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {role === ROLES.HRO && isSearching && (
-        <div className="flex items-center justify-center mt-8">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="ml-2 text-muted-foreground">Searching for requests...</p>
-        </div>
-      )}
-
-      {role === ROLES.HRO && !isSearching && searchAttempted && (
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle>Request Status for ZanID: {zanId}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {foundRequests.length > 0 ? (
-              <Table>
-                <TableCaption>A list of recent requests for ZanID: {zanId}.</TableCaption>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[150px]">Request ID</TableHead>
-                    <TableHead>Employee Name</TableHead>
-                    <TableHead>Request Type</TableHead>
-                    <TableHead>Submission Date</TableHead>
-                    <TableHead className="text-right">Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {foundRequests.map((request) => (
-                    <TableRow key={request.id}>
-                      <TableCell className="font-medium">{request.id}</TableCell>
-                      <TableCell>{request.employeeName}</TableCell>
-                      <TableCell>{request.requestType}</TableCell>
-                      <TableCell>{request.submissionDate}</TableCell>
-                      <TableCell className="text-right">{request.status}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <p className="text-muted-foreground text-center py-4">No requests found for ZanID: {zanId}.</p>
-            )}
-          </CardContent>
-        </Card>
-      )}
-      
-      {role === ROLES.HRO && !isSearching && !searchAttempted && (
-         <Card className="shadow-lg">
-            <CardContent className="pt-6">
-                <p className="text-muted-foreground text-center">Please enter an employee's ZanID above and click "Search Requests" to view their request history.</p>
             </CardContent>
-        </Card>
-      )}
+          </Card>
 
-      {role !== ROLES.HRO && (
+          {isSearching && (
+            <div className="flex items-center justify-center mt-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="ml-2 text-muted-foreground">Searching for requests...</p>
+            </div>
+          )}
+
+          {!isSearching && searchAttempted && (
+            <Card className="shadow-lg">
+              <CardHeader>
+                <CardTitle>Request Status for ZanID: {zanId}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {foundRequests.length > 0 ? (
+                  <Table>
+                    <TableCaption>A list of recent requests for ZanID: {zanId}.</TableCaption>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[150px]">Request ID</TableHead>
+                        <TableHead>Employee Name</TableHead>
+                        <TableHead>Request Type</TableHead>
+                        <TableHead>Submission Date</TableHead>
+                        <TableHead className="text-right">Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {foundRequests.map((request) => (
+                        <TableRow key={request.id}>
+                          <TableCell className="font-medium">{request.id}</TableCell>
+                          <TableCell>{request.employeeName}</TableCell>
+                          <TableCell>{request.requestType}</TableCell>
+                          <TableCell>{request.submissionDate}</TableCell>
+                          <TableCell className="text-right">{request.status}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <p className="text-muted-foreground text-center py-4">No requests found for ZanID: {zanId}.</p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+          
+          {!isSearching && !searchAttempted && (
+            <Card className="shadow-lg">
+                <CardContent className="pt-6">
+                    <p className="text-muted-foreground text-center">Please enter an employee's ZanID above and click "Search Requests" to view their request history.</p>
+                </CardContent>
+            </Card>
+          )}
+        </>
+      ) : (
          <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Access Denied</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground">This module is only available for HRO personnel.</p>
+            <p className="text-muted-foreground">You do not have permission to access this module.</p>
           </CardContent>
         </Card>
       )}

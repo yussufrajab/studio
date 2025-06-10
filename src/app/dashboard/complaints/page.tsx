@@ -166,7 +166,7 @@ export default function ComplaintsPage() {
         </Card>
       )}
 
-      {(role === ROLES.DO || role === ROLES.HHRMD_HRMO) && (
+      {(role === ROLES.DO || role === ROLES.HHRMD) && (
          <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Review Complaints</CardTitle>
@@ -199,4 +199,3 @@ export default function ComplaintsPage() {
     </div>
   );
 }
-
