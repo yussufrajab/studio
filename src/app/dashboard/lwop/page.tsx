@@ -11,7 +11,7 @@ import { ROLES, EMPLOYEES } from '@/lib/constants';
 import React, { useState } from 'react';
 import type { Employee } from '@/lib/types';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, Search, FileText } from 'lucide-react';
+import { Loader2, Search, FileText, AlertTriangle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 
 interface MockPendingLWOPRequest {
@@ -51,6 +51,28 @@ const mockPendingLWOPRequests: MockPendingLWOPRequest[] = [
   },
 ];
 
+function parseDurationToMonths(durationStr: string): number | null {
+  durationStr = durationStr.toLowerCase().trim();
+
+  const monthsMatch = durationStr.match(/^(\d+)\s*months?$/);
+  if (monthsMatch && monthsMatch[1]) {
+    return parseInt(monthsMatch[1], 10);
+  }
+
+  const yearsMatch = durationStr.match(/^(\d+)\s*years?$/);
+  if (yearsMatch && yearsMatch[1]) {
+    return parseInt(yearsMatch[1], 10) * 12;
+  }
+  
+  const numberMatch = durationStr.match(/^(\d+)$/);
+  if (numberMatch && numberMatch[1]) {
+    return parseInt(numberMatch[1], 10);
+  }
+
+  return null; 
+}
+
+
 export default function LwopPage() {
   const { role } = useAuth();
   const [zanId, setZanId] = useState('');
@@ -64,6 +86,8 @@ export default function LwopPage() {
 
   const [selectedRequest, setSelectedRequest] = useState<MockPendingLWOPRequest | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+
+  const isEmployeeOnProbation = employeeDetails?.status === 'On Probation';
 
   const handleFetchEmployeeDetails = () => {
     if (!zanId) {
@@ -96,16 +120,53 @@ export default function LwopPage() {
       toast({ title: "Submission Error", description: "Employee details are missing.", variant: "destructive" });
       return;
     }
-    if (!duration || !reason) {
-      toast({ title: "Submission Error", description: "Please fill in duration and reason.", variant: "destructive" });
+
+    if (employeeDetails.status === 'On Probation') {
+      toast({ 
+        title: "LWOP Not Applicable", 
+        description: "This employee is currently 'On Probation' and cannot apply for LWOP.", 
+        variant: "destructive",
+        duration: 5000,
+      });
       return;
     }
+
+    if (!duration) {
+      toast({ title: "Submission Error", description: "Please fill in Duration.", variant: "destructive" });
+      return;
+    }
+    if (!reason) {
+      toast({ title: "Submission Error", description: "Please fill in Reason for LWOP.", variant: "destructive" });
+      return;
+    }
+    
+    const parsedMonths = parseDurationToMonths(duration);
+    if (parsedMonths === null) {
+      toast({ 
+        title: "Invalid Duration Format", 
+        description: "Please enter duration like '6 months', '1 year', or a number of months (e.g., '24').", 
+        variant: "destructive",
+        duration: 5000,
+      });
+      return;
+    }
+
+    if (parsedMonths > 36) {
+      toast({ 
+        title: "LWOP Duration Exceeded", 
+        description: "Maximum LWOP duration is 36 months.", 
+        variant: "destructive",
+        duration: 5000,
+      });
+      return;
+    }
+    
     if (!letterOfRequestFile) {
       toast({ title: "Submission Error", description: "Letter of Request is missing. Please upload the PDF document.", variant: "destructive" });
       return;
     }
     if (letterOfRequestFile && letterOfRequestFile[0] && letterOfRequestFile[0].type !== "application/pdf") {
-        toast({ title: "Submission Error", description: "The letter of request must be a PDF file.", variant: "destructive" });
+        toast({ title: "Submission Error", description: "The Letter of Request must be a PDF file.", variant: "destructive" });
         return;
     }
 
@@ -113,6 +174,7 @@ export default function LwopPage() {
     console.log("Submitting LWOP Request:", {
       employee: employeeDetails,
       duration,
+      parsedMonths,
       reason,
       letterOfRequest: letterOfRequestFile[0]?.name,
     });
@@ -160,23 +222,31 @@ export default function LwopPage() {
                       <div><Label className="text-muted-foreground">ZanID:</Label> <p className="font-semibold text-foreground">{employeeDetails.zanId}</p></div>
                       <div><Label className="text-muted-foreground">Department:</Label> <p className="font-semibold text-foreground">{employeeDetails.department || 'N/A'}</p></div>
                       <div><Label className="text-muted-foreground">Cadre/Position:</Label> <p className="font-semibold text-foreground">{employeeDetails.cadre || 'N/A'}</p></div>
+                      <div><Label className="text-muted-foreground">Status:</Label> <p className={`font-semibold ${isEmployeeOnProbation ? 'text-destructive' : 'text-green-600'}`}>{employeeDetails.status || 'N/A'}</p></div>
                     </div>
                   </div>
                 </div>
+
+                {isEmployeeOnProbation && (
+                  <div className="flex items-center p-4 mt-2 text-sm text-destructive border border-destructive/50 rounded-md bg-destructive/10">
+                    <AlertTriangle className="h-5 w-5 mr-3 flex-shrink-0" />
+                    <span>LWOP is not applicable for employees currently 'On Probation'.</span>
+                  </div>
+                )}
             
-                <div className="space-y-4">
+                <div className={`space-y-4 ${isEmployeeOnProbation ? 'opacity-50 cursor-not-allowed' : ''}`}>
                   <h3 className="text-lg font-medium text-foreground">LWOP Details</h3>
                   <div>
-                    <Label htmlFor="durationLwop">Duration (e.g., 3 months, 2024-01-01 to 2024-03-31)</Label>
-                    <Input id="durationLwop" placeholder="Specify duration and dates" value={duration} onChange={(e) => setDuration(e.target.value)} disabled={isSubmitting} />
+                    <Label htmlFor="durationLwop">Duration (Max 36 months)</Label>
+                    <Input id="durationLwop" placeholder="e.g., 6 months, 1 year, 24" value={duration} onChange={(e) => setDuration(e.target.value)} disabled={isSubmitting || isEmployeeOnProbation} />
                   </div>
                   <div>
                     <Label htmlFor="reasonLwop">Reason for LWOP</Label>
-                    <Textarea id="reasonLwop" placeholder="State the reason for the leave request" value={reason} onChange={(e) => setReason(e.target.value)} disabled={isSubmitting} />
+                    <Textarea id="reasonLwop" placeholder="State the reason for the leave request" value={reason} onChange={(e) => setReason(e.target.value)} disabled={isSubmitting || isEmployeeOnProbation} />
                   </div>
                   <div>
                     <Label htmlFor="letterOfRequestLwop" className="flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" />Upload Letter of Request (PDF Only)</Label>
-                    <Input id="letterOfRequestLwop" type="file" onChange={(e) => setLetterOfRequestFile(e.target.files)} accept=".pdf" disabled={isSubmitting} />
+                    <Input id="letterOfRequestLwop" type="file" onChange={(e) => setLetterOfRequestFile(e.target.files)} accept=".pdf" disabled={isSubmitting || isEmployeeOnProbation} />
                   </div>
                 </div>
               </div>
@@ -184,7 +254,7 @@ export default function LwopPage() {
           </CardContent>
           {employeeDetails && (
             <CardFooter className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2 pt-4 border-t">
-                <Button onClick={handleSubmitLwopRequest} disabled={!employeeDetails || !duration || !reason || !letterOfRequestFile || isSubmitting}>
+                <Button onClick={handleSubmitLwopRequest} disabled={!employeeDetails || !duration || !reason || !letterOfRequestFile || isSubmitting || isEmployeeOnProbation}>
                   {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Submit LWOP Request
                 </Button>
@@ -272,3 +342,4 @@ export default function LwopPage() {
     </div>
   );
 }
+
