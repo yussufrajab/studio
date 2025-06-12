@@ -6,12 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/hooks/use-auth';
 import { ROLES, EMPLOYEES } from '@/lib/constants';
 import React, { useState } from 'react';
 import type { Employee } from '@/lib/types';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, Search, FileText, Award, ChevronsUpDown } from 'lucide-react';
+import { Loader2, Search, FileText, Award, ChevronsUpDown, ListFilter, Star } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 
 interface MockPendingPromotionRequest {
@@ -20,11 +21,12 @@ interface MockPendingPromotionRequest {
   zanId: string;
   currentCadre: string;
   proposedCadre: string;
+  promotionType: 'Experience' | 'Education Advancement';
   submissionDate: string;
   submittedBy: string;
   status: string;
   documents?: string[];
-  studiedOutsideCountry?: boolean;
+  studiedOutsideCountry?: boolean; // Relevant for Education type
 }
 
 const mockPendingPromotionRequests: MockPendingPromotionRequest[] = [
@@ -34,11 +36,11 @@ const mockPendingPromotionRequests: MockPendingPromotionRequest[] = [
     zanId: '556789345',
     currentCadre: 'Planning Officer',
     proposedCadre: 'Senior Planning Officer',
+    promotionType: 'Experience',
     submissionDate: '2024-07-29',
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending HHRMD Review',
-    documents: ['Performance Appraisal Form', 'Certificate (Degree)', 'Letter of Request'],
-    studiedOutsideCountry: false,
+    documents: ['Performance Appraisal Form (Year 1)', 'Performance Appraisal Form (Year 2)', 'Performance Appraisal Form (Year 3)', 'Civil Service Commission Promotion Form', 'Letter of Request'],
   },
   {
     id: 'PROM002',
@@ -46,10 +48,11 @@ const mockPendingPromotionRequests: MockPendingPromotionRequest[] = [
     zanId: '667890456',
     currentCadre: 'Procurement Officer',
     proposedCadre: 'Principal Procurement Officer',
+    promotionType: 'Education Advancement',
     submissionDate: '2024-07-26',
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending HRMO Review',
-    documents: ['Performance Appraisal Form', 'Certificate (Masters)', 'TCU Form', 'Letter of Request'],
+    documents: ['Academic Certificate (Masters)', 'TCU Form', 'Letter of Request'],
     studiedOutsideCountry: true,
   },
 ];
@@ -61,26 +64,40 @@ export default function PromotionPage() {
   const [isFetchingEmployee, setIsFetchingEmployee] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [promotionType, setPromotionType] = useState<'experience' | 'education' | ''>('');
   const [proposedCadre, setProposedCadre] = useState('');
-  const [performanceAppraisalFile, setPerformanceAppraisalFile] = useState<FileList | null>(null);
+
+  // Experience-based promotion files
+  const [performanceAppraisalFileY1, setPerformanceAppraisalFileY1] = useState<FileList | null>(null);
+  const [performanceAppraisalFileY2, setPerformanceAppraisalFileY2] = useState<FileList | null>(null);
+  const [performanceAppraisalFileY3, setPerformanceAppraisalFileY3] = useState<FileList | null>(null);
+  const [cscPromotionFormFile, setCscPromotionFormFile] = useState<FileList | null>(null);
+
+  // Education-based promotion files
   const [certificateFile, setCertificateFile] = useState<FileList | null>(null);
   const [studiedOutsideCountry, setStudiedOutsideCountry] = useState(false);
   const [tcuFormFile, setTcuFormFile] = useState<FileList | null>(null);
+  
+  // Common file
   const [letterOfRequestFile, setLetterOfRequestFile] = useState<FileList | null>(null);
 
   const [selectedRequest, setSelectedRequest] = useState<MockPendingPromotionRequest | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
   const resetFormFields = () => {
+    setPromotionType('');
     setProposedCadre('');
-    setPerformanceAppraisalFile(null);
+    setPerformanceAppraisalFileY1(null);
+    setPerformanceAppraisalFileY2(null);
+    setPerformanceAppraisalFileY3(null);
+    setCscPromotionFormFile(null);
     setCertificateFile(null);
     setStudiedOutsideCountry(false);
     setTcuFormFile(null);
     setLetterOfRequestFile(null);
     const fileInputs = document.querySelectorAll('input[type="file"]');
     fileInputs.forEach(input => (input as HTMLInputElement).value = '');
-    const checkboxInput = document.getElementById('studiedOutsideCountry') as HTMLInputElement;
+    const checkboxInput = document.getElementById('studiedOutsideCountryPromo') as HTMLInputElement;
     if (checkboxInput) checkboxInput.checked = false;
   };
 
@@ -110,20 +127,12 @@ export default function PromotionPage() {
       toast({ title: "Submission Error", description: "Employee details are missing.", variant: "destructive" });
       return;
     }
+    if (!promotionType) {
+      toast({ title: "Submission Error", description: "Please select a Promotion Type.", variant: "destructive" });
+      return;
+    }
     if (!proposedCadre) {
       toast({ title: "Submission Error", description: "Proposed New Cadre/Position is required.", variant: "destructive" });
-      return;
-    }
-    if (!performanceAppraisalFile) {
-      toast({ title: "Submission Error", description: "Performance Appraisal Form is missing. Please upload the PDF document.", variant: "destructive" });
-      return;
-    }
-    if (!certificateFile) {
-      toast({ title: "Submission Error", description: "Certificate is missing. Please upload the PDF document.", variant: "destructive" });
-      return;
-    }
-    if (studiedOutsideCountry && !tcuFormFile) {
-      toast({ title: "Submission Error", description: "TCU Form is missing as employee studied outside the country. Please upload the PDF document.", variant: "destructive" });
       return;
     }
     if (!letterOfRequestFile) {
@@ -132,22 +141,86 @@ export default function PromotionPage() {
     }
 
     const checkPdf = (fileList: FileList | null) => fileList && fileList[0] && fileList[0].type === "application/pdf";
-    
-    if (!checkPdf(performanceAppraisalFile) || !checkPdf(certificateFile) || (studiedOutsideCountry && !checkPdf(tcuFormFile)) || !checkPdf(letterOfRequestFile)) {
-        toast({ title: "Submission Error", description: "All uploaded documents must be in PDF format.", variant: "destructive" });
+
+    if (!checkPdf(letterOfRequestFile)) {
+      toast({ title: "Submission Error", description: "Letter of Request must be a PDF file.", variant: "destructive" });
+      return;
+    }
+
+    let submissionData: any = {
+      employee: employeeDetails,
+      promotionType,
+      proposedCadre,
+      letterOfRequestFile: letterOfRequestFile[0]?.name,
+    };
+
+    if (promotionType === 'experience') {
+      if (!performanceAppraisalFileY1) {
+        toast({ title: "Submission Error", description: "Performance Appraisal Form (Year 1) is missing. Please upload the PDF document.", variant: "destructive" });
         return;
+      }
+      if (!checkPdf(performanceAppraisalFileY1)) {
+        toast({ title: "Submission Error", description: "Performance Appraisal Form (Year 1) must be a PDF file.", variant: "destructive" });
+        return;
+      }
+      if (!performanceAppraisalFileY2) {
+        toast({ title: "Submission Error", description: "Performance Appraisal Form (Year 2) is missing. Please upload the PDF document.", variant: "destructive" });
+        return;
+      }
+       if (!checkPdf(performanceAppraisalFileY2)) {
+        toast({ title: "Submission Error", description: "Performance Appraisal Form (Year 2) must be a PDF file.", variant: "destructive" });
+        return;
+      }
+      if (!performanceAppraisalFileY3) {
+        toast({ title: "Submission Error", description: "Performance Appraisal Form (Year 3) is missing. Please upload the PDF document.", variant: "destructive" });
+        return;
+      }
+      if (!checkPdf(performanceAppraisalFileY3)) {
+        toast({ title: "Submission Error", description: "Performance Appraisal Form (Year 3) must be a PDF file.", variant: "destructive" });
+        return;
+      }
+      if (!cscPromotionFormFile) {
+        toast({ title: "Submission Error", description: "Civil Service Commission Promotion Form is missing. Please upload the PDF document.", variant: "destructive" });
+        return;
+      }
+      if (!checkPdf(cscPromotionFormFile)) {
+        toast({ title: "Submission Error", description: "Civil Service Commission Promotion Form must be a PDF file.", variant: "destructive" });
+        return;
+      }
+      submissionData = {
+        ...submissionData,
+        performanceAppraisalFileY1: performanceAppraisalFileY1[0]?.name,
+        performanceAppraisalFileY2: performanceAppraisalFileY2[0]?.name,
+        performanceAppraisalFileY3: performanceAppraisalFileY3[0]?.name,
+        cscPromotionFormFile: cscPromotionFormFile[0]?.name,
+      };
+    } else if (promotionType === 'education') {
+      if (!certificateFile) {
+        toast({ title: "Submission Error", description: "Academic Certificate is missing. Please upload the PDF document.", variant: "destructive" });
+        return;
+      }
+      if (!checkPdf(certificateFile)) {
+        toast({ title: "Submission Error", description: "Academic Certificate must be a PDF file.", variant: "destructive" });
+        return;
+      }
+      if (studiedOutsideCountry && !tcuFormFile) {
+        toast({ title: "Submission Error", description: "TCU Form is missing as employee studied outside the country. Please upload the PDF document.", variant: "destructive" });
+        return;
+      }
+      if (studiedOutsideCountry && tcuFormFile && !checkPdf(tcuFormFile)) {
+        toast({ title: "Submission Error", description: "TCU Form must be a PDF file.", variant: "destructive" });
+        return;
+      }
+      submissionData = {
+        ...submissionData,
+        certificateFile: certificateFile[0]?.name,
+        studiedOutsideCountry,
+        tcuFormFile: tcuFormFile ? tcuFormFile[0]?.name : null,
+      };
     }
 
     setIsSubmitting(true);
-    console.log("Submitting Promotion Request:", {
-      employee: employeeDetails,
-      proposedCadre,
-      performanceAppraisalFile: performanceAppraisalFile[0]?.name,
-      certificateFile: certificateFile[0]?.name,
-      studiedOutsideCountry,
-      tcuFormFile: tcuFormFile ? tcuFormFile[0]?.name : null,
-      letterOfRequestFile: letterOfRequestFile[0]?.name,
-    });
+    console.log("Submitting Promotion Request:", submissionData);
 
     setTimeout(() => {
       toast({ title: "Promotion Request Submitted", description: `Promotion request for ${employeeDetails.name} submitted successfully.` });
@@ -157,15 +230,27 @@ export default function PromotionPage() {
       setIsSubmitting(false);
     }, 1500);
   };
+  
+  const isSubmitDisabled = () => {
+    if (!employeeDetails || !promotionType || !proposedCadre || !letterOfRequestFile) return true;
+    if (promotionType === 'experience') {
+      return !performanceAppraisalFileY1 || !performanceAppraisalFileY2 || !performanceAppraisalFileY3 || !cscPromotionFormFile || isSubmitting;
+    }
+    if (promotionType === 'education') {
+      return !certificateFile || (studiedOutsideCountry && !tcuFormFile) || isSubmitting;
+    }
+    return true; // Should not happen if promotionType is set
+  };
+
 
   return (
     <div>
-      <PageHeader title="Promotion" description="Manage employee promotions." />
+      <PageHeader title="Promotion" description="Manage employee promotions based on experience or education." />
       {role === ROLES.HRO && (
         <Card className="mb-6 shadow-lg">
           <CardHeader>
             <CardTitle>Submit Promotion Request</CardTitle>
-            <CardDescription>Enter employee's ZanID to fetch details, then complete the promotion form.</CardDescription>
+            <CardDescription>Enter ZanID, select promotion type, then complete the form. All documents must be PDF.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
@@ -192,53 +277,81 @@ export default function PromotionPage() {
                     </div>
                   </div>
                 </div>
-            
-                <div className="space-y-4">
-                  <h3 className="text-lg font-medium text-foreground">Promotion Details & Documents (PDF Only)</h3>
-                  <div>
-                    <Label htmlFor="proposedCadre">Proposed New Cadre/Position</Label>
-                    <Input id="proposedCadre" placeholder="e.g., Principal Officer" value={proposedCadre} onChange={(e) => setProposedCadre(e.target.value)} disabled={isSubmitting} />
-                  </div>
-                  <div>
-                    <Label htmlFor="performanceAppraisalFile" className="flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" />Upload Performance Appraisal Form</Label>
-                    <Input id="performanceAppraisalFile" type="file" onChange={(e) => setPerformanceAppraisalFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
-                  </div>
-                  <div>
-                    <Label htmlFor="certificateFile" className="flex items-center"><Award className="mr-2 h-4 w-4 text-primary" />Upload Certificate</Label>
-                    <Input id="certificateFile" type="file" onChange={(e) => setCertificateFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="studiedOutsideCountry" checked={studiedOutsideCountry} onCheckedChange={(checked) => setStudiedOutsideCountry(checked as boolean)} disabled={isSubmitting} />
-                    <Label htmlFor="studiedOutsideCountry" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                      Employee studied outside the country? (Requires TCU Form)
-                    </Label>
-                  </div>
-                  {studiedOutsideCountry && (
-                    <div>
-                      <Label htmlFor="tcuFormFile" className="flex items-center"><ChevronsUpDown className="mr-2 h-4 w-4 text-primary" />Upload TCU Form</Label>
-                      <Input id="tcuFormFile" type="file" onChange={(e) => setTcuFormFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
-                    </div>
-                  )}
-                  <div>
-                    <Label htmlFor="letterOfRequestPromo" className="flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" />Upload Letter of Request</Label>
-                    <Input id="letterOfRequestPromo" type="file" onChange={(e) => setLetterOfRequestFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
-                  </div>
+
+                <div className="space-y-2">
+                    <Label htmlFor="promotionTypeSelect" className="flex items-center"><ListFilter className="mr-2 h-4 w-4 text-primary" />Promotion Type</Label>
+                    <Select value={promotionType} onValueChange={(value) => setPromotionType(value as 'experience' | 'education' | '')} disabled={isSubmitting}>
+                      <SelectTrigger id="promotionTypeSelect">
+                        <SelectValue placeholder="Select promotion type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="experience">Promotion Based on Experience (Performance)</SelectItem>
+                        <SelectItem value="education">Promotion Based on Education Advancement</SelectItem>
+                      </SelectContent>
+                    </Select>
                 </div>
+            
+                {promotionType && (
+                    <div className="space-y-4">
+                        <h3 className="text-lg font-medium text-foreground">Promotion Details & Documents (PDF Only)</h3>
+                        <div>
+                            <Label htmlFor="proposedCadre">Proposed New Cadre/Position</Label>
+                            <Input id="proposedCadre" placeholder="e.g., Principal Officer" value={proposedCadre} onChange={(e) => setProposedCadre(e.target.value)} disabled={isSubmitting} />
+                        </div>
+
+                        {promotionType === 'experience' && (
+                            <>
+                                <div>
+                                <Label htmlFor="performanceAppraisalFileY1" className="flex items-center"><Star className="mr-2 h-4 w-4 text-primary" />Upload Performance Appraisal Form (Year 1)</Label>
+                                <Input id="performanceAppraisalFileY1" type="file" onChange={(e) => setPerformanceAppraisalFileY1(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
+                                </div>
+                                <div>
+                                <Label htmlFor="performanceAppraisalFileY2" className="flex items-center"><Star className="mr-2 h-4 w-4 text-primary" />Upload Performance Appraisal Form (Year 2)</Label>
+                                <Input id="performanceAppraisalFileY2" type="file" onChange={(e) => setPerformanceAppraisalFileY2(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
+                                </div>
+                                <div>
+                                <Label htmlFor="performanceAppraisalFileY3" className="flex items-center"><Star className="mr-2 h-4 w-4 text-primary" />Upload Performance Appraisal Form (Year 3)</Label>
+                                <Input id="performanceAppraisalFileY3" type="file" onChange={(e) => setPerformanceAppraisalFileY3(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
+                                </div>
+                                <div>
+                                <Label htmlFor="cscPromotionFormFile" className="flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" />Upload Civil Service Commission Promotion Form (Tume ya Utumishi)</Label>
+                                <Input id="cscPromotionFormFile" type="file" onChange={(e) => setCscPromotionFormFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
+                                </div>
+                            </>
+                        )}
+
+                        {promotionType === 'education' && (
+                            <>
+                                <div>
+                                <Label htmlFor="certificateFilePromo" className="flex items-center"><Award className="mr-2 h-4 w-4 text-primary" />Upload Academic Certificate</Label>
+                                <Input id="certificateFilePromo" type="file" onChange={(e) => setCertificateFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                <Checkbox id="studiedOutsideCountryPromo" checked={studiedOutsideCountry} onCheckedChange={(checked) => setStudiedOutsideCountry(checked as boolean)} disabled={isSubmitting} />
+                                <Label htmlFor="studiedOutsideCountryPromo" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                    Employee studied outside the country? (Requires TCU Form)
+                                </Label>
+                                </div>
+                                {studiedOutsideCountry && (
+                                <div>
+                                    <Label htmlFor="tcuFormFilePromo" className="flex items-center"><ChevronsUpDown className="mr-2 h-4 w-4 text-primary" />Upload TCU Form</Label>
+                                    <Input id="tcuFormFilePromo" type="file" onChange={(e) => setTcuFormFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
+                                </div>
+                                )}
+                            </>
+                        )}
+                        <div>
+                            <Label htmlFor="letterOfRequestPromo" className="flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" />Upload Letter of Request</Label>
+                            <Input id="letterOfRequestPromo" type="file" onChange={(e) => setLetterOfRequestFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
+                        </div>
+                    </div>
+                )}
               </div>
             )}
           </CardContent>
-          {employeeDetails && (
+          {employeeDetails && promotionType && (
             <CardFooter className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2 pt-4 border-t">
-                <Button onClick={handleSubmitPromotionRequest} 
-                        disabled={
-                            !employeeDetails || 
-                            !proposedCadre || 
-                            !performanceAppraisalFile || 
-                            !certificateFile || 
-                            (studiedOutsideCountry && !tcuFormFile) || 
-                            !letterOfRequestFile || 
-                            isSubmitting
-                        }>
+                <Button onClick={handleSubmitPromotionRequest} disabled={isSubmitDisabled()}>
                   {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Submit Promotion Request
                 </Button>
@@ -258,6 +371,7 @@ export default function PromotionPage() {
               mockPendingPromotionRequests.map((request) => (
                 <div key={request.id} className="mb-4 border p-4 rounded-md space-y-2 shadow-sm bg-background hover:shadow-md transition-shadow">
                   <h3 className="font-semibold text-base">Promotion for: {request.employeeName} (ZanID: {request.zanId})</h3>
+                  <p className="text-sm text-muted-foreground">Type: {request.promotionType}</p>
                   <p className="text-sm text-muted-foreground">Current Cadre: {request.currentCadre}</p>
                   <p className="text-sm text-muted-foreground">Proposed Cadre: {request.proposedCadre}</p>
                   <p className="text-sm text-muted-foreground">Submitted: {request.submissionDate} by {request.submittedBy}</p>
@@ -287,6 +401,10 @@ export default function PromotionPage() {
             </DialogHeader>
             <div className="grid gap-4 py-4 text-sm">
               <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                <Label className="text-right font-semibold">Promotion Type:</Label>
+                <p className="col-span-2">{selectedRequest.promotionType}</p>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
                 <Label className="text-right font-semibold">Current Cadre:</Label>
                 <p className="col-span-2">{selectedRequest.currentCadre}</p>
               </div>
@@ -294,10 +412,12 @@ export default function PromotionPage() {
                 <Label className="text-right font-semibold">Proposed Cadre:</Label>
                 <p className="col-span-2">{selectedRequest.proposedCadre}</p>
               </div>
-              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
-                <Label className="text-right font-semibold">Studied Outside?:</Label>
-                <p className="col-span-2">{selectedRequest.studiedOutsideCountry ? 'Yes' : 'No'}</p>
-              </div>
+              {selectedRequest.promotionType === 'Education Advancement' && (
+                <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                    <Label className="text-right font-semibold">Studied Outside?:</Label>
+                    <p className="col-span-2">{selectedRequest.studiedOutsideCountry ? 'Yes' : 'No'}</p>
+                </div>
+              )}
               <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
                 <Label className="text-right font-semibold">Submitted:</Label>
                 <p className="col-span-2">{selectedRequest.submissionDate} by {selectedRequest.submittedBy}</p>
@@ -330,3 +450,4 @@ export default function PromotionPage() {
     </div>
   );
 }
+
