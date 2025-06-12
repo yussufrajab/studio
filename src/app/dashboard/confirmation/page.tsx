@@ -82,7 +82,7 @@ export default function ConfirmationPage() {
             toast({ 
                 title: "Already Confirmed", 
                 description: "This employee has already been confirmed. Confirmation request cannot be submitted.", 
-                variant: "warning",
+                variant: "destructive", // Changed to destructive for red color
                 duration: 5000,
             });
         } else {
@@ -105,7 +105,7 @@ export default function ConfirmationPage() {
       toast({ 
         title: "Already Confirmed", 
         description: "This employee has already been confirmed. Confirmation request cannot be submitted.", 
-        variant: "destructive",
+        variant: "destructive", // Ensured destructive for red color
         duration: 5000,
       });
       return;
@@ -183,7 +183,7 @@ export default function ConfirmationPage() {
                 </div>
                 
                 {isAlreadyConfirmed && (
-                  <Alert variant="warning" className="mt-4">
+                  <Alert variant="destructive" className="mt-4"> {/* Changed to destructive for red color */}
                     <AlertTriangle className="h-4 w-4" />
                     <AlertTitle>Already Confirmed</AlertTitle>
                     <AlertDescription>
@@ -223,7 +223,7 @@ export default function ConfirmationPage() {
         </Card>
       )}
 
-      {(role === ROLES.HHRMD || role === ROLES.HRMO) && (
+      {(role === ROLES.HHRMD || role === ROLES.HRMO || role === ROLES.DO) && (
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Review Confirmation Requests</CardTitle>
