@@ -109,8 +109,16 @@ export default function TerminationPage() {
       toast({ title: "Submission Error", description: "Employee details are missing.", variant: "destructive" });
       return;
     }
-    if (!reasonTermination || !proposedDateTermination || !misconductEvidenceFile || !letterOfRequestFile) {
-      toast({ title: "Submission Error", description: "Reason, Proposed Date, Misconduct Evidence, and Letter of Request are required.", variant: "destructive" });
+    if (!reasonTermination || !proposedDateTermination) {
+      toast({ title: "Submission Error", description: "Reason for Termination and Proposed Date are required.", variant: "destructive" });
+      return;
+    }
+    if (!misconductEvidenceFile) {
+      toast({ title: "Submission Error", description: "Misconduct Evidence & Investigation Report is missing. Please upload the PDF document.", variant: "destructive" });
+      return;
+    }
+    if (!letterOfRequestFile) {
+      toast({ title: "Submission Error", description: "Letter of Request is missing. Please upload the PDF document.", variant: "destructive" });
       return;
     }
 

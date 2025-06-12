@@ -96,8 +96,12 @@ export default function LwopPage() {
       toast({ title: "Submission Error", description: "Employee details are missing.", variant: "destructive" });
       return;
     }
-    if (!duration || !reason || !letterOfRequestFile) {
-      toast({ title: "Submission Error", description: "Please fill all fields and upload the letter of request (PDF only).", variant: "destructive" });
+    if (!duration || !reason) {
+      toast({ title: "Submission Error", description: "Please fill in duration and reason.", variant: "destructive" });
+      return;
+    }
+    if (!letterOfRequestFile) {
+      toast({ title: "Submission Error", description: "Letter of Request is missing. Please upload the PDF document.", variant: "destructive" });
       return;
     }
     if (letterOfRequestFile && letterOfRequestFile[0] && letterOfRequestFile[0].type !== "application/pdf") {
@@ -189,7 +193,7 @@ export default function LwopPage() {
         </Card>
       )}
 
-       {(role === ROLES.HHRMD || role === ROLES.HRMO) && ( // DO removed
+       {(role === ROLES.HHRMD || role === ROLES.HRMO) && (
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Review LWOP Requests</CardTitle>

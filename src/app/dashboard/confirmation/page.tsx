@@ -42,7 +42,7 @@ const mockPendingConfirmationRequests: MockPendingConfirmationRequest[] = [
     department: 'Human Resources',
     submissionDate: '2024-07-27',
     submittedBy: 'K. Mnyonge (HRO)',
-    status: 'Pending HRMO Review', // Changed status for variety
+    status: 'Pending HRMO Review',
     documents: ['Evaluation Form', 'IPA Certificate', 'Letter of Request'],
   },
 ];
@@ -92,8 +92,17 @@ export default function ConfirmationPage() {
       toast({ title: "Submission Error", description: "Employee details are missing.", variant: "destructive" });
       return;
     }
-    if (!evaluationFormFile || !ipaCertificateFile || !letterOfRequestFile) {
-      toast({ title: "Submission Error", description: "Please upload all required documents (PDF only).", variant: "destructive" });
+
+    if (!evaluationFormFile) {
+      toast({ title: "Submission Error", description: "Evaluation Form is missing. Please upload the PDF document.", variant: "destructive" });
+      return;
+    }
+    if (!ipaCertificateFile) {
+      toast({ title: "Submission Error", description: "IPA Certificate is missing. Please upload the PDF document.", variant: "destructive" });
+      return;
+    }
+    if (!letterOfRequestFile) {
+      toast({ title: "Submission Error", description: "Letter of Request is missing. Please upload the PDF document.", variant: "destructive" });
       return;
     }
     
@@ -191,7 +200,7 @@ export default function ConfirmationPage() {
         </Card>
       )}
 
-      {(role === ROLES.HHRMD || role === ROLES.HRMO) && ( // DO removed from this view
+      {(role === ROLES.HHRMD || role === ROLES.HRMO) && (
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Review Confirmation Requests</CardTitle>

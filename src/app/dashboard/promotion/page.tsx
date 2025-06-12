@@ -110,12 +110,24 @@ export default function PromotionPage() {
       toast({ title: "Submission Error", description: "Employee details are missing.", variant: "destructive" });
       return;
     }
-    if (!proposedCadre || !performanceAppraisalFile || !certificateFile || !letterOfRequestFile) {
-      toast({ title: "Submission Error", description: "Please fill all required fields and upload necessary documents (PDF only).", variant: "destructive" });
+    if (!proposedCadre) {
+      toast({ title: "Submission Error", description: "Proposed New Cadre/Position is required.", variant: "destructive" });
+      return;
+    }
+    if (!performanceAppraisalFile) {
+      toast({ title: "Submission Error", description: "Performance Appraisal Form is missing. Please upload the PDF document.", variant: "destructive" });
+      return;
+    }
+    if (!certificateFile) {
+      toast({ title: "Submission Error", description: "Certificate is missing. Please upload the PDF document.", variant: "destructive" });
       return;
     }
     if (studiedOutsideCountry && !tcuFormFile) {
-      toast({ title: "Submission Error", description: "TCU Form is required as employee studied outside the country.", variant: "destructive" });
+      toast({ title: "Submission Error", description: "TCU Form is missing as employee studied outside the country. Please upload the PDF document.", variant: "destructive" });
+      return;
+    }
+    if (!letterOfRequestFile) {
+      toast({ title: "Submission Error", description: "Letter of Request is missing. Please upload the PDF document.", variant: "destructive" });
       return;
     }
 
@@ -235,7 +247,7 @@ export default function PromotionPage() {
         </Card>
       )}
 
-      {(role === ROLES.HHRMD || role === ROLES.HRMO) && ( // DO removed
+      {(role === ROLES.HHRMD || role === ROLES.HRMO) && ( 
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Review Promotion Requests</CardTitle>

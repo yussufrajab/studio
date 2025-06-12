@@ -106,8 +106,12 @@ export default function ServiceExtensionPage() {
       toast({ title: "Submission Error", description: "Employee details are missing.", variant: "destructive" });
       return;
     }
-    if (!currentRetirementDate || !requestedExtensionPeriod || !justification || !letterOfRequestFile) {
-      toast({ title: "Submission Error", description: "Current Retirement Date, Extension Period, Justification, and Letter of Request are required.", variant: "destructive" });
+    if (!currentRetirementDate || !requestedExtensionPeriod || !justification) {
+      toast({ title: "Submission Error", description: "Current Retirement Date, Requested Extension Period, and Justification are required.", variant: "destructive" });
+      return;
+    }
+    if (!letterOfRequestFile) {
+      toast({ title: "Submission Error", description: "Letter of Request is missing. Please upload the PDF document.", variant: "destructive" });
       return;
     }
 
@@ -221,7 +225,7 @@ export default function ServiceExtensionPage() {
           )}
         </Card>
       )}
-      {(role === ROLES.HHRMD || role === ROLES.HRMO) && ( // DO removed
+      {(role === ROLES.HHRMD || role === ROLES.HRMO) && ( 
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Review Service Extension Requests</CardTitle>

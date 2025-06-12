@@ -122,8 +122,13 @@ export default function RetirementPage() {
       toast({ title: "Submission Error", description: "Employee details are missing.", variant: "destructive" });
       return;
     }
-    if (!retirementType || !retirementDate || !letterOfRequestFile) {
-      toast({ title: "Submission Error", description: "Retirement Type, Proposed Date, and Letter of Request are required.", variant: "destructive" });
+    if (!retirementType || !retirementDate) {
+      toast({ title: "Submission Error", description: "Retirement Type and Proposed Retirement Date are required.", variant: "destructive" });
+      return;
+    }
+
+    if (!letterOfRequestFile) {
+      toast({ title: "Submission Error", description: "Letter of Request is missing. Please upload the PDF document.", variant: "destructive" });
       return;
     }
 
@@ -136,9 +141,15 @@ export default function RetirementPage() {
       return;
     }
 
-    if (retirementType === 'illness' && (!medicalFormFile || !illnessLeaveLetterFile)) {
-      toast({ title: "Submission Error", description: "Medical Form and Leave Due to Illness Letter are required for retirement due to illness.", variant: "destructive" });
-      return;
+    if (retirementType === 'illness') {
+      if (!medicalFormFile) {
+        toast({ title: "Submission Error", description: "Medical Form is missing for illness retirement. Please upload the PDF document.", variant: "destructive" });
+        return;
+      }
+      if (!illnessLeaveLetterFile) {
+        toast({ title: "Submission Error", description: "Leave Due to Illness Letter is missing for illness retirement. Please upload the PDF document.", variant: "destructive" });
+        return;
+      }
     }
 
     const checkPdf = (fileList: FileList | null) => fileList && fileList[0] && fileList[0].type === "application/pdf";
@@ -158,7 +169,6 @@ export default function RetirementPage() {
       }
     }
     
-
     setIsSubmitting(true);
     console.log("Submitting Retirement Request:", {
       employee: employeeDetails,
@@ -276,7 +286,7 @@ export default function RetirementPage() {
           )}
         </Card>
       )}
-      {(role === ROLES.HHRMD || role === ROLES.HRMO) && ( // DO removed
+      {(role === ROLES.HHRMD || role === ROLES.HRMO) && ( 
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Review Retirement Requests</CardTitle>

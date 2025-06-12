@@ -112,8 +112,12 @@ export default function DismissalPage() {
       toast({ title: "Submission Error", description: "Dismissal is only applicable to employees 'On Probation'.", variant: "destructive" });
       return;
     }
-    if (!reasonDismissal || !proposedDateDismissal || !letterOfRequestFile) {
-      toast({ title: "Submission Error", description: "Reason, Proposed Date, and Letter of Request are required.", variant: "destructive" });
+    if (!reasonDismissal || !proposedDateDismissal) {
+      toast({ title: "Submission Error", description: "Reason for Dismissal and Proposed Date are required.", variant: "destructive" });
+      return;
+    }
+    if (!letterOfRequestFile) {
+      toast({ title: "Submission Error", description: "Letter of Request is missing. Please upload the PDF document.", variant: "destructive" });
       return;
     }
 
