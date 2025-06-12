@@ -10,8 +10,9 @@ import { ROLES, EMPLOYEES } from '@/lib/constants';
 import React, { useState } from 'react';
 import type { Employee } from '@/lib/types';
 import { toast }  from '@/hooks/use-toast';
-import { Loader2, Search, FileText, CheckCircle, Award } from 'lucide-react';
+import { Loader2, Search, FileText, CheckCircle, Award, AlertTriangle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface MockPendingConfirmationRequest {
   id: string;
@@ -27,7 +28,7 @@ interface MockPendingConfirmationRequest {
 const mockPendingConfirmationRequests: MockPendingConfirmationRequest[] = [
   {
     id: 'CONF001',
-    employeeName: 'Ali Juma Ali',
+    employeeName: 'Ali Juma Ali', // This employee is 'On Probation' in EMPLOYEES
     zanId: '221458232',
     department: 'Administration',
     submissionDate: '2024-07-28',
@@ -35,16 +36,8 @@ const mockPendingConfirmationRequests: MockPendingConfirmationRequest[] = [
     status: 'Pending HHRMD Review',
     documents: ['Evaluation Form', 'IPA Certificate', 'Letter of Request'],
   },
-  {
-    id: 'CONF002',
-    employeeName: 'Safia Juma Ali',
-    zanId: '125468957',
-    department: 'Human Resources',
-    submissionDate: '2024-07-27',
-    submittedBy: 'K. Mnyonge (HRO)',
-    status: 'Pending HRMO Review',
-    documents: ['Evaluation Form', 'IPA Certificate', 'Letter of Request'],
-  },
+  // Add another mock for an employee not yet confirmed for testing, if available in EMPLOYEES
+  // For Safia Juma Ali (already confirmed), an HRO shouldn't be able to submit.
 ];
 
 export default function ConfirmationPage() {
@@ -62,24 +55,39 @@ export default function ConfirmationPage() {
   const [selectedRequest, setSelectedRequest] = useState<MockPendingConfirmationRequest | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
-  const handleFetchEmployeeDetails = () => {
-    if (!zanId) {
-      toast({ title: "ZanID Required", description: "Please enter an employee's ZanID.", variant: "destructive" });
-      return;
-    }
-    setIsFetchingEmployee(true);
+  const isAlreadyConfirmed = employeeToConfirm?.status === 'Confirmed';
+
+  const resetEmployeeAndForm = () => {
     setEmployeeToConfirm(null); 
     setEvaluationFormFile(null);
     setIpaCertificateFile(null);
     setLetterOfRequestFile(null);
     const fileInputs = document.querySelectorAll('input[type="file"]');
     fileInputs.forEach(input => (input as HTMLInputElement).value = '');
+  }
+
+  const handleFetchEmployeeDetails = () => {
+    if (!zanId) {
+      toast({ title: "ZanID Required", description: "Please enter an employee's ZanID.", variant: "destructive" });
+      return;
+    }
+    setIsFetchingEmployee(true);
+    resetEmployeeAndForm();
 
     setTimeout(() => {
       const foundEmployee = EMPLOYEES.find(emp => emp.zanId === zanId);
       if (foundEmployee) {
         setEmployeeToConfirm(foundEmployee);
-        toast({ title: "Employee Found", description: `Details for ${foundEmployee.name} loaded.` });
+        if (foundEmployee.status === 'Confirmed') {
+            toast({ 
+                title: "Already Confirmed", 
+                description: "This employee has already been confirmed. Confirmation request cannot be submitted.", 
+                variant: "warning",
+                duration: 5000,
+            });
+        } else {
+            toast({ title: "Employee Found", description: `Details for ${foundEmployee.name} loaded.` });
+        }
       } else {
         toast({ title: "Employee Not Found", description: `No employee found with ZanID: ${zanId}.`, variant: "destructive" });
       }
@@ -90,6 +98,16 @@ export default function ConfirmationPage() {
   const handleSubmitRequest = () => {
     if (!employeeToConfirm) {
       toast({ title: "Submission Error", description: "Employee details are missing.", variant: "destructive" });
+      return;
+    }
+
+    if (employeeToConfirm.status === 'Confirmed') {
+      toast({ 
+        title: "Already Confirmed", 
+        description: "This employee has already been confirmed. Confirmation request cannot be submitted.", 
+        variant: "destructive",
+        duration: 5000,
+      });
       return;
     }
 
@@ -122,14 +140,7 @@ export default function ConfirmationPage() {
     setTimeout(() => {
       toast({ title: "Request Submitted", description: `Confirmation request for ${employeeToConfirm.name} submitted successfully.` });
       setZanId('');
-      setEmployeeToConfirm(null);
-      setEvaluationFormFile(null);
-      setIpaCertificateFile(null);
-      setLetterOfRequestFile(null);
-      
-      const fileInputs = document.querySelectorAll('input[type="file"]');
-      fileInputs.forEach(input => (input as HTMLInputElement).value = '');
-
+      resetEmployeeAndForm();
       setIsSubmitting(false);
     }, 1500);
   };
@@ -166,24 +177,34 @@ export default function ConfirmationPage() {
                       <div><Label className="text-muted-foreground">ZanID:</Label> <p className="font-semibold text-foreground">{employeeToConfirm.zanId}</p></div>
                       <div><Label className="text-muted-foreground">Department:</Label> <p className="font-semibold text-foreground">{employeeToConfirm.department || 'N/A'}</p></div>
                       <div><Label className="text-muted-foreground">Cadre/Position:</Label> <p className="font-semibold text-foreground">{employeeToConfirm.cadre || 'N/A'}</p></div>
-                      <div className="md:col-span-2"><Label className="text-muted-foreground">Current Status:</Label> <p className="font-semibold text-foreground">{employeeToConfirm.status || 'N/A'}</p></div>
+                      <div className="md:col-span-2"><Label className="text-muted-foreground">Current Status:</Label> <p className={`font-semibold ${employeeToConfirm.status === 'Confirmed' ? 'text-green-600' : employeeToConfirm.status === 'On Probation' ? 'text-orange-500' : 'text-foreground'}`}>{employeeToConfirm.status || 'N/A'}</p></div>
                     </div>
                   </div>
                 </div>
+                
+                {isAlreadyConfirmed && (
+                  <Alert variant="warning" className="mt-4">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Already Confirmed</AlertTitle>
+                    <AlertDescription>
+                      This employee has already been confirmed. Confirmation request cannot be submitted.
+                    </AlertDescription>
+                  </Alert>
+                )}
             
-                <div className="space-y-4">
+                <div className={`space-y-4 ${isAlreadyConfirmed ? 'opacity-50 cursor-not-allowed' : ''}`}>
                   <h3 className="text-lg font-medium text-foreground">Required Documents (PDF Only)</h3>
                   <div>
                     <Label htmlFor="evaluationForm" className="flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" />Upload Evaluation Form</Label>
-                    <Input id="evaluationForm" type="file" onChange={(e) => setEvaluationFormFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
+                    <Input id="evaluationForm" type="file" onChange={(e) => setEvaluationFormFile(e.target.files)} accept=".pdf" disabled={isSubmitting || isAlreadyConfirmed}/>
                   </div>
                   <div>
                     <Label htmlFor="ipaCertificate" className="flex items-center"><Award className="mr-2 h-4 w-4 text-primary" />Upload IPA Certificate</Label>
-                    <Input id="ipaCertificate" type="file" onChange={(e) => setIpaCertificateFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
+                    <Input id="ipaCertificate" type="file" onChange={(e) => setIpaCertificateFile(e.target.files)} accept=".pdf" disabled={isSubmitting || isAlreadyConfirmed}/>
                   </div>
                   <div>
                     <Label htmlFor="letterOfRequest" className="flex items-center"><CheckCircle className="mr-2 h-4 w-4 text-primary" />Upload Letter of Request</Label>
-                    <Input id="letterOfRequest" type="file" onChange={(e) => setLetterOfRequestFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
+                    <Input id="letterOfRequest" type="file" onChange={(e) => setLetterOfRequestFile(e.target.files)} accept=".pdf" disabled={isSubmitting || isAlreadyConfirmed}/>
                   </div>
                 </div>
               </div>
@@ -191,7 +212,9 @@ export default function ConfirmationPage() {
           </CardContent>
           {employeeToConfirm && (
             <CardFooter className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2 pt-4 border-t">
-                <Button onClick={handleSubmitRequest} disabled={!employeeToConfirm || !evaluationFormFile || !ipaCertificateFile || !letterOfRequestFile || isSubmitting }>
+                <Button 
+                    onClick={handleSubmitRequest} 
+                    disabled={!employeeToConfirm || !evaluationFormFile || !ipaCertificateFile || !letterOfRequestFile || isSubmitting || isAlreadyConfirmed }>
                   {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Submit Request
                 </Button>
@@ -274,3 +297,5 @@ export default function ConfirmationPage() {
     </div>
   );
 }
+
+    
