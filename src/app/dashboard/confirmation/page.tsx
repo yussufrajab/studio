@@ -13,6 +13,7 @@ import { toast }  from '@/hooks/use-toast';
 import { Loader2, Search, FileText, CheckCircle, Award, AlertTriangle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { format, parseISO } from 'date-fns';
 
 interface MockPendingConfirmationRequest {
   id: string;
@@ -36,8 +37,6 @@ const mockPendingConfirmationRequests: MockPendingConfirmationRequest[] = [
     status: 'Pending HHRMD Review',
     documents: ['Evaluation Form', 'IPA Certificate', 'Letter of Request'],
   },
-  // Add another mock for an employee not yet confirmed for testing, if available in EMPLOYEES
-  // For Safia Juma Ali (already confirmed), an HRO shouldn't be able to submit.
 ];
 
 export default function ConfirmationPage() {
@@ -82,7 +81,7 @@ export default function ConfirmationPage() {
             toast({ 
                 title: "Already Confirmed", 
                 description: "This employee has already been confirmed. Confirmation request cannot be submitted.", 
-                variant: "destructive", // Changed to destructive for red color
+                variant: "destructive",
                 duration: 5000,
             });
         } else {
@@ -105,7 +104,7 @@ export default function ConfirmationPage() {
       toast({ 
         title: "Already Confirmed", 
         description: "This employee has already been confirmed. Confirmation request cannot be submitted.", 
-        variant: "destructive", // Ensured destructive for red color
+        variant: "destructive",
         duration: 5000,
       });
       return;
@@ -177,13 +176,16 @@ export default function ConfirmationPage() {
                       <div><Label className="text-muted-foreground">ZanID:</Label> <p className="font-semibold text-foreground">{employeeToConfirm.zanId}</p></div>
                       <div><Label className="text-muted-foreground">Department:</Label> <p className="font-semibold text-foreground">{employeeToConfirm.department || 'N/A'}</p></div>
                       <div><Label className="text-muted-foreground">Cadre/Position:</Label> <p className="font-semibold text-foreground">{employeeToConfirm.cadre || 'N/A'}</p></div>
+                      <div><Label className="text-muted-foreground">Employment Date:</Label> <p className="font-semibold text-foreground">{employeeToConfirm.employmentDate ? format(parseISO(employeeToConfirm.employmentDate), 'PPP') : 'N/A'}</p></div>
+                      <div><Label className="text-muted-foreground">Date of Birth:</Label> <p className="font-semibold text-foreground">{employeeToConfirm.dateOfBirth ? format(parseISO(employeeToConfirm.dateOfBirth), 'PPP') : 'N/A'}</p></div>
+                      <div><Label className="text-muted-foreground">Institution:</Label> <p className="font-semibold text-foreground">{employeeToConfirm.institution || 'N/A'}</p></div>
                       <div className="md:col-span-2"><Label className="text-muted-foreground">Current Status:</Label> <p className={`font-semibold ${employeeToConfirm.status === 'Confirmed' ? 'text-green-600' : employeeToConfirm.status === 'On Probation' ? 'text-orange-500' : 'text-foreground'}`}>{employeeToConfirm.status || 'N/A'}</p></div>
                     </div>
                   </div>
                 </div>
                 
                 {isAlreadyConfirmed && (
-                  <Alert variant="destructive" className="mt-4"> {/* Changed to destructive for red color */}
+                  <Alert variant="destructive" className="mt-4">
                     <AlertTriangle className="h-4 w-4" />
                     <AlertTitle>Already Confirmed</AlertTitle>
                     <AlertDescription>
@@ -223,7 +225,7 @@ export default function ConfirmationPage() {
         </Card>
       )}
 
-      {(role === ROLES.HHRMD || role === ROLES.HRMO || role === ROLES.DO) && (
+      {(role === ROLES.HHRMD || role === ROLES.HRMO) && (
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Review Confirmation Requests</CardTitle>
@@ -297,5 +299,4 @@ export default function ConfirmationPage() {
     </div>
   );
 }
-
     
