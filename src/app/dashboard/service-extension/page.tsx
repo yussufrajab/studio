@@ -11,7 +11,7 @@ import { ROLES, EMPLOYEES } from '@/lib/constants';
 import React, { useState } from 'react';
 import type { Employee } from '@/lib/types';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, Search, FileText, CalendarDays, Paperclip } from 'lucide-react';
+import { Loader2, Search, FileText, CalendarDays, CheckSquare } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 
 interface MockPendingServiceExtensionRequest {
@@ -38,7 +38,7 @@ const mockPendingServiceExtensionRequests: MockPendingServiceExtensionRequest[] 
     submissionDate: '2024-07-20',
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending HHRMD Review',
-    documents: ['Letter of Request', 'Project Completion Plan', 'Performance Review'],
+    documents: ['Letter of Request', 'Employee Consent Letter', 'Project Completion Plan', 'Performance Review'],
   },
   {
     id: 'SEXT002',
@@ -50,7 +50,7 @@ const mockPendingServiceExtensionRequests: MockPendingServiceExtensionRequest[] 
     submissionDate: '2024-07-18',
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending HRMO Review',
-    documents: ['Letter of Request', 'Mentorship Plan'],
+    documents: ['Letter of Request', 'Employee Consent Letter', 'Mentorship Plan'],
   },
 ];
 
@@ -64,7 +64,7 @@ export default function ServiceExtensionPage() {
   const [currentRetirementDate, setCurrentRetirementDate] = useState('');
   const [requestedExtensionPeriod, setRequestedExtensionPeriod] = useState('');
   const [justification, setJustification] = useState('');
-  const [supportingDocumentsFile, setSupportingDocumentsFile] = useState<FileList | null>(null);
+  const [employeeConsentLetterFile, setEmployeeConsentLetterFile] = useState<FileList | null>(null);
   const [letterOfRequestFile, setLetterOfRequestFile] = useState<FileList | null>(null);
 
   const [selectedRequest, setSelectedRequest] = useState<MockPendingServiceExtensionRequest | null>(null);
@@ -74,7 +74,7 @@ export default function ServiceExtensionPage() {
     setCurrentRetirementDate('');
     setRequestedExtensionPeriod('');
     setJustification('');
-    setSupportingDocumentsFile(null);
+    setEmployeeConsentLetterFile(null);
     setLetterOfRequestFile(null);
     const fileInputs = document.querySelectorAll('input[type="file"]');
     fileInputs.forEach(input => (input as HTMLInputElement).value = '');
@@ -106,12 +106,24 @@ export default function ServiceExtensionPage() {
       toast({ title: "Submission Error", description: "Employee details are missing.", variant: "destructive" });
       return;
     }
-    if (!currentRetirementDate || !requestedExtensionPeriod || !justification) {
-      toast({ title: "Submission Error", description: "Current Retirement Date, Requested Extension Period, and Justification are required.", variant: "destructive" });
-      return;
+    if (!currentRetirementDate) {
+        toast({ title: "Submission Error", description: "Current Retirement Date is missing.", variant: "destructive" });
+        return;
+    }
+    if (!requestedExtensionPeriod) {
+        toast({ title: "Submission Error", description: "Requested Extension Period is missing.", variant: "destructive" });
+        return;
+    }
+    if (!justification) {
+        toast({ title: "Submission Error", description: "Justification for Extension is missing.", variant: "destructive" });
+        return;
     }
     if (!letterOfRequestFile) {
       toast({ title: "Submission Error", description: "Letter of Request is missing. Please upload the PDF document.", variant: "destructive" });
+      return;
+    }
+    if (!employeeConsentLetterFile) {
+      toast({ title: "Submission Error", description: "Employee Consent Letter is missing. Please upload the PDF document.", variant: "destructive" });
       return;
     }
 
@@ -121,8 +133,8 @@ export default function ServiceExtensionPage() {
       toast({ title: "Submission Error", description: "Letter of Request must be a PDF file.", variant: "destructive" });
       return;
     }
-    if (supportingDocumentsFile && !checkPdf(supportingDocumentsFile)) {
-      toast({ title: "Submission Error", description: "Supporting Document, if provided, must be a PDF file.", variant: "destructive" });
+    if (!checkPdf(employeeConsentLetterFile)) {
+      toast({ title: "Submission Error", description: "Employee Consent Letter must be a PDF file.", variant: "destructive" });
       return;
     }
 
@@ -132,7 +144,7 @@ export default function ServiceExtensionPage() {
       currentRetirementDate,
       requestedExtensionPeriod,
       justification,
-      supportingDocumentsFile: supportingDocumentsFile ? supportingDocumentsFile[0]?.name : null,
+      employeeConsentLetterFile: employeeConsentLetterFile[0]?.name,
       letterOfRequestFile: letterOfRequestFile[0]?.name,
     });
 
@@ -195,12 +207,12 @@ export default function ServiceExtensionPage() {
                     <Textarea id="justificationServiceExt" placeholder="Provide strong reasons for the service extension" value={justification} onChange={(e) => setJustification(e.target.value)} disabled={isSubmitting} />
                   </div>
                   <div>
-                    <Label htmlFor="supportingDocumentsFile" className="flex items-center"><Paperclip className="mr-2 h-4 w-4 text-primary" />Upload Supporting Documents (Optional, PDF Only)</Label>
-                    <Input id="supportingDocumentsFile" type="file" onChange={(e) => setSupportingDocumentsFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
-                  </div>
-                  <div>
                     <Label htmlFor="letterOfRequestServiceExt" className="flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" />Upload Letter of Request (Required, PDF Only)</Label>
                     <Input id="letterOfRequestServiceExt" type="file" onChange={(e) => setLetterOfRequestFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
+                  </div>
+                   <div>
+                    <Label htmlFor="employeeConsentLetterFile" className="flex items-center"><CheckSquare className="mr-2 h-4 w-4 text-primary" />Upload Employee Consent Letter (Required, PDF Only)</Label>
+                    <Input id="employeeConsentLetterFile" type="file" onChange={(e) => setEmployeeConsentLetterFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
                   </div>
                 </div>
               </div>
@@ -216,6 +228,7 @@ export default function ServiceExtensionPage() {
                     !requestedExtensionPeriod ||
                     !justification ||
                     !letterOfRequestFile || 
+                    !employeeConsentLetterFile ||
                     isSubmitting 
                 }>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -309,3 +322,4 @@ export default function ServiceExtensionPage() {
     </div>
   );
 }
+
