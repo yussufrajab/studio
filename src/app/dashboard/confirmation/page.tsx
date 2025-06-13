@@ -20,6 +20,10 @@ interface MockPendingConfirmationRequest {
   employeeName: string;
   zanId: string;
   department: string;
+  cadre: string;
+  employmentDate: string;
+  dateOfBirth: string;
+  institution: string;
   submissionDate: string;
   submittedBy: string;
   status: string;
@@ -29,9 +33,13 @@ interface MockPendingConfirmationRequest {
 const mockPendingConfirmationRequests: MockPendingConfirmationRequest[] = [
   {
     id: 'CONF001',
-    employeeName: 'Ali Juma Ali', // This employee is 'On Probation' in EMPLOYEES
+    employeeName: 'Ali Juma Ali',
     zanId: '221458232',
     department: 'Administration',
+    cadre: 'Administrative Officer',
+    employmentDate: "2023-01-10",
+    dateOfBirth: "1980-05-15",
+    institution: "Central Government Office",
     submissionDate: '2024-07-28',
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending HHRMD Review',
@@ -264,31 +272,62 @@ export default function ConfirmationPage() {
                 Confirmation request for <strong>{selectedRequest.employeeName}</strong> (ZanID: {selectedRequest.zanId}).
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4 text-sm">
-              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
-                <Label className="text-right font-semibold">Department:</Label>
-                <p className="col-span-2">{selectedRequest.department}</p>
-              </div>
-              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
-                <Label className="text-right font-semibold">Submitted:</Label>
-                <p className="col-span-2">{selectedRequest.submissionDate} by {selectedRequest.submittedBy}</p>
-              </div>
-              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
-                <Label className="text-right font-semibold">Status:</Label>
-                <p className="col-span-2 text-primary">{selectedRequest.status}</p>
-              </div>
-              <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
-                <Label className="text-right font-semibold pt-1">Documents:</Label>
-                <div className="col-span-2">
-                  {selectedRequest.documents && selectedRequest.documents.length > 0 ? (
-                    <ul className="list-disc pl-5 text-muted-foreground">
-                      {selectedRequest.documents.map((doc, index) => <li key={index}>{doc}</li>)}
-                    </ul>
-                  ) : (
-                    <p className="text-muted-foreground">No documents listed for this mock request.</p>
-                  )}
+            <div className="space-y-4 py-4 text-sm">
+                <div className="space-y-1 border-b pb-3 mb-3">
+                    <h4 className="font-semibold text-base text-foreground mb-2">Employee Information</h4>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">Full Name:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employeeName}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">ZanID:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.zanId}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">Department:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.department}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">Cadre/Position:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.cadre}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">Employment Date:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employmentDate ? format(parseISO(selectedRequest.employmentDate), 'PPP') : 'N/A'}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">Date of Birth:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.dateOfBirth ? format(parseISO(selectedRequest.dateOfBirth), 'PPP') : 'N/A'}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">Institution:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.institution || 'N/A'}</p>
+                    </div>
                 </div>
-              </div>
+
+                <div className="space-y-1">
+                    <h4 className="font-semibold text-base text-foreground mb-2">Request Information</h4>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                        <Label className="text-right font-semibold">Submitted:</Label>
+                        <p className="col-span-2">{selectedRequest.submissionDate} by {selectedRequest.submittedBy}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                        <Label className="text-right font-semibold">Status:</Label>
+                        <p className="col-span-2 text-primary">{selectedRequest.status}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
+                        <Label className="text-right font-semibold pt-1">Documents:</Label>
+                        <div className="col-span-2">
+                        {selectedRequest.documents && selectedRequest.documents.length > 0 ? (
+                            <ul className="list-disc pl-5 text-muted-foreground">
+                            {selectedRequest.documents.map((doc, index) => <li key={index}>{doc}</li>)}
+                            </ul>
+                        ) : (
+                            <p className="text-muted-foreground">No documents listed for this mock request.</p>
+                        )}
+                        </div>
+                    </div>
+                </div>
             </div>
             <DialogFooter>
               <DialogClose asChild>

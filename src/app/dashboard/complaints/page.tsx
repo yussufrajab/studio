@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/hooks/use-auth';
-import { ROLES } from '@/lib/constants';
+import { ROLES, EMPLOYEES } from '@/lib/constants';
 import React, { useState } from 'react';
 import { standardizeComplaintFormatting } from '@/ai/flows/complaint-rewriter';
 import type { ComplaintFormValues } from '@/lib/types';
@@ -18,6 +18,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { toast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { format, parseISO } from 'date-fns';
 
 const complaintSchema = z.object({
   complaintText: z.string().min(10, "Complaint text must be at least 10 characters."),
@@ -28,12 +29,17 @@ interface MockPendingComplaint {
   id: string;
   employeeName: string; 
   zanId?: string; 
+  department?: string;
+  cadre?: string;
+  employmentDate?: string;
+  dateOfBirth?: string;
+  institution?: string;
   category: string;
   details: string;
   submissionDate: string;
   submittedBy: string; 
   status: string;
-  documents?: string[]; // Assuming evidence files might be summarized here
+  documents?: string[];
 }
 
 const mockPendingComplaints: MockPendingComplaint[] = [
@@ -41,6 +47,11 @@ const mockPendingComplaints: MockPendingComplaint[] = [
     id: 'COMP001',
     employeeName: 'Fatma Said Omar',
     zanId: '334589123',
+    department: 'Finance',
+    cadre: 'Accountant',
+    employmentDate: "2018-09-15",
+    dateOfBirth: "1988-02-10",
+    institution: "Treasury Office",
     category: 'Unfair Treatment',
     details: 'Employee states that they were unfairly overlooked for a training opportunity despite meeting all criteria.',
     submissionDate: '2024-07-20',
@@ -52,6 +63,11 @@ const mockPendingComplaints: MockPendingComplaint[] = [
     id: 'COMP002',
     employeeName: 'Ali Juma Ali',
     zanId: '221458232',
+    department: 'Administration',
+    cadre: 'Administrative Officer',
+    employmentDate: "2023-01-10",
+    dateOfBirth: "1980-05-15",
+    institution: "Central Government Office",
     category: 'Workplace Safety',
     details: 'Complaint regarding inadequate safety equipment in the workshop, leading to a minor preventable incident.',
     submissionDate: '2024-07-18',
@@ -211,33 +227,70 @@ export default function ComplaintsPage() {
                 Complaint from <strong>{selectedRequest.employeeName}</strong> {selectedRequest.zanId ? `(ZanID: ${selectedRequest.zanId})` : '(Anonymous/External)'}.
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4 text-sm">
-              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
-                <Label className="text-right font-semibold">Category:</Label>
-                <p className="col-span-2">{selectedRequest.category}</p>
-              </div>
-               <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
-                <Label className="text-right font-semibold pt-1">Details:</Label>
-                <p className="col-span-2">{selectedRequest.details}</p>
-              </div>
-              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
-                <Label className="text-right font-semibold">Submitted:</Label>
-                <p className="col-span-2">{selectedRequest.submissionDate} by {selectedRequest.submittedBy}</p>
-              </div>
-              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
-                <Label className="text-right font-semibold">Status:</Label>
-                <p className="col-span-2 text-primary">{selectedRequest.status}</p>
-              </div>
-              <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
-                <Label className="text-right font-semibold pt-1">Evidence Files:</Label>
-                 <div className="col-span-2">
-                  {selectedRequest.documents && selectedRequest.documents.length > 0 ? (
-                    <ul className="list-disc pl-5 text-muted-foreground">
-                      {selectedRequest.documents.map((doc, index) => <li key={index}>{doc}</li>)}
-                    </ul>
-                  ) : (
-                    <p className="text-muted-foreground">No specific evidence files listed for this mock complaint.</p>
-                  )}
+            <div className="space-y-4 py-4 text-sm">
+              {selectedRequest.zanId && ( // Only show employee details if it's not an anonymous complaint
+                <div className="space-y-1 border-b pb-3 mb-3">
+                    <h4 className="font-semibold text-base text-foreground mb-2">Employee Information</h4>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">Full Name:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employeeName}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">ZanID:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.zanId}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">Department:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.department || 'N/A'}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">Cadre/Position:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.cadre || 'N/A'}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">Employment Date:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employmentDate ? format(parseISO(selectedRequest.employmentDate), 'PPP') : 'N/A'}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">Date of Birth:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.dateOfBirth ? format(parseISO(selectedRequest.dateOfBirth), 'PPP') : 'N/A'}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">Institution:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.institution || 'N/A'}</p>
+                    </div>
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <h4 className="font-semibold text-base text-foreground mb-2">Complaint Information</h4>
+                <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                    <Label className="text-right font-semibold">Category:</Label>
+                    <p className="col-span-2">{selectedRequest.category}</p>
+                </div>
+                <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
+                    <Label className="text-right font-semibold pt-1">Details:</Label>
+                    <p className="col-span-2">{selectedRequest.details}</p>
+                </div>
+                <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                    <Label className="text-right font-semibold">Submitted:</Label>
+                    <p className="col-span-2">{selectedRequest.submissionDate} by {selectedRequest.submittedBy}</p>
+                </div>
+                <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                    <Label className="text-right font-semibold">Status:</Label>
+                    <p className="col-span-2 text-primary">{selectedRequest.status}</p>
+                </div>
+                <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
+                    <Label className="text-right font-semibold pt-1">Evidence Files:</Label>
+                    <div className="col-span-2">
+                    {selectedRequest.documents && selectedRequest.documents.length > 0 ? (
+                        <ul className="list-disc pl-5 text-muted-foreground">
+                        {selectedRequest.documents.map((doc, index) => <li key={index}>{doc}</li>)}
+                        </ul>
+                    ) : (
+                        <p className="text-muted-foreground">No specific evidence files listed for this mock complaint.</p>
+                    )}
+                    </div>
                 </div>
               </div>
             </div>

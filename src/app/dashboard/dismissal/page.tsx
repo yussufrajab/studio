@@ -19,6 +19,11 @@ interface MockPendingDismissalRequest {
   id: string;
   employeeName: string;
   zanId: string;
+  department: string;
+  cadre: string;
+  employmentDate: string;
+  dateOfBirth: string;
+  institution: string;
   reasonSummary: string;
   proposedDate: string;
   submissionDate: string;
@@ -31,7 +36,12 @@ const mockPendingDismissalRequests: MockPendingDismissalRequest[] = [
   {
     id: 'DISMISS001',
     employeeName: 'Ali Juma Ali', 
-    zanId: '221458232', // Employee is 'On Probation'
+    zanId: '221458232', 
+    department: 'Administration',
+    cadre: 'Administrative Officer',
+    employmentDate: '2023-01-10',
+    dateOfBirth: '1980-05-15',
+    institution: 'Central Government Office',
     reasonSummary: 'Failure to meet performance standards during probation period.',
     proposedDate: '2024-08-15',
     submissionDate: '2024-07-29',
@@ -260,8 +270,8 @@ export default function DismissalPage() {
                 <div key={request.id} className="mb-4 border p-4 rounded-md space-y-2 shadow-sm bg-background hover:shadow-md transition-shadow">
                   <h3 className="font-semibold text-base">Dismissal for: {request.employeeName} (ZanID: {request.zanId})</h3>
                   <p className="text-sm text-muted-foreground">Reason: {request.reasonSummary}</p>
-                  <p className="text-sm text-muted-foreground">Proposed Date: {request.proposedDate}</p>
-                  <p className="text-sm text-muted-foreground">Submitted: {request.submissionDate} by {request.submittedBy}</p>
+                  <p className="text-sm text-muted-foreground">Proposed Date: {request.proposedDate ? format(parseISO(request.proposedDate), 'PPP') : 'N/A'}</p>
+                  <p className="text-sm text-muted-foreground">Submitted: {request.submissionDate ? format(parseISO(request.submissionDate), 'PPP') : 'N/A'} by {request.submittedBy}</p>
                   <p className="text-sm"><span className="font-medium">Status:</span> <span className="text-primary">{request.status}</span></p>
                   <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                     <Button size="sm" variant="outline" onClick={() => { setSelectedRequest(request); setIsDetailsModalOpen(true); }}>View Details</Button>
@@ -286,35 +296,69 @@ export default function DismissalPage() {
                 Dismissal request for <strong>{selectedRequest.employeeName}</strong> (ZanID: {selectedRequest.zanId}).
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4 text-sm">
-               <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
-                <Label className="text-right font-semibold pt-1">Reason Summary:</Label>
-                <p className="col-span-2">{selectedRequest.reasonSummary}</p>
-              </div>
-              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
-                <Label className="text-right font-semibold">Proposed Date:</Label>
-                <p className="col-span-2">{selectedRequest.proposedDate}</p>
-              </div>
-              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
-                <Label className="text-right font-semibold">Submitted:</Label>
-                <p className="col-span-2">{selectedRequest.submissionDate} by {selectedRequest.submittedBy}</p>
-              </div>
-              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
-                <Label className="text-right font-semibold">Status:</Label>
-                <p className="col-span-2 text-primary">{selectedRequest.status}</p>
-              </div>
-              <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
-                <Label className="text-right font-semibold pt-1">Documents:</Label>
-                 <div className="col-span-2">
-                  {selectedRequest.documents && selectedRequest.documents.length > 0 ? (
-                    <ul className="list-disc pl-5 text-muted-foreground">
-                      {selectedRequest.documents.map((doc, index) => <li key={index}>{doc}</li>)}
-                    </ul>
-                  ) : (
-                    <p className="text-muted-foreground">No documents listed.</p>
-                  )}
+            <div className="space-y-4 py-4 text-sm">
+                <div className="space-y-1 border-b pb-3 mb-3">
+                    <h4 className="font-semibold text-base text-foreground mb-2">Employee Information</h4>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">Full Name:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employeeName}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">ZanID:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.zanId}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">Department:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.department}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">Cadre/Position:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.cadre}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">Employment Date:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employmentDate ? format(parseISO(selectedRequest.employmentDate), 'PPP') : 'N/A'}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">Date of Birth:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.dateOfBirth ? format(parseISO(selectedRequest.dateOfBirth), 'PPP') : 'N/A'}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">Institution:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.institution || 'N/A'}</p>
+                    </div>
                 </div>
-              </div>
+                 <div className="space-y-1">
+                     <h4 className="font-semibold text-base text-foreground mb-2">Request Information</h4>
+                    <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
+                        <Label className="text-right font-semibold pt-1">Reason Summary:</Label>
+                        <p className="col-span-2">{selectedRequest.reasonSummary}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                        <Label className="text-right font-semibold">Proposed Date:</Label>
+                        <p className="col-span-2">{selectedRequest.proposedDate ? format(parseISO(selectedRequest.proposedDate), 'PPP') : 'N/A'}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                        <Label className="text-right font-semibold">Submitted:</Label>
+                        <p className="col-span-2">{selectedRequest.submissionDate ? format(parseISO(selectedRequest.submissionDate), 'PPP') : 'N/A'} by {selectedRequest.submittedBy}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                        <Label className="text-right font-semibold">Status:</Label>
+                        <p className="col-span-2 text-primary">{selectedRequest.status}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
+                        <Label className="text-right font-semibold pt-1">Documents:</Label>
+                        <div className="col-span-2">
+                        {selectedRequest.documents && selectedRequest.documents.length > 0 ? (
+                            <ul className="list-disc pl-5 text-muted-foreground">
+                            {selectedRequest.documents.map((doc, index) => <li key={index}>{doc}</li>)}
+                            </ul>
+                        ) : (
+                            <p className="text-muted-foreground">No documents listed.</p>
+                        )}
+                        </div>
+                    </div>
+                </div>
             </div>
             <DialogFooter>
               <DialogClose asChild>

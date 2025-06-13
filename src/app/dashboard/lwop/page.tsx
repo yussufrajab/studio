@@ -19,6 +19,11 @@ interface MockPendingLWOPRequest {
   id: string;
   employeeName: string;
   zanId: string;
+  department: string;
+  cadre: string;
+  employmentDate: string;
+  dateOfBirth: string;
+  institution: string;
   duration: string;
   reason: string;
   submissionDate: string;
@@ -32,6 +37,11 @@ const mockPendingLWOPRequests: MockPendingLWOPRequest[] = [
     id: 'LWOP001',
     employeeName: 'Fatma Said Omar',
     zanId: '334589123',
+    department: 'Finance',
+    cadre: 'Accountant',
+    employmentDate: "2018-09-15",
+    dateOfBirth: "1988-02-10",
+    institution: "Treasury Office",
     duration: '6 Months',
     reason: 'Further studies abroad.',
     submissionDate: '2024-07-25',
@@ -43,6 +53,11 @@ const mockPendingLWOPRequests: MockPendingLWOPRequest[] = [
     id: 'LWOP002',
     employeeName: 'Hassan Mzee Juma',
     zanId: '445678912',
+    department: 'ICT',
+    cadre: 'IT Support',
+    employmentDate: "2017-01-20",
+    dateOfBirth: "1975-09-01",
+    institution: "e-Government Agency",
     duration: '1 Year',
     reason: 'Personal family matters requiring extended leave.',
     submissionDate: '2024-07-22',
@@ -307,35 +322,70 @@ export default function LwopPage() {
                 LWOP request for <strong>{selectedRequest.employeeName}</strong> (ZanID: {selectedRequest.zanId}).
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4 text-sm">
-              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
-                <Label className="text-right font-semibold">Duration:</Label>
-                <p className="col-span-2">{selectedRequest.duration}</p>
-              </div>
-               <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
-                <Label className="text-right font-semibold pt-1">Reason:</Label>
-                <p className="col-span-2">{selectedRequest.reason}</p>
-              </div>
-              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
-                <Label className="text-right font-semibold">Submitted:</Label>
-                <p className="col-span-2">{selectedRequest.submissionDate} by {selectedRequest.submittedBy}</p>
-              </div>
-              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
-                <Label className="text-right font-semibold">Status:</Label>
-                <p className="col-span-2 text-primary">{selectedRequest.status}</p>
-              </div>
-              <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
-                <Label className="text-right font-semibold pt-1">Documents:</Label>
-                 <div className="col-span-2">
-                  {selectedRequest.documents && selectedRequest.documents.length > 0 ? (
-                    <ul className="list-disc pl-5 text-muted-foreground">
-                      {selectedRequest.documents.map((doc, index) => <li key={index}>{doc}</li>)}
-                    </ul>
-                  ) : (
-                    <p className="text-muted-foreground">No documents listed.</p>
-                  )}
+             <div className="space-y-4 py-4 text-sm">
+                <div className="space-y-1 border-b pb-3 mb-3">
+                    <h4 className="font-semibold text-base text-foreground mb-2">Employee Information</h4>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">Full Name:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employeeName}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">ZanID:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.zanId}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">Department:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.department}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">Cadre/Position:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.cadre}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">Employment Date:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employmentDate ? format(parseISO(selectedRequest.employmentDate), 'PPP') : 'N/A'}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">Date of Birth:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.dateOfBirth ? format(parseISO(selectedRequest.dateOfBirth), 'PPP') : 'N/A'}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">Institution:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.institution || 'N/A'}</p>
+                    </div>
                 </div>
-              </div>
+
+                <div className="space-y-1">
+                    <h4 className="font-semibold text-base text-foreground mb-2">Request Information</h4>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                        <Label className="text-right font-semibold">Duration:</Label>
+                        <p className="col-span-2">{selectedRequest.duration}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
+                        <Label className="text-right font-semibold pt-1">Reason:</Label>
+                        <p className="col-span-2">{selectedRequest.reason}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                        <Label className="text-right font-semibold">Submitted:</Label>
+                        <p className="col-span-2">{selectedRequest.submissionDate} by {selectedRequest.submittedBy}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                        <Label className="text-right font-semibold">Status:</Label>
+                        <p className="col-span-2 text-primary">{selectedRequest.status}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
+                        <Label className="text-right font-semibold pt-1">Documents:</Label>
+                        <div className="col-span-2">
+                        {selectedRequest.documents && selectedRequest.documents.length > 0 ? (
+                            <ul className="list-disc pl-5 text-muted-foreground">
+                            {selectedRequest.documents.map((doc, index) => <li key={index}>{doc}</li>)}
+                            </ul>
+                        ) : (
+                            <p className="text-muted-foreground">No documents listed.</p>
+                        )}
+                        </div>
+                    </div>
+                </div>
             </div>
             <DialogFooter>
               <DialogClose asChild>

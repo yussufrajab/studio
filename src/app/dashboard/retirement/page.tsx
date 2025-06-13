@@ -20,6 +20,11 @@ interface MockPendingRetirementRequest {
   id: string;
   employeeName: string;
   zanId: string;
+  department: string;
+  cadre: string;
+  employmentDate: string;
+  dateOfBirth: string;
+  institution: string;
   retirementType: string;
   proposedDate: string;
   submissionDate: string;
@@ -33,6 +38,11 @@ const mockPendingRetirementRequests: MockPendingRetirementRequest[] = [
     id: 'RETIRE001',
     employeeName: 'Hamid Khalfan Abdalla', 
     zanId: '778901234',
+    department: 'Transport',
+    cadre: 'Senior Driver',
+    employmentDate: '2010-01-01',
+    dateOfBirth: '1978-03-25', // Should be older to be near retirement for compulsory
+    institution: 'Government Garage',
     retirementType: 'Compulsory (Age 60)',
     proposedDate: '2025-03-25',
     submissionDate: '2024-07-30',
@@ -44,6 +54,11 @@ const mockPendingRetirementRequests: MockPendingRetirementRequest[] = [
     id: 'RETIRE002',
     employeeName: 'Juma Omar Ali', 
     zanId: '667890456',
+    department: 'Procurement',
+    cadre: 'Procurement Officer',
+    employmentDate: '2015-10-11',
+    dateOfBirth: '1983-06-18', // Should be older for voluntary at 55+
+    institution: 'Government Procurement Services Agency',
     retirementType: 'Voluntary (Age 55+)',
     proposedDate: '2025-06-18',
     submissionDate: '2024-07-28',
@@ -53,8 +68,13 @@ const mockPendingRetirementRequests: MockPendingRetirementRequest[] = [
   },
   {
     id: 'RETIRE003',
-    employeeName: 'Asha Juma Khalfan', 
-    zanId: 'ASHA_ZANID_PLACEHOLDER', 
+    employeeName: 'Asha Juma Khalfan', // This employee is not in EMPLOYEES, so details are hardcoded
+    zanId: '889012345',
+    department: 'Education',
+    cadre: 'Teacher',
+    employmentDate: '2005-05-05',
+    dateOfBirth: '1970-12-12',
+    institution: 'Ministry of Education',
     retirementType: 'Illness',
     proposedDate: '2025-01-15',
     submissionDate: '2024-07-22',
@@ -91,7 +111,7 @@ export default function RetirementPage() {
   }, []);
 
   useEffect(() => {
-    setAgeEligibilityError(null); // Reset error on change
+    setAgeEligibilityError(null); 
     if (employeeDetails && employeeDetails.dateOfBirth && retirementType && retirementDate) {
       const birthDate = parseISO(employeeDetails.dateOfBirth);
       const proposedRetirementDate = parseISO(retirementDate);
@@ -385,35 +405,69 @@ export default function RetirementPage() {
                 Retirement request for <strong>{selectedRequest.employeeName}</strong> (ZanID: {selectedRequest.zanId}).
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4 text-sm">
-              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
-                <Label className="text-right font-semibold">Retirement Type:</Label>
-                <p className="col-span-2">{selectedRequest.retirementType}</p>
-              </div>
-              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
-                <Label className="text-right font-semibold">Proposed Date:</Label>
-                <p className="col-span-2">{selectedRequest.proposedDate}</p>
-              </div>
-              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
-                <Label className="text-right font-semibold">Submitted:</Label>
-                <p className="col-span-2">{selectedRequest.submissionDate} by {selectedRequest.submittedBy}</p>
-              </div>
-              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
-                <Label className="text-right font-semibold">Status:</Label>
-                <p className="col-span-2 text-primary">{selectedRequest.status}</p>
-              </div>
-              <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
-                <Label className="text-right font-semibold pt-1">Documents:</Label>
-                 <div className="col-span-2">
-                  {selectedRequest.documents && selectedRequest.documents.length > 0 ? (
-                    <ul className="list-disc pl-5 text-muted-foreground">
-                      {selectedRequest.documents.map((doc, index) => <li key={index}>{doc}</li>)}
-                    </ul>
-                  ) : (
-                    <p className="text-muted-foreground">No documents listed.</p>
-                  )}
+            <div className="space-y-4 py-4 text-sm">
+                <div className="space-y-1 border-b pb-3 mb-3">
+                    <h4 className="font-semibold text-base text-foreground mb-2">Employee Information</h4>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">Full Name:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employeeName}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">ZanID:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.zanId}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">Department:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.department}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">Cadre/Position:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.cadre}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">Employment Date:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employmentDate ? format(parseISO(selectedRequest.employmentDate), 'PPP') : 'N/A'}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">Date of Birth:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.dateOfBirth ? format(parseISO(selectedRequest.dateOfBirth), 'PPP') : 'N/A'}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">Institution:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.institution || 'N/A'}</p>
+                    </div>
                 </div>
-              </div>
+                <div className="space-y-1">
+                    <h4 className="font-semibold text-base text-foreground mb-2">Request Information</h4>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                        <Label className="text-right font-semibold">Retirement Type:</Label>
+                        <p className="col-span-2">{selectedRequest.retirementType}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                        <Label className="text-right font-semibold">Proposed Date:</Label>
+                        <p className="col-span-2">{selectedRequest.proposedDate ? format(parseISO(selectedRequest.proposedDate), 'PPP') : 'N/A'}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                        <Label className="text-right font-semibold">Submitted:</Label>
+                        <p className="col-span-2">{selectedRequest.submissionDate ? format(parseISO(selectedRequest.submissionDate), 'PPP') : 'N/A'} by {selectedRequest.submittedBy}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                        <Label className="text-right font-semibold">Status:</Label>
+                        <p className="col-span-2 text-primary">{selectedRequest.status}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
+                        <Label className="text-right font-semibold pt-1">Documents:</Label>
+                        <div className="col-span-2">
+                        {selectedRequest.documents && selectedRequest.documents.length > 0 ? (
+                            <ul className="list-disc pl-5 text-muted-foreground">
+                            {selectedRequest.documents.map((doc, index) => <li key={index}>{doc}</li>)}
+                            </ul>
+                        ) : (
+                            <p className="text-muted-foreground">No documents listed.</p>
+                        )}
+                        </div>
+                    </div>
+                </div>
             </div>
             <DialogFooter>
               <DialogClose asChild>

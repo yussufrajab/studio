@@ -20,14 +20,18 @@ interface MockPendingPromotionRequest {
   id: string;
   employeeName: string;
   zanId: string;
+  department: string;
   currentCadre: string;
+  employmentDate: string;
+  dateOfBirth: string;
+  institution: string;
   proposedCadre: string;
   promotionType: 'Experience' | 'Education Advancement';
   submissionDate: string;
   submittedBy: string;
   status: string;
   documents?: string[];
-  studiedOutsideCountry?: boolean; // Relevant for Education type
+  studiedOutsideCountry?: boolean;
 }
 
 const mockPendingPromotionRequests: MockPendingPromotionRequest[] = [
@@ -35,7 +39,11 @@ const mockPendingPromotionRequests: MockPendingPromotionRequest[] = [
     id: 'PROM001',
     employeeName: 'Zainab Ali Khamis',
     zanId: '556789345',
+    department: 'Planning',
     currentCadre: 'Planning Officer',
+    employmentDate: "2022-02-01",
+    dateOfBirth: "1992-12-30",
+    institution: "Planning Commission",
     proposedCadre: 'Senior Planning Officer',
     promotionType: 'Experience',
     submissionDate: '2024-07-29',
@@ -47,7 +55,11 @@ const mockPendingPromotionRequests: MockPendingPromotionRequest[] = [
     id: 'PROM002',
     employeeName: 'Juma Omar Ali',
     zanId: '667890456',
+    department: 'Procurement',
     currentCadre: 'Procurement Officer',
+    employmentDate: "2015-10-11",
+    dateOfBirth: "1983-06-18",
+    institution: "Government Procurement Services Agency",
     proposedCadre: 'Principal Procurement Officer',
     promotionType: 'Education Advancement',
     submissionDate: '2024-07-26',
@@ -240,7 +252,7 @@ export default function PromotionPage() {
     if (promotionType === 'education') {
       return !certificateFile || (studiedOutsideCountry && !tcuFormFile) || isSubmitting;
     }
-    return true; // Should not happen if promotionType is set
+    return true; 
   };
 
 
@@ -405,45 +417,75 @@ export default function PromotionPage() {
                 Promotion request for <strong>{selectedRequest.employeeName}</strong> (ZanID: {selectedRequest.zanId}).
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4 text-sm">
-              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
-                <Label className="text-right font-semibold">Promotion Type:</Label>
-                <p className="col-span-2">{selectedRequest.promotionType}</p>
-              </div>
-              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
-                <Label className="text-right font-semibold">Current Cadre:</Label>
-                <p className="col-span-2">{selectedRequest.currentCadre}</p>
-              </div>
-              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
-                <Label className="text-right font-semibold">Proposed Cadre:</Label>
-                <p className="col-span-2">{selectedRequest.proposedCadre}</p>
-              </div>
-              {selectedRequest.promotionType === 'Education Advancement' && (
-                <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
-                    <Label className="text-right font-semibold">Studied Outside?:</Label>
-                    <p className="col-span-2">{selectedRequest.studiedOutsideCountry ? 'Yes' : 'No'}</p>
+            <div className="space-y-4 py-4 text-sm">
+                 <div className="space-y-1 border-b pb-3 mb-3">
+                    <h4 className="font-semibold text-base text-foreground mb-2">Employee Information</h4>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">Full Name:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employeeName}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">ZanID:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.zanId}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">Department:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.department}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">Current Cadre:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.currentCadre}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">Employment Date:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employmentDate ? format(parseISO(selectedRequest.employmentDate), 'PPP') : 'N/A'}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">Date of Birth:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.dateOfBirth ? format(parseISO(selectedRequest.dateOfBirth), 'PPP') : 'N/A'}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">Institution:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.institution || 'N/A'}</p>
+                    </div>
                 </div>
-              )}
-              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
-                <Label className="text-right font-semibold">Submitted:</Label>
-                <p className="col-span-2">{selectedRequest.submissionDate} by {selectedRequest.submittedBy}</p>
-              </div>
-              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
-                <Label className="text-right font-semibold">Status:</Label>
-                <p className="col-span-2 text-primary">{selectedRequest.status}</p>
-              </div>
-              <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
-                <Label className="text-right font-semibold pt-1">Documents:</Label>
-                 <div className="col-span-2">
-                  {selectedRequest.documents && selectedRequest.documents.length > 0 ? (
-                    <ul className="list-disc pl-5 text-muted-foreground">
-                      {selectedRequest.documents.map((doc, index) => <li key={index}>{doc}</li>)}
-                    </ul>
-                  ) : (
-                    <p className="text-muted-foreground">No documents listed.</p>
-                  )}
+                <div className="space-y-1">
+                     <h4 className="font-semibold text-base text-foreground mb-2">Request Information</h4>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                        <Label className="text-right font-semibold">Promotion Type:</Label>
+                        <p className="col-span-2">{selectedRequest.promotionType}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                        <Label className="text-right font-semibold">Proposed Cadre:</Label>
+                        <p className="col-span-2">{selectedRequest.proposedCadre}</p>
+                    </div>
+                    {selectedRequest.promotionType === 'Education Advancement' && (
+                        <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                            <Label className="text-right font-semibold">Studied Outside?:</Label>
+                            <p className="col-span-2">{selectedRequest.studiedOutsideCountry ? 'Yes' : 'No'}</p>
+                        </div>
+                    )}
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                        <Label className="text-right font-semibold">Submitted:</Label>
+                        <p className="col-span-2">{selectedRequest.submissionDate} by {selectedRequest.submittedBy}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                        <Label className="text-right font-semibold">Status:</Label>
+                        <p className="col-span-2 text-primary">{selectedRequest.status}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
+                        <Label className="text-right font-semibold pt-1">Documents:</Label>
+                        <div className="col-span-2">
+                        {selectedRequest.documents && selectedRequest.documents.length > 0 ? (
+                            <ul className="list-disc pl-5 text-muted-foreground">
+                            {selectedRequest.documents.map((doc, index) => <li key={index}>{doc}</li>)}
+                            </ul>
+                        ) : (
+                            <p className="text-muted-foreground">No documents listed.</p>
+                        )}
+                        </div>
+                    </div>
                 </div>
-              </div>
             </div>
             <DialogFooter>
               <DialogClose asChild>
