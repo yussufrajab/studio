@@ -11,7 +11,7 @@ import { ROLES, EMPLOYEES } from '@/lib/constants';
 import React, { useState, useEffect } from 'react';
 import type { Employee } from '@/lib/types';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, Search, FileText, CalendarDays, Paperclip, ShieldAlert } from 'lucide-react';
+import { Loader2, Search, FileText, CalendarDays, Paperclip, ShieldAlert, FileWarning, PauseOctagon, Files } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 
@@ -50,7 +50,7 @@ const initialMockPendingTerminationRequests: MockPendingTerminationRequest[] = [
     submissionDate: '2024-07-25',
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending DO Review',
-    documents: ['Misconduct Evidence & Investigation Report', 'Warning Letters', 'Letter of Request'],
+    documents: ['Letter of Request', 'Misconduct Investigation Report', 'Warning Letter(s)'],
     reviewStage: 'initial',
   },
   {
@@ -67,7 +67,7 @@ const initialMockPendingTerminationRequests: MockPendingTerminationRequest[] = [
     submissionDate: '2024-07-22',
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending HHRMD Review',
-    documents: ['Misconduct Investigation Report', 'Code of Conduct Violation Details', 'Letter of Request'],
+    documents: ['Letter of Request', 'Misconduct Investigation Report', 'Employee Explanation Letter', 'Investigation Committee Report'],
     reviewStage: 'initial',
   },
 ];
@@ -81,9 +81,19 @@ export default function TerminationPage() {
 
   const [reasonTermination, setReasonTermination] = useState('');
   const [proposedDateTermination, setProposedDateTermination] = useState('');
-  const [misconductEvidenceFile, setMisconductEvidenceFile] = useState<FileList | null>(null);
-  const [supportingDocumentsFile, setSupportingDocumentsFile] = useState<FileList | null>(null);
+  
+  // Required document
   const [letterOfRequestFile, setLetterOfRequestFile] = useState<FileList | null>(null);
+  const [misconductEvidenceFile, setMisconductEvidenceFile] = useState<FileList | null>(null); // Primary evidence
+
+  // Optional supporting documents
+  const [warningLettersFile, setWarningLettersFile] = useState<FileList | null>(null);
+  const [employeeExplanationLetterFile, setEmployeeExplanationLetterFile] = useState<FileList | null>(null);
+  const [suspensionLetterFile, setSuspensionLetterFile] = useState<FileList | null>(null);
+  const [summonNoticeFile, setSummonNoticeFile] = useState<FileList | null>(null);
+  const [investigationCommitteeReportFile, setInvestigationCommitteeReportFile] = useState<FileList | null>(null); // Can be separate from primary evidence
+  const [otherAdditionalDocumentsFile, setOtherAdditionalDocumentsFile] = useState<FileList | null>(null);
+
   const [minProposedDate, setMinProposedDate] = useState('');
 
   const [pendingRequests, setPendingRequests] = useState<MockPendingTerminationRequest[]>(initialMockPendingTerminationRequests);
@@ -101,9 +111,14 @@ export default function TerminationPage() {
   const resetFormFields = () => {
     setReasonTermination('');
     setProposedDateTermination('');
-    setMisconductEvidenceFile(null);
-    setSupportingDocumentsFile(null);
     setLetterOfRequestFile(null);
+    setMisconductEvidenceFile(null);
+    setWarningLettersFile(null);
+    setEmployeeExplanationLetterFile(null);
+    setSuspensionLetterFile(null);
+    setSummonNoticeFile(null);
+    setInvestigationCommitteeReportFile(null);
+    setOtherAdditionalDocumentsFile(null);
     const fileInputs = document.querySelectorAll('input[type="file"]');
     fileInputs.forEach(input => (input as HTMLInputElement).value = '');
   };
@@ -138,34 +153,52 @@ export default function TerminationPage() {
       toast({ title: "Submission Error", description: "Reason for Termination and Proposed Date are required.", variant: "destructive" });
       return;
     }
-    if (!misconductEvidenceFile) {
-      toast({ title: "Submission Error", description: "Misconduct Evidence & Investigation Report is missing. Please upload the PDF document.", variant: "destructive" });
-      return;
-    }
     if (!letterOfRequestFile) {
       toast({ title: "Submission Error", description: "Letter of Request is missing. Please upload the PDF document.", variant: "destructive" });
       return;
     }
-
-    const checkPdf = (fileList: FileList | null) => fileList && fileList[0] && fileList[0].type === "application/pdf";
-
-    if (!checkPdf(misconductEvidenceFile)) {
-      toast({ title: "Submission Error", description: "Misconduct Evidence & Investigation Report must be a PDF file.", variant: "destructive" });
+    if (!misconductEvidenceFile) {
+      toast({ title: "Submission Error", description: "Misconduct Evidence & Investigation Report is missing. Please upload the PDF document.", variant: "destructive" });
       return;
     }
-    if (supportingDocumentsFile && !checkPdf(supportingDocumentsFile)) {
-      toast({ title: "Submission Error", description: "Supporting Document, if provided, must be a PDF file.", variant: "destructive" });
-      return;
+
+    const checkPdf = (fileList: FileList | null) => !fileList || (fileList[0] && fileList[0].type === "application/pdf");
+
+    if (letterOfRequestFile && letterOfRequestFile[0].type !== "application/pdf") {
+      toast({ title: "Submission Error", description: "Letter of Request must be a PDF file.", variant: "destructive" }); return;
     }
-    if (!checkPdf(letterOfRequestFile)) {
-      toast({ title: "Submission Error", description: "Letter of Request must be a PDF file.", variant: "destructive" });
-      return;
+    if (misconductEvidenceFile && misconductEvidenceFile[0].type !== "application/pdf") {
+      toast({ title: "Submission Error", description: "Misconduct Evidence & Investigation Report must be a PDF file.", variant: "destructive" }); return;
+    }
+    if (!checkPdf(warningLettersFile)) {
+      toast({ title: "Submission Error", description: "Warning Letter(s) must be a PDF file.", variant: "destructive" }); return;
+    }
+    if (!checkPdf(employeeExplanationLetterFile)) {
+      toast({ title: "Submission Error", description: "Employee Explanation Letter must be a PDF file.", variant: "destructive" }); return;
+    }
+    if (!checkPdf(suspensionLetterFile)) {
+      toast({ title: "Submission Error", description: "Suspension Letter must be a PDF file.", variant: "destructive" }); return;
+    }
+    if (!checkPdf(summonNoticeFile)) {
+      toast({ title: "Submission Error", description: "Summon Notice must be a PDF file.", variant: "destructive" }); return;
+    }
+    if (!checkPdf(investigationCommitteeReportFile)) {
+      toast({ title: "Submission Error", description: "Investigation Committee Report (optional) must be a PDF file.", variant: "destructive" }); return;
+    }
+    if (!checkPdf(otherAdditionalDocumentsFile)) {
+      toast({ title: "Submission Error", description: "Other Additional Documents must be a PDF file.", variant: "destructive" }); return;
     }
 
     setIsSubmitting(true);
     const newRequestId = `TERM${Date.now().toString().slice(-3)}`;
     let documentsList = ['Letter of Request', 'Misconduct Evidence & Investigation Report'];
-    if (supportingDocumentsFile) documentsList.push('Supporting Documents');
+    if (warningLettersFile) documentsList.push('Warning Letter(s)');
+    if (employeeExplanationLetterFile) documentsList.push('Employee Explanation Letter');
+    if (suspensionLetterFile) documentsList.push('Suspension Letter');
+    if (summonNoticeFile) documentsList.push('Summon Notice/Invitation Letter');
+    if (investigationCommitteeReportFile) documentsList.push('Investigation Committee Report (Additional)');
+    if (otherAdditionalDocumentsFile) documentsList.push('Other Additional Document(s)');
+
 
     const newRequest: MockPendingTerminationRequest = {
         id: newRequestId,
@@ -185,14 +218,7 @@ export default function TerminationPage() {
         reviewStage: 'initial',
     };
 
-    console.log("Submitting Termination Request:", {
-      employee: employeeDetails,
-      reasonTermination,
-      proposedDateTermination,
-      misconductEvidenceFile: misconductEvidenceFile[0]?.name,
-      supportingDocumentsFile: supportingDocumentsFile ? supportingDocumentsFile[0]?.name : null,
-      letterOfRequestFile: letterOfRequestFile[0]?.name,
-    });
+    console.log("Submitting Termination Request:", newRequest);
 
     setTimeout(() => {
       setPendingRequests(prev => [newRequest, ...prev]);
@@ -274,10 +300,17 @@ export default function TerminationPage() {
       toast({ title: `Commission Decision: ${decision === 'approved' ? 'Approved' : 'Rejected'}`, description: toastMessage });
     }
   };
+  
+  const isSubmitDisabled = !employeeDetails || 
+    !reasonTermination ||
+    !proposedDateTermination ||
+    !letterOfRequestFile || 
+    !misconductEvidenceFile ||
+    isSubmitting;
 
   return (
     <div>
-      <PageHeader title="Termination" description="Process employee terminations." />
+      <PageHeader title="Termination" description="Process employee terminations for confirmed employees." />
       {role === ROLES.HRO && (
         <Card className="mb-6 shadow-lg">
           <CardHeader>
@@ -325,17 +358,41 @@ export default function TerminationPage() {
                     <Label htmlFor="proposedDateTermination" className="flex items-center"><CalendarDays className="mr-2 h-4 w-4 text-primary" />Proposed Date of Termination</Label>
                     <Input id="proposedDateTermination" type="date" value={proposedDateTermination} onChange={(e) => setProposedDateTermination(e.target.value)} disabled={isSubmitting} min={minProposedDate} />
                   </div>
+                  
+                  <h4 className="text-md font-medium text-foreground pt-2">Upload Required Documents (PDF Only)</h4>
                   <div>
-                    <Label htmlFor="misconductEvidenceFile" className="flex items-center"><ShieldAlert className="mr-2 h-4 w-4 text-destructive" />Upload Misconduct Evidence &amp; Investigation Report (PDF Only)</Label>
+                    <Label htmlFor="letterOfRequestFileTermination" className="flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" />Upload Letter of Request (Required)</Label>
+                    <Input id="letterOfRequestFileTermination" type="file" onChange={(e) => setLetterOfRequestFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
+                  </div>
+                  <div>
+                    <Label htmlFor="misconductEvidenceFile" className="flex items-center"><ShieldAlert className="mr-2 h-4 w-4 text-destructive" />Upload Misconduct Evidence &amp; Primary Investigation Report (Required)</Label>
                     <Input id="misconductEvidenceFile" type="file" onChange={(e) => setMisconductEvidenceFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
                   </div>
+                  
+                  <h4 className="text-md font-medium text-foreground pt-2">Upload Optional Supporting Documents (PDF Only)</h4>
                   <div>
-                    <Label htmlFor="supportingDocumentsFile" className="flex items-center"><Paperclip className="mr-2 h-4 w-4 text-primary" />Upload Supporting Documents (Optional, PDF Only)</Label>
-                    <Input id="supportingDocumentsFile" type="file" onChange={(e) => setSupportingDocumentsFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
+                    <Label htmlFor="warningLettersFileTerm" className="flex items-center"><FileWarning className="mr-2 h-4 w-4 text-orange-500" />Upload Warning Letter(s)</Label>
+                    <Input id="warningLettersFileTerm" type="file" onChange={(e) => setWarningLettersFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
                   </div>
                   <div>
-                    <Label htmlFor="letterOfRequestFileTermination" className="flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" />Upload Letter of Request (PDF Only)</Label>
-                    <Input id="letterOfRequestFileTermination" type="file" onChange={(e) => setLetterOfRequestFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
+                    <Label htmlFor="employeeExplanationLetterFileTerm" className="flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" />Upload Employee Explanation Letter</Label>
+                    <Input id="employeeExplanationLetterFileTerm" type="file" onChange={(e) => setEmployeeExplanationLetterFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
+                  </div>
+                   <div>
+                    <Label htmlFor="suspensionLetterFileTerm" className="flex items-center"><PauseOctagon className="mr-2 h-4 w-4 text-red-500" />Upload Suspension Letter</Label>
+                    <Input id="suspensionLetterFileTerm" type="file" onChange={(e) => setSuspensionLetterFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
+                  </div>
+                  <div>
+                    <Label htmlFor="summonNoticeFileTerm" className="flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" />Upload Summon Notice / Invitation Letter</Label>
+                    <Input id="summonNoticeFileTerm" type="file" onChange={(e) => setSummonNoticeFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
+                  </div>
+                  <div>
+                    <Label htmlFor="investigationCommitteeReportFileTerm" className="flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" />Upload Investigation Committee Report (Additional)</Label>
+                    <Input id="investigationCommitteeReportFileTerm" type="file" onChange={(e) => setInvestigationCommitteeReportFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
+                  </div>
+                  <div>
+                    <Label htmlFor="otherAdditionalDocumentsFileTerm" className="flex items-center"><Files className="mr-2 h-4 w-4 text-primary" />Upload Other Additional Documents</Label>
+                    <Input id="otherAdditionalDocumentsFileTerm" type="file" onChange={(e) => setOtherAdditionalDocumentsFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
                   </div>
                 </div>
               </div>
@@ -345,14 +402,7 @@ export default function TerminationPage() {
             <CardFooter className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2 pt-4 border-t">
               <Button 
                 onClick={handleSubmitTerminationRequest} 
-                disabled={
-                    !employeeDetails || 
-                    !reasonTermination ||
-                    !proposedDateTermination ||
-                    !misconductEvidenceFile ||
-                    !letterOfRequestFile || 
-                    isSubmitting 
-                }>
+                disabled={isSubmitDisabled}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Submit Termination Request
               </Button>
@@ -515,7 +565,7 @@ export default function TerminationPage() {
                     />
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" onClick={() => { setIsRejectionModalOpen(false); setCurrentRequestToAction(null); }}>Cancel</Button>
+                    <Button variant="outline" onClick={() => { setIsRejectionModalOpen(false); setCurrentRequestToAction(null); setRejectionReasonInput(''); }}>Cancel</Button>
                     <Button variant="destructive" onClick={handleRejectionSubmit} disabled={!rejectionReasonInput.trim()}>Submit Rejection</Button>
                 </DialogFooter>
             </DialogContent>
@@ -524,5 +574,3 @@ export default function TerminationPage() {
     </div>
   );
 }
-
-    
