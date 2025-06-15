@@ -30,6 +30,7 @@ const REPORT_TYPES = [
   { value: 'illnessRetirement', label: 'Ripoti ya Kustaafu kwa Ugonjwa (Illness Retirement)' },
   { value: 'lwop', label: 'Ripoti ya Likizo Bila Malipo (Leave Without Pay)' },
   { value: 'promotion', label: 'Ripoti ya Kupandishwa Cheo (Promotion)' },
+  { value: 'promotionExperience', label: 'Ripoti ya Kupandishwa Cheo kwa Uzoefu (Promotion due to Experience)' },
   { value: 'terminationDismissal', label: 'Ripoti ya Kufukuzwa/Kuachishwa Kazi (Termination/Dismissal)' },
   { value: 'complaints', label: 'Ripoti ya Malalamiko (Complaints)' },
   { value: 'cadreChange', label: 'Ripoti ya Kubadilishwa Kada (Change of Cadre)' },
@@ -108,7 +109,7 @@ const MOCK_DATA_STORE: Record<string, () => ReportOutput> = {
     totals: { sn: 'JUMLA', wizara: '', muda: '', m: 5, f: 2, t: 7, sababuKuidhinishwa: '' }
   }),
   promotion: () => ({
-    title: 'Ripoti ya Kupandishwa Cheo',
+    title: 'Ripoti ya Kupandishwa Cheo (Jumla)',
     headers: ["S.NO", "WIZARA/TAASISI", "MALE", "FEMALE", "JUMLA"],
     dataKeys: ["sno", "wizara", "m", "f", "jumla"],
     data: [
@@ -118,6 +119,17 @@ const MOCK_DATA_STORE: Record<string, () => ReportOutput> = {
       { sno: 4, wizara: 'WIZARA YA KILIMO MALIASILI NA MIFUGO', m: 2, f: 1, jumla: 3 },
     ],
     totals: { sno: 'JUMLA', wizara: '', m: 8, f: 17, jumla: 25 }
+  }),
+  promotionExperience: () => ({
+    title: 'Ripoti ya Kupandishwa Cheo kwa Uzoefu',
+    headers: ["S/N", "WIZARA/TAASISI", "JINA KAMILI", "JINSIA", "TAREHE YA KUANZA KAZI", "CHEO CHA SASA & DARAJA", "CHEO KILICHOPENDEKEZWA & DARAJA", "JUMLA"],
+    dataKeys: ["sn", "wizara", "jinaKamili", "jinsia", "tareheKuanzaKazi", "cheoSasaNaDaraja", "cheoKilichopendekezwaNaDaraja", "jumla"],
+    data: [
+      { sn: 1, wizara: 'Wizara ya Elimu', jinaKamili: 'Salum Ali Juma', jinsia: 'M', tareheKuanzaKazi: '12/08/2015', cheoSasaNaDaraja: 'Assistant ICT Officer Grade I', cheoKilichopendekezwaNaDaraja: 'Senior Assistant ICT Officer', jumla: 1 },
+      { sn: 2, wizara: 'Wizara ya Afya', jinaKamili: 'Asha Bakari Said', jinsia: 'F', tareheKuanzaKazi: '01/03/2012', cheoSasaNaDaraja: 'Registered Nurse Grade II', cheoKilichopendekezwaNaDaraja: 'Senior Registered Nurse', jumla: 1 },
+      { sn: 3, wizara: 'Ofisi ya Rais - Utumishi', jinaKamili: 'Khamis Omar Faki', jinsia: 'M', tareheKuanzaKazi: '15/05/2010', cheoSasaNaDaraja: 'HR Officer Grade I', cheoKilichopendekezwaNaDaraja: 'Principal HR Officer', jumla: 1 },
+    ],
+    totals: { sn: 'JUMLA', cheoSasaNaDaraja: '', cheoKilichopendekezwaNaDaraja: '', jumla: 3 } 
   }),
   terminationDismissal: () => ({
     title: 'Ripoti ya Kufukuzwa/Kuachishwa Kazi',
