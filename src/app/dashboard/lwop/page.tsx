@@ -207,7 +207,7 @@ export default function LwopPage() {
         reason: reason,
         submissionDate: format(new Date(), 'yyyy-MM-dd'),
         submittedBy: `${user?.name} (${user?.role})`,
-        status: role === ROLES.HHRMD ? 'Pending HHRMD Review' : 'Pending HRMO Review', // Or determine reviewer based on logic
+        status: role === ROLES.HHRMD ? 'Pending HHRMD Review' : 'Pending HRMO Review', 
         documents: ['Letter of Request'],
         reviewStage: 'initial',
     };
@@ -233,20 +233,30 @@ export default function LwopPage() {
   };
   
   const handleInitialAction = (requestId: string, action: 'forward' | 'reject') => {
+    let modifiedRequestDetailsForToast: { name: string; action: 'forward' | 'reject' } | null = null;
+
     setPendingRequests(prevRequests =>
       prevRequests.map(req => {
         if (req.id === requestId) {
+          modifiedRequestDetailsForToast = { name: req.employeeName, action: action };
           if (action === 'forward') {
-            toast({ title: "Request Forwarded", description: `Request ${req.id} for ${req.employeeName} forwarded to Commission.` });
             return { ...req, status: "Request Received – Awaiting Commission Decision", reviewStage: 'commission_review', reviewedBy: role || undefined };
           } else {
-            toast({ title: "Request Rejected", description: `Request ${req.id} for ${req.employeeName} rejected and returned to HRO.`, variant: 'destructive' });
             return { ...req, status: `Rejected by ${role} - Awaiting HRO Correction`, reviewedBy: role || undefined };
           }
         }
         return req;
       })
     );
+
+    if (modifiedRequestDetailsForToast) {
+      const { name, action: performedAction } = modifiedRequestDetailsForToast;
+      if (performedAction === 'forward') {
+        toast({ title: "Request Forwarded", description: `Request ${requestId} for ${name} forwarded to Commission.` });
+      } else {
+        toast({ title: "Request Rejected", description: `Request ${requestId} for ${name} rejected and returned to HRO.`, variant: 'destructive' });
+      }
+    }
   };
 
 

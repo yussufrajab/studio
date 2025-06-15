@@ -71,7 +71,7 @@ const initialMockPendingPromotionRequests: MockPendingPromotionRequest[] = [
     status: 'Pending HRMO Review',
     documents: ['Academic Certificate (Masters)', 'TCU Form', 'Letter of Request'],
     studiedOutsideCountry: true,
-    reviewStage: 'initial', // Education advancement might follow a different review, but for consistency in structure
+    reviewStage: 'initial', 
   },
 ];
 
@@ -287,44 +287,62 @@ export default function PromotionPage() {
   };
 
   const handleInitialAction = (requestId: string, action: 'forward' | 'reject') => {
+    let modifiedRequestDetailsForToast: { name: string; action: 'forward' | 'reject' } | null = null;
+
     setPendingRequests(prevRequests =>
       prevRequests.map(req => {
         if (req.id === requestId) {
+          modifiedRequestDetailsForToast = { name: req.employeeName, action: action };
           if (action === 'forward') {
-            toast({ title: "Request Forwarded", description: `Request ${req.id} for ${req.employeeName} forwarded to Commission.` });
             return { ...req, status: "Request Received – Awaiting Commission Decision", reviewStage: 'commission_review', reviewedBy: role || undefined };
           } else {
-            toast({ title: "Request Rejected", description: `Request ${req.id} for ${req.employeeName} rejected and returned to HRO.`, variant: 'destructive' });
             return { ...req, status: `Rejected by ${role} - Awaiting HRO Correction`, reviewedBy: role || undefined };
           }
         }
         return req;
       })
     );
+
+    if (modifiedRequestDetailsForToast) {
+      const { name, action: performedAction } = modifiedRequestDetailsForToast;
+      if (performedAction === 'forward') {
+        toast({ title: "Request Forwarded", description: `Request ${requestId} for ${name} forwarded to Commission.` });
+      } else {
+        toast({ title: "Request Rejected", description: `Request ${requestId} for ${name} rejected and returned to HRO.`, variant: 'destructive' });
+      }
+    }
   };
 
   const handleEducationPromotionApprove = (requestId: string) => {
-     setPendingRequests(prevRequests =>
-      prevRequests.map(req => {
-        if (req.id === requestId) {
-          toast({ title: "Promotion Approved", description: `Education Promotion for ${req.employeeName} has been approved.` });
-          return { ...req, status: "Approved by " + (role || "Reviewer"), reviewStage: 'commission_review' }; // Using commission_review to signify it's past initial
-        }
-        return req;
-      })
-    );
-  };
-  const handleEducationPromotionReject = (requestId: string) => {
+    let employeeNameForToast: string | null = null;
     setPendingRequests(prevRequests =>
-      prevRequests.map(req => {
-        if (req.id === requestId) {
-          toast({ title: "Promotion Rejected", description: `Education Promotion for ${req.employeeName} has been rejected.`, variant: 'destructive'});
-          return { ...req, status: "Rejected by " + (role || "Reviewer"), reviewStage: 'commission_review' };
-        }
-        return req;
-      })
-    );
-  };
+     prevRequests.map(req => {
+       if (req.id === requestId) {
+         employeeNameForToast = req.employeeName;
+         return { ...req, status: "Approved by " + (role || "Reviewer"), reviewStage: 'commission_review' }; 
+       }
+       return req;
+     })
+   );
+   if(employeeNameForToast) {
+    toast({ title: "Promotion Approved", description: `Education Promotion for ${employeeNameForToast} has been approved.` });
+   }
+ };
+ const handleEducationPromotionReject = (requestId: string) => {
+    let employeeNameForToast: string | null = null;
+   setPendingRequests(prevRequests =>
+     prevRequests.map(req => {
+       if (req.id === requestId) {
+        employeeNameForToast = req.employeeName;
+         return { ...req, status: "Rejected by " + (role || "Reviewer"), reviewStage: 'commission_review' };
+       }
+       return req;
+     })
+   );
+   if(employeeNameForToast) {
+    toast({ title: "Promotion Rejected", description: `Education Promotion for ${employeeNameForToast} has been rejected.`, variant: 'destructive'});
+   }
+ };
 
 
   return (
@@ -460,7 +478,7 @@ export default function PromotionPage() {
                 (role === ROLES.HHRMD && req.status === 'Pending HHRMD Review') ||
                 (role === ROLES.HRMO && req.status === 'Pending HRMO Review') ||
                 req.status === 'Request Received – Awaiting Commission Decision' ||
-                req.status.startsWith('Rejected by') || req.status.startsWith('Approved by') // Show approved/rejected education promos
+                req.status.startsWith('Rejected by') || req.status.startsWith('Approved by') 
             ).length > 0 ? (
               pendingRequests.filter(req => 
                 (role === ROLES.HHRMD && req.status === 'Pending HHRMD Review') ||
