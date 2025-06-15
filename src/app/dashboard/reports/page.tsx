@@ -31,6 +31,7 @@ const REPORT_TYPES = [
   { value: 'lwop', label: 'Ripoti ya Likizo Bila Malipo (Leave Without Pay)' },
   { value: 'promotion', label: 'Ripoti ya Kupandishwa Cheo (Promotion)' },
   { value: 'promotionExperience', label: 'Ripoti ya Kupandishwa Cheo kwa Uzoefu (Promotion due to Experience)' },
+  { value: 'promotionEducation', label: 'Ripoti ya Kupandishwa Cheo kwa Maendeleo ya Elimu (Promotion due to Education Advancement)' },
   { value: 'terminationDismissal', label: 'Ripoti ya Kufukuzwa/Kuachishwa Kazi (Termination/Dismissal)' },
   { value: 'complaints', label: 'Ripoti ya Malalamiko (Complaints)' },
   { value: 'cadreChange', label: 'Ripoti ya Kubadilishwa Kada (Change of Cadre)' },
@@ -130,6 +131,16 @@ const MOCK_DATA_STORE: Record<string, () => ReportOutput> = {
       { sn: 3, wizara: 'Ofisi ya Rais - Utumishi', jinaKamili: 'Khamis Omar Faki', jinsia: 'M', tareheKuanzaKazi: '15/05/2010', cheoSasaNaDaraja: 'HR Officer Grade I', cheoKilichopendekezwaNaDaraja: 'Principal HR Officer', jumla: 1 },
     ],
     totals: { sn: 'JUMLA', cheoSasaNaDaraja: '', cheoKilichopendekezwaNaDaraja: '', jumla: 3 } 
+  }),
+  promotionEducation: () => ({
+    title: 'Ripoti ya Kupandishwa Cheo kwa Maendeleo ya Elimu',
+    headers: ["S/N", "WIZARA/TAASISI", "JINA KAMILI", "JINSIA", "TAREHE YA KUANZA KAZI", "CHEO CHA SASA & DARAJA", "CHEO KIPYA & DARAJA", "JUMLA"],
+    dataKeys: ["sn", "wizara", "jinaKamili", "jinsia", "tareheKuanzaKazi", "cheoSasaNaDaraja", "cheoKipyaNaDaraja", "jumla"],
+    data: [
+      { sn: 1, wizara: 'Wizara ya Utalii', jinaKamili: 'Fatma Hamad Ali', jinsia: 'F', tareheKuanzaKazi: '10/07/2016', cheoSasaNaDaraja: 'Tourism Officer Grade II', cheoKipyaNaDaraja: 'Tourism Officer Grade I', jumla: 1 },
+      { sn: 2, wizara: 'Wizara ya Biashara', jinaKamili: 'Ahmed Salim Mohamed', jinsia: 'M', tareheKuanzaKazi: '05/02/2014', cheoSasaNaDaraja: 'Trade Officer Grade I', cheoKipyaNaDaraja: 'Senior Trade Officer', jumla: 1 },
+    ],
+    totals: { sn: 'JUMLA', cheoSasaNaDaraja: '', cheoKipyaNaDaraja: '', jumla: 2 } 
   }),
   terminationDismissal: () => ({
     title: 'Ripoti ya Kufukuzwa/Kuachishwa Kazi',
