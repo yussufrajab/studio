@@ -30,7 +30,7 @@ interface MockPendingTerminationRequest {
   submittedBy: string;
   status: string;
   documents?: string[];
-  reviewStage: 'initial' | 'commission_review';
+  reviewStage: 'initial' | 'commission_review' | 'completed';
   rejectionReason?: string;
   reviewedBy?: string;
 }
@@ -89,6 +89,10 @@ export default function TerminationPage() {
   const [pendingRequests, setPendingRequests] = useState<MockPendingTerminationRequest[]>(initialMockPendingTerminationRequests);
   const [selectedRequest, setSelectedRequest] = useState<MockPendingTerminationRequest | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+
+  const [isRejectionModalOpen, setIsRejectionModalOpen] = useState(false);
+  const [rejectionReasonInput, setRejectionReasonInput] = useState('');
+  const [currentRequestToAction, setCurrentRequestToAction] = useState<MockPendingTerminationRequest | null>(null);
 
   useEffect(() => {
     setMinProposedDate(format(new Date(), 'yyyy-MM-dd'));
@@ -201,29 +205,73 @@ export default function TerminationPage() {
   };
 
   const handleInitialAction = (requestId: string, action: 'forward' | 'reject') => {
-    let modifiedRequestDetailsForToast: { name: string; action: 'forward' | 'reject' } | null = null;
+    const request = pendingRequests.find(req => req.id === requestId);
+    if (!request) return;
+
+    if (action === 'reject') {
+      setCurrentRequestToAction(request);
+      setRejectionReasonInput('');
+      setIsRejectionModalOpen(true);
+    } else if (action === 'forward') {
+      let toastMessage = "";
+      setPendingRequests(prevRequests =>
+        prevRequests.map(req => {
+          if (req.id === requestId) {
+            toastMessage = `Request ${requestId} for ${req.employeeName} forwarded to Commission.`;
+            return { ...req, status: "Request Received – Awaiting Commission Decision", reviewStage: 'commission_review', reviewedBy: role || undefined };
+          }
+          return req;
+        })
+      );
+      if(toastMessage) {
+        toast({ title: "Request Forwarded", description: toastMessage });
+      }
+    }
+  };
+
+  const handleRejectionSubmit = () => {
+    if (!currentRequestToAction || !rejectionReasonInput.trim()) {
+      toast({ title: "Rejection Error", description: "Reason for rejection is required.", variant: "destructive" });
+      return;
+    }
+    const requestId = currentRequestToAction.id;
+    const employeeName = currentRequestToAction.employeeName;
+    let toastMessage = "";
 
     setPendingRequests(prevRequests =>
       prevRequests.map(req => {
         if (req.id === requestId) {
-          modifiedRequestDetailsForToast = { name: req.employeeName, action: action };
-          if (action === 'forward') {
-            return { ...req, status: "Request Received – Awaiting Commission Decision", reviewStage: 'commission_review', reviewedBy: role || undefined };
-          } else {
-            return { ...req, status: `Rejected by ${role} - Awaiting HRO Correction`, reviewedBy: role || undefined };
-          }
+          toastMessage = `Request ${requestId} for ${employeeName} rejected and returned to HRO.`;
+          return { ...req, status: `Rejected by ${role} - Awaiting HRO Correction`, rejectionReason: rejectionReasonInput, reviewStage: 'initial' };
         }
         return req;
       })
     );
+    if (toastMessage) {
+      toast({ title: "Request Rejected", description: toastMessage, variant: 'destructive' });
+    }
+    setIsRejectionModalOpen(false);
+    setCurrentRequestToAction(null);
+    setRejectionReasonInput('');
+  };
 
-    if (modifiedRequestDetailsForToast) {
-      const { name, action: performedAction } = modifiedRequestDetailsForToast;
-      if (performedAction === 'forward') {
-        toast({ title: "Request Forwarded", description: `Request ${requestId} for ${name} forwarded to Commission.` });
-      } else {
-        toast({ title: "Request Rejected", description: `Request ${requestId} for ${name} rejected and returned to HRO.`, variant: 'destructive' });
-      }
+  const handleCommissionDecision = (requestId: string, decision: 'approved' | 'rejected') => {
+    const request = pendingRequests.find(req => req.id === requestId);
+    if (!request) return;
+
+    const finalStatus = decision === 'approved' ? "Approved by Commission" : "Rejected by Commission";
+    let toastMessage = "";
+    setPendingRequests(prevRequests =>
+      prevRequests.map(req => {
+        if (req.id === requestId) {
+          toastMessage = `Request ${requestId} for ${req.employeeName} has been ${finalStatus.toLowerCase()}.`;
+          return { ...req, status: finalStatus, reviewStage: 'completed' };
+        }
+        return req;
+      })
+    );
+    if (toastMessage) {
+      toast({ title: `Commission Decision: ${decision === 'approved' ? 'Approved' : 'Rejected'}`, description: toastMessage });
     }
   };
 
@@ -323,13 +371,13 @@ export default function TerminationPage() {
                 (role === ROLES.DO && req.status === 'Pending DO Review') ||
                 (role === ROLES.HHRMD && req.status === 'Pending HHRMD Review') ||
                 req.status === 'Request Received – Awaiting Commission Decision' ||
-                req.status.startsWith('Rejected by')
+                req.status.startsWith('Rejected by') || req.status.startsWith('Approved by Commission') || req.status.startsWith('Rejected by Commission')
             ).length > 0 ? (
               pendingRequests.filter(req => 
                 (role === ROLES.DO && req.status === 'Pending DO Review') ||
                 (role === ROLES.HHRMD && req.status === 'Pending HHRMD Review') ||
                 req.status === 'Request Received – Awaiting Commission Decision' ||
-                req.status.startsWith('Rejected by')
+                req.status.startsWith('Rejected by') || req.status.startsWith('Approved by Commission') || req.status.startsWith('Rejected by Commission')
               ).map((request) => (
                 <div key={request.id} className="mb-4 border p-4 rounded-md space-y-2 shadow-sm bg-background hover:shadow-md transition-shadow">
                   <h3 className="font-semibold text-base">Termination for: {request.employeeName} (ZanID: {request.zanId})</h3>
@@ -337,6 +385,7 @@ export default function TerminationPage() {
                   <p className="text-sm text-muted-foreground">Proposed Date: {request.proposedDate ? format(parseISO(request.proposedDate), 'PPP') : 'N/A'}</p>
                   <p className="text-sm text-muted-foreground">Submitted: {request.submissionDate ? format(parseISO(request.submissionDate), 'PPP') : 'N/A'} by {request.submittedBy}</p>
                   <p className="text-sm"><span className="font-medium">Status:</span> <span className="text-primary">{request.status}</span></p>
+                  {request.rejectionReason && <p className="text-sm text-destructive"><span className="font-medium">Rejection Reason:</span> {request.rejectionReason}</p>}
                   <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                     <Button size="sm" variant="outline" onClick={() => { setSelectedRequest(request); setIsDetailsModalOpen(true); }}>View Details</Button>
                      {request.reviewStage === 'initial' && (request.status.startsWith(`Pending ${role} Review`)) && (
@@ -344,6 +393,12 @@ export default function TerminationPage() {
                         <Button size="sm" onClick={() => handleInitialAction(request.id, 'forward')}>Verify &amp; Forward to Commission</Button>
                         <Button size="sm" variant="destructive" onClick={() => handleInitialAction(request.id, 'reject')}>Reject &amp; Return to HRO</Button>
                       </>
+                    )}
+                     {request.reviewStage === 'commission_review' && request.status === 'Request Received – Awaiting Commission Decision' && request.reviewedBy === role && (
+                        <>
+                            <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => handleCommissionDecision(request.id, 'approved')}>Approved by Commission</Button>
+                            <Button size="sm" variant="destructive" onClick={() => handleCommissionDecision(request.id, 'rejected')}>Rejected by Commission</Button>
+                        </>
                     )}
                   </div>
                 </div>
@@ -413,6 +468,12 @@ export default function TerminationPage() {
                         <Label className="text-right font-semibold">Status:</Label>
                         <p className="col-span-2 text-primary">{selectedRequest.status}</p>
                     </div>
+                     {selectedRequest.rejectionReason && (
+                        <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
+                            <Label className="text-right font-semibold text-destructive pt-1">Rejection Reason:</Label>
+                            <p className="col-span-2 text-destructive">{selectedRequest.rejectionReason}</p>
+                        </div>
+                    )}
                     <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
                         <Label className="text-right font-semibold pt-1">Documents:</Label>
                         <div className="col-span-2">
@@ -435,6 +496,33 @@ export default function TerminationPage() {
           </DialogContent>
         </Dialog>
       )}
+
+      {currentRequestToAction && (
+        <Dialog open={isRejectionModalOpen} onOpenChange={setIsRejectionModalOpen}>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Reject Termination Request: {currentRequestToAction.id}</DialogTitle>
+                    <DialogDescription>
+                        Please provide the reason for rejecting the termination request for <strong>{currentRequestToAction.employeeName}</strong>. This reason will be visible to the HRO.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                    <Textarea
+                        placeholder="Enter rejection reason here..."
+                        value={rejectionReasonInput}
+                        onChange={(e) => setRejectionReasonInput(e.target.value)}
+                        rows={4}
+                    />
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => { setIsRejectionModalOpen(false); setCurrentRequestToAction(null); }}>Cancel</Button>
+                    <Button variant="destructive" onClick={handleRejectionSubmit} disabled={!rejectionReasonInput.trim()}>Submit Rejection</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
+
+    
