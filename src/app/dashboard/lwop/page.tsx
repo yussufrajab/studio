@@ -30,9 +30,12 @@ interface MockPendingLWOPRequest {
   submittedBy: string;
   status: string;
   documents?: string[];
+  reviewStage: 'initial' | 'commission_review';
+  rejectionReason?: string;
+  reviewedBy?: string;
 }
 
-const mockPendingLWOPRequests: MockPendingLWOPRequest[] = [
+const initialMockPendingLWOPRequests: MockPendingLWOPRequest[] = [
   {
     id: 'LWOP001',
     employeeName: 'Fatma Said Omar',
@@ -48,6 +51,7 @@ const mockPendingLWOPRequests: MockPendingLWOPRequest[] = [
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending HHRMD Review',
     documents: ['Letter of Request', 'Admission Letter Scan'],
+    reviewStage: 'initial',
   },
   {
     id: 'LWOP002',
@@ -64,6 +68,7 @@ const mockPendingLWOPRequests: MockPendingLWOPRequest[] = [
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending HRMO Review',
     documents: ['Letter of Request'],
+    reviewStage: 'initial',
   },
 ];
 
@@ -90,7 +95,7 @@ function parseDurationToMonths(durationStr: string): number | null {
 
 
 export default function LwopPage() {
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const [zanId, setZanId] = useState('');
   const [employeeDetails, setEmployeeDetails] = useState<Employee | null>(null);
   const [isFetchingEmployee, setIsFetchingEmployee] = useState(false);
@@ -100,6 +105,7 @@ export default function LwopPage() {
   const [reason, setReason] = useState('');
   const [letterOfRequestFile, setLetterOfRequestFile] = useState<FileList | null>(null);
 
+  const [pendingRequests, setPendingRequests] = useState<MockPendingLWOPRequest[]>(initialMockPendingLWOPRequests);
   const [selectedRequest, setSelectedRequest] = useState<MockPendingLWOPRequest | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
@@ -187,6 +193,24 @@ export default function LwopPage() {
     }
 
     setIsSubmitting(true);
+     const newRequestId = `LWOP${Date.now().toString().slice(-3)}`;
+    const newRequest: MockPendingLWOPRequest = {
+        id: newRequestId,
+        employeeName: employeeDetails.name,
+        zanId: employeeDetails.zanId,
+        department: employeeDetails.department || 'N/A',
+        cadre: employeeDetails.cadre || 'N/A',
+        employmentDate: employeeDetails.employmentDate || 'N/A',
+        dateOfBirth: employeeDetails.dateOfBirth || 'N/A',
+        institution: employeeDetails.institution || 'N/A',
+        duration: duration,
+        reason: reason,
+        submissionDate: format(new Date(), 'yyyy-MM-dd'),
+        submittedBy: `${user?.name} (${user?.role})`,
+        status: role === ROLES.HHRMD ? 'Pending HHRMD Review' : 'Pending HRMO Review', // Or determine reviewer based on logic
+        documents: ['Letter of Request'],
+        reviewStage: 'initial',
+    };
     console.log("Submitting LWOP Request:", {
       employee: employeeDetails,
       duration,
@@ -195,6 +219,7 @@ export default function LwopPage() {
       letterOfRequest: letterOfRequestFile[0]?.name,
     });
     setTimeout(() => {
+      setPendingRequests(prev => [newRequest, ...prev]);
       toast({ title: "LWOP Request Submitted", description: `LWOP request for ${employeeDetails.name} submitted successfully.` });
       setZanId('');
       setEmployeeDetails(null);
@@ -206,6 +231,24 @@ export default function LwopPage() {
       setIsSubmitting(false);
     }, 1500);
   };
+  
+  const handleInitialAction = (requestId: string, action: 'forward' | 'reject') => {
+    setPendingRequests(prevRequests =>
+      prevRequests.map(req => {
+        if (req.id === requestId) {
+          if (action === 'forward') {
+            toast({ title: "Request Forwarded", description: `Request ${req.id} for ${req.employeeName} forwarded to Commission.` });
+            return { ...req, status: "Request Received – Awaiting Commission Decision", reviewStage: 'commission_review', reviewedBy: role || undefined };
+          } else {
+            toast({ title: "Request Rejected", description: `Request ${req.id} for ${req.employeeName} rejected and returned to HRO.`, variant: 'destructive' });
+            return { ...req, status: `Rejected by ${role} - Awaiting HRO Correction`, reviewedBy: role || undefined };
+          }
+        }
+        return req;
+      })
+    );
+  };
+
 
   return (
     <div>
@@ -291,23 +334,37 @@ export default function LwopPage() {
             <CardDescription>Review, approve, or reject pending LWOP requests.</CardDescription>
           </CardHeader>
           <CardContent>
-            {mockPendingLWOPRequests.length > 0 ? (
-              mockPendingLWOPRequests.map((request) => (
+            {pendingRequests.filter(req => 
+                (role === ROLES.HHRMD && req.status === 'Pending HHRMD Review') ||
+                (role === ROLES.HRMO && req.status === 'Pending HRMO Review') ||
+                req.status === 'Request Received – Awaiting Commission Decision' ||
+                req.status.startsWith('Rejected by')
+            ).length > 0 ? (
+              pendingRequests.filter(req => 
+                (role === ROLES.HHRMD && req.status === 'Pending HHRMD Review') ||
+                (role === ROLES.HRMO && req.status === 'Pending HRMO Review') ||
+                req.status === 'Request Received – Awaiting Commission Decision' ||
+                req.status.startsWith('Rejected by')
+              ).map((request) => (
                 <div key={request.id} className="mb-4 border p-4 rounded-md space-y-2 shadow-sm bg-background hover:shadow-md transition-shadow">
                   <h3 className="font-semibold text-base">LWOP Request for: {request.employeeName} (ZanID: {request.zanId})</h3>
                   <p className="text-sm text-muted-foreground">Duration: {request.duration}</p>
                   <p className="text-sm text-muted-foreground">Reason: {request.reason}</p>
-                  <p className="text-sm text-muted-foreground">Submitted: {request.submissionDate} by {request.submittedBy}</p>
+                  <p className="text-sm text-muted-foreground">Submitted: {request.submissionDate ? format(parseISO(request.submissionDate), 'PPP') : 'N/A'} by {request.submittedBy}</p>
                   <p className="text-sm"><span className="font-medium">Status:</span> <span className="text-primary">{request.status}</span></p>
                   <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                     <Button size="sm" variant="outline" onClick={() => { setSelectedRequest(request); setIsDetailsModalOpen(true); }}>View Details</Button>
-                    <Button size="sm">Approve</Button>
-                    <Button size="sm" variant="destructive">Reject</Button>
+                    {request.reviewStage === 'initial' && (request.status.startsWith(`Pending ${role} Review`)) && (
+                      <>
+                        <Button size="sm" onClick={() => handleInitialAction(request.id, 'forward')}>Verify &amp; Forward to Commission</Button>
+                        <Button size="sm" variant="destructive" onClick={() => handleInitialAction(request.id, 'reject')}>Reject &amp; Return to HRO</Button>
+                      </>
+                    )}
                   </div>
                 </div>
               ))
             ) : (
-              <p className="text-muted-foreground">No LWOP requests pending review.</p>
+              <p className="text-muted-foreground">No LWOP requests pending your review.</p>
             )}
           </CardContent>
         </Card>
@@ -367,7 +424,7 @@ export default function LwopPage() {
                     </div>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
                         <Label className="text-right font-semibold">Submitted:</Label>
-                        <p className="col-span-2">{selectedRequest.submissionDate} by {selectedRequest.submittedBy}</p>
+                        <p className="col-span-2">{selectedRequest.submissionDate ? format(parseISO(selectedRequest.submissionDate), 'PPP') : 'N/A'} by {selectedRequest.submittedBy}</p>
                     </div>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
                         <Label className="text-right font-semibold">Status:</Label>

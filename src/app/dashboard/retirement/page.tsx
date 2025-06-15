@@ -31,9 +31,12 @@ interface MockPendingRetirementRequest {
   submittedBy: string;
   status: string;
   documents?: string[];
+  reviewStage: 'initial' | 'commission_review';
+  rejectionReason?: string;
+  reviewedBy?: string;
 }
 
-const mockPendingRetirementRequests: MockPendingRetirementRequest[] = [
+const initialMockPendingRetirementRequests: MockPendingRetirementRequest[] = [
   {
     id: 'RETIRE001',
     employeeName: 'Hamid Khalfan Abdalla', 
@@ -41,7 +44,7 @@ const mockPendingRetirementRequests: MockPendingRetirementRequest[] = [
     department: 'Transport',
     cadre: 'Senior Driver',
     employmentDate: '2010-01-01',
-    dateOfBirth: '1978-03-25', // Should be older to be near retirement for compulsory
+    dateOfBirth: '1965-03-25', // Adjusted to be near retirement for compulsory for mock
     institution: 'Government Garage',
     retirementType: 'Compulsory (Age 60)',
     proposedDate: '2025-03-25',
@@ -49,6 +52,7 @@ const mockPendingRetirementRequests: MockPendingRetirementRequest[] = [
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending HHRMD Review',
     documents: ['Letter of Request', 'Birth Certificate Copy'],
+    reviewStage: 'initial',
   },
   {
     id: 'RETIRE002',
@@ -57,7 +61,7 @@ const mockPendingRetirementRequests: MockPendingRetirementRequest[] = [
     department: 'Procurement',
     cadre: 'Procurement Officer',
     employmentDate: '2015-10-11',
-    dateOfBirth: '1983-06-18', // Should be older for voluntary at 55+
+    dateOfBirth: '1970-06-18', // Adjusted for voluntary at 55+
     institution: 'Government Procurement Services Agency',
     retirementType: 'Voluntary (Age 55+)',
     proposedDate: '2025-06-18',
@@ -65,10 +69,11 @@ const mockPendingRetirementRequests: MockPendingRetirementRequest[] = [
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending HRMO Review',
     documents: ['Letter of Request', 'Service Record Summary'],
+    reviewStage: 'initial',
   },
   {
     id: 'RETIRE003',
-    employeeName: 'Asha Juma Khalfan', // This employee is not in EMPLOYEES, so details are hardcoded
+    employeeName: 'Asha Juma Khalfan', 
     zanId: '889012345',
     department: 'Education',
     cadre: 'Teacher',
@@ -81,6 +86,7 @@ const mockPendingRetirementRequests: MockPendingRetirementRequest[] = [
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending HHRMD Review',
     documents: ['Medical Form', 'Leave Due to Illness Letter', 'Letter of Request'],
+    reviewStage: 'initial',
   },
 ];
 
@@ -88,7 +94,7 @@ const COMPULSORY_RETIREMENT_AGE = 60;
 const VOLUNTARY_RETIREMENT_AGE = 55;
 
 export default function RetirementPage() {
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const [zanId, setZanId] = useState('');
   const [employeeDetails, setEmployeeDetails] = useState<Employee | null>(null);
   const [isFetchingEmployee, setIsFetchingEmployee] = useState(false);
@@ -102,6 +108,7 @@ export default function RetirementPage() {
   const [minRetirementDate, setMinRetirementDate] = useState('');
   const [ageEligibilityError, setAgeEligibilityError] = useState<string | null>(null);
 
+  const [pendingRequests, setPendingRequests] = useState<MockPendingRetirementRequest[]>(initialMockPendingRetirementRequests);
   const [selectedRequest, setSelectedRequest] = useState<MockPendingRetirementRequest | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
@@ -235,6 +242,34 @@ export default function RetirementPage() {
     }
     
     setIsSubmitting(true);
+    let documentsList = ['Letter of Request'];
+    if (retirementType === 'illness') {
+        documentsList.push('Medical Form', 'Leave Due to Illness Letter');
+    } else if (retirementType === 'compulsory') {
+        documentsList.push('Birth Certificate Copy (or equivalent)');
+    } else if (retirementType === 'voluntary') {
+        documentsList.push('Service Record Summary');
+    }
+
+    const newRequestId = `RET${Date.now().toString().slice(-3)}`;
+    const newRequest: MockPendingRetirementRequest = {
+        id: newRequestId,
+        employeeName: employeeDetails.name,
+        zanId: employeeDetails.zanId,
+        department: employeeDetails.department || 'N/A',
+        cadre: employeeDetails.cadre || 'N/A',
+        employmentDate: employeeDetails.employmentDate || 'N/A',
+        dateOfBirth: employeeDetails.dateOfBirth || 'N/A',
+        institution: employeeDetails.institution || 'N/A',
+        retirementType: retirementType,
+        proposedDate: retirementDate,
+        submissionDate: format(new Date(), 'yyyy-MM-dd'),
+        submittedBy: `${user?.name} (${user?.role})`,
+        status: role === ROLES.HHRMD ? 'Pending HHRMD Review' : 'Pending HRMO Review',
+        documents: documentsList,
+        reviewStage: 'initial',
+    };
+
     console.log("Submitting Retirement Request:", {
       employee: employeeDetails,
       retirementType,
@@ -245,6 +280,7 @@ export default function RetirementPage() {
     });
 
     setTimeout(() => {
+      setPendingRequests(prev => [newRequest, ...prev]);
       toast({ title: "Retirement Request Submitted", description: `Request for ${employeeDetails.name} submitted successfully.` });
       setZanId('');
       setEmployeeDetails(null);
@@ -261,6 +297,23 @@ export default function RetirementPage() {
     (retirementType === 'illness' && (!medicalFormFile || !illnessLeaveLetterFile)) || 
     isSubmitting ||
     !!ageEligibilityError;
+
+  const handleInitialAction = (requestId: string, action: 'forward' | 'reject') => {
+    setPendingRequests(prevRequests =>
+      prevRequests.map(req => {
+        if (req.id === requestId) {
+          if (action === 'forward') {
+            toast({ title: "Request Forwarded", description: `Request ${req.id} for ${req.employeeName} forwarded to Commission.` });
+            return { ...req, status: "Request Received – Awaiting Commission Decision", reviewStage: 'commission_review', reviewedBy: role || undefined };
+          } else {
+            toast({ title: "Request Rejected", description: `Request ${req.id} for ${req.employeeName} rejected and returned to HRO.`, variant: 'destructive' });
+            return { ...req, status: `Rejected by ${role} - Awaiting HRO Correction`, reviewedBy: role || undefined };
+          }
+        }
+        return req;
+      })
+    );
+  };
 
   return (
     <div>
@@ -312,7 +365,7 @@ export default function RetirementPage() {
 
 
                 <div className={`space-y-4 ${!!ageEligibilityError ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                  <h3 className="text-lg font-medium text-foreground">Retirement Details & Documents (PDF Only)</h3>
+                  <h3 className="text-lg font-medium text-foreground">Retirement Details &amp; Documents (PDF Only)</h3>
                   <div>
                     <Label htmlFor="retirementType" className="flex items-center"><ListFilter className="mr-2 h-4 w-4 text-primary" />Retirement Type</Label>
                     <Select value={retirementType} onValueChange={setRetirementType} disabled={isSubmitting || !!ageEligibilityError}>
@@ -374,23 +427,37 @@ export default function RetirementPage() {
             <CardDescription>Review, approve, or reject pending retirement requests.</CardDescription>
           </CardHeader>
           <CardContent>
-            {mockPendingRetirementRequests.length > 0 ? (
-              mockPendingRetirementRequests.map((request) => (
+            {pendingRequests.filter(req => 
+                (role === ROLES.HHRMD && req.status === 'Pending HHRMD Review') ||
+                (role === ROLES.HRMO && req.status === 'Pending HRMO Review') ||
+                req.status === 'Request Received – Awaiting Commission Decision' ||
+                req.status.startsWith('Rejected by')
+            ).length > 0 ? (
+              pendingRequests.filter(req => 
+                (role === ROLES.HHRMD && req.status === 'Pending HHRMD Review') ||
+                (role === ROLES.HRMO && req.status === 'Pending HRMO Review') ||
+                req.status === 'Request Received – Awaiting Commission Decision' ||
+                req.status.startsWith('Rejected by')
+              ).map((request) => (
                 <div key={request.id} className="mb-4 border p-4 rounded-md space-y-2 shadow-sm bg-background hover:shadow-md transition-shadow">
                   <h3 className="font-semibold text-base">Retirement Request for: {request.employeeName} (ZanID: {request.zanId})</h3>
                   <p className="text-sm text-muted-foreground">Type: {request.retirementType}</p>
-                  <p className="text-sm text-muted-foreground">Proposed Date: {request.proposedDate}</p>
-                  <p className="text-sm text-muted-foreground">Submitted: {request.submissionDate} by {request.submittedBy}</p>
+                  <p className="text-sm text-muted-foreground">Proposed Date: {request.proposedDate ? format(parseISO(request.proposedDate), 'PPP') : 'N/A'}</p>
+                  <p className="text-sm text-muted-foreground">Submitted: {request.submissionDate ? format(parseISO(request.submissionDate), 'PPP') : 'N/A'} by {request.submittedBy}</p>
                   <p className="text-sm"><span className="font-medium">Status:</span> <span className="text-primary">{request.status}</span></p>
                   <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                     <Button size="sm" variant="outline" onClick={() => { setSelectedRequest(request); setIsDetailsModalOpen(true); }}>View Details</Button>
-                    <Button size="sm">Approve</Button>
-                    <Button size="sm" variant="destructive">Reject</Button>
+                    {request.reviewStage === 'initial' && (request.status.startsWith(`Pending ${role} Review`)) && (
+                      <>
+                        <Button size="sm" onClick={() => handleInitialAction(request.id, 'forward')}>Verify &amp; Forward to Commission</Button>
+                        <Button size="sm" variant="destructive" onClick={() => handleInitialAction(request.id, 'reject')}>Reject &amp; Return to HRO</Button>
+                      </>
+                    )}
                   </div>
                 </div>
               ))
             ) : (
-              <p className="text-muted-foreground">No retirement requests pending review.</p>
+              <p className="text-muted-foreground">No retirement requests pending your review.</p>
             )}
           </CardContent>
         </Card>
@@ -426,8 +493,7 @@ export default function RetirementPage() {
                     </div>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
                         <Label className="text-right text-muted-foreground">Employment Date:</Label>
-                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employmentDate ? format(parseISO(selectedRequest.employmentDate), 'PPP') : 'N/A'}</p>
-                    </div>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employmentDate ? format(parseISO(selectedRequest.employmentDate), 'PPP') : 'N/A'}</p></div>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
                         <Label className="text-right text-muted-foreground">Date of Birth:</Label>
                         <p className="col-span-2 font-medium text-foreground">{selectedRequest.dateOfBirth ? format(parseISO(selectedRequest.dateOfBirth), 'PPP') : 'N/A'}</p>

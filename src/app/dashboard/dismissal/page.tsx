@@ -30,9 +30,12 @@ interface MockPendingDismissalRequest {
   submittedBy: string;
   status: string;
   documents?: string[];
+  reviewStage: 'initial' | 'commission_review';
+  rejectionReason?: string;
+  reviewedBy?: string;
 }
 
-const mockPendingDismissalRequests: MockPendingDismissalRequest[] = [
+const initialMockPendingDismissalRequests: MockPendingDismissalRequest[] = [
   {
     id: 'DISMISS001',
     employeeName: 'Ali Juma Ali', 
@@ -48,11 +51,12 @@ const mockPendingDismissalRequests: MockPendingDismissalRequest[] = [
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending DO Review',
     documents: ['Form for Appraisal (Optional)', 'Supporting Documents (Optional)', 'Letter of Request'],
+    reviewStage: 'initial',
   },
 ];
 
 export default function DismissalPage() {
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const [zanId, setZanId] = useState('');
   const [employeeDetails, setEmployeeDetails] = useState<Employee | null>(null);
   const [isFetchingEmployee, setIsFetchingEmployee] = useState(false);
@@ -65,6 +69,7 @@ export default function DismissalPage() {
   const [letterOfRequestFile, setLetterOfRequestFile] = useState<FileList | null>(null);
   const [minProposedDate, setMinProposedDate] = useState('');
 
+  const [pendingRequests, setPendingRequests] = useState<MockPendingDismissalRequest[]>(initialMockPendingDismissalRequests);
   const [selectedRequest, setSelectedRequest] = useState<MockPendingDismissalRequest | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
@@ -147,6 +152,29 @@ export default function DismissalPage() {
     }
 
     setIsSubmitting(true);
+    const newRequestId = `DISMISS${Date.now().toString().slice(-3)}`;
+    let documentsList = ['Letter of Request'];
+    if (appraisalFormFile) documentsList.push('Form for Appraisal');
+    if (supportingDocumentsFile) documentsList.push('Supporting Documents');
+
+    const newRequest: MockPendingDismissalRequest = {
+        id: newRequestId,
+        employeeName: employeeDetails.name,
+        zanId: employeeDetails.zanId,
+        department: employeeDetails.department || 'N/A',
+        cadre: employeeDetails.cadre || 'N/A',
+        employmentDate: employeeDetails.employmentDate || 'N/A',
+        dateOfBirth: employeeDetails.dateOfBirth || 'N/A',
+        institution: employeeDetails.institution || 'N/A',
+        reasonSummary: reasonDismissal,
+        proposedDate: proposedDateDismissal,
+        submissionDate: format(new Date(), 'yyyy-MM-dd'),
+        submittedBy: `${user?.name} (${user?.role})`,
+        status: role === ROLES.DO ? 'Pending DO Review' : (role === ROLES.HHRMD ? 'Pending HHRMD Review' : 'Pending Review'),
+        documents: documentsList,
+        reviewStage: 'initial',
+    };
+
     console.log("Submitting Dismissal Request:", {
       employee: employeeDetails,
       reasonDismissal,
@@ -157,12 +185,30 @@ export default function DismissalPage() {
     });
 
     setTimeout(() => {
+      setPendingRequests(prev => [newRequest, ...prev]);
       toast({ title: "Dismissal Request Submitted", description: `Request for ${employeeDetails.name} submitted successfully.` });
       setZanId('');
       setEmployeeDetails(null);
       resetFormFields();
       setIsSubmitting(false);
     }, 1500);
+  };
+
+  const handleInitialAction = (requestId: string, action: 'forward' | 'reject') => {
+    setPendingRequests(prevRequests =>
+      prevRequests.map(req => {
+        if (req.id === requestId) {
+          if (action === 'forward') {
+            toast({ title: "Request Forwarded", description: `Request ${req.id} for ${req.employeeName} forwarded to Commission.` });
+            return { ...req, status: "Request Received – Awaiting Commission Decision", reviewStage: 'commission_review', reviewedBy: role || undefined };
+          } else {
+            toast({ title: "Request Rejected", description: `Request ${req.id} for ${req.employeeName} rejected and returned to HRO.`, variant: 'destructive' });
+            return { ...req, status: `Rejected by ${role} - Awaiting HRO Correction`, reviewedBy: role || undefined };
+          }
+        }
+        return req;
+      })
+    );
   };
 
   return (
@@ -214,7 +260,7 @@ export default function DismissalPage() {
                 )}
 
                 <div className={`space-y-4 ${!isDismissalAllowed ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                  <h3 className="text-lg font-medium text-foreground">Dismissal Details & Documents</h3>
+                  <h3 className="text-lg font-medium text-foreground">Dismissal Details &amp; Documents</h3>
                   <div>
                     <Label htmlFor="reasonDismissal">Reason for Dismissal</Label>
                     <Textarea id="reasonDismissal" placeholder="Clearly state the grounds for dismissal" value={reasonDismissal} onChange={(e) => setReasonDismissal(e.target.value)} disabled={!isDismissalAllowed || isSubmitting} />
@@ -265,8 +311,18 @@ export default function DismissalPage() {
             <CardDescription>Review, approve, or reject pending dismissal requests.</CardDescription>
           </CardHeader>
           <CardContent>
-            {mockPendingDismissalRequests.length > 0 ? (
-              mockPendingDismissalRequests.map((request) => (
+            {pendingRequests.filter(req => 
+                (role === ROLES.DO && req.status === 'Pending DO Review') ||
+                (role === ROLES.HHRMD && req.status === 'Pending HHRMD Review') ||
+                req.status === 'Request Received – Awaiting Commission Decision' ||
+                req.status.startsWith('Rejected by')
+            ).length > 0 ? (
+              pendingRequests.filter(req => 
+                (role === ROLES.DO && req.status === 'Pending DO Review') ||
+                (role === ROLES.HHRMD && req.status === 'Pending HHRMD Review') ||
+                req.status === 'Request Received – Awaiting Commission Decision' ||
+                req.status.startsWith('Rejected by')
+              ).map((request) => (
                 <div key={request.id} className="mb-4 border p-4 rounded-md space-y-2 shadow-sm bg-background hover:shadow-md transition-shadow">
                   <h3 className="font-semibold text-base">Dismissal for: {request.employeeName} (ZanID: {request.zanId})</h3>
                   <p className="text-sm text-muted-foreground">Reason: {request.reasonSummary}</p>
@@ -275,13 +331,17 @@ export default function DismissalPage() {
                   <p className="text-sm"><span className="font-medium">Status:</span> <span className="text-primary">{request.status}</span></p>
                   <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                     <Button size="sm" variant="outline" onClick={() => { setSelectedRequest(request); setIsDetailsModalOpen(true); }}>View Details</Button>
-                    <Button size="sm">Approve</Button>
-                    <Button size="sm" variant="destructive">Reject</Button>
+                    {request.reviewStage === 'initial' && (request.status.startsWith(`Pending ${role} Review`)) && (
+                      <>
+                        <Button size="sm" onClick={() => handleInitialAction(request.id, 'forward')}>Verify &amp; Forward to Commission</Button>
+                        <Button size="sm" variant="destructive" onClick={() => handleInitialAction(request.id, 'reject')}>Reject &amp; Return to HRO</Button>
+                      </>
+                    )}
                   </div>
                 </div>
               ))
             ) : (
-              <p className="text-muted-foreground">No dismissal requests pending review.</p>
+              <p className="text-muted-foreground">No dismissal requests pending your review.</p>
             )}
           </CardContent>
         </Card>
@@ -317,8 +377,7 @@ export default function DismissalPage() {
                     </div>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
                         <Label className="text-right text-muted-foreground">Employment Date:</Label>
-                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employmentDate ? format(parseISO(selectedRequest.employmentDate), 'PPP') : 'N/A'}</p>
-                    </div>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employmentDate ? format(parseISO(selectedRequest.employmentDate), 'PPP') : 'N/A'}</p></div>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
                         <Label className="text-right text-muted-foreground">Date of Birth:</Label>
                         <p className="col-span-2 font-medium text-foreground">{selectedRequest.dateOfBirth ? format(parseISO(selectedRequest.dateOfBirth), 'PPP') : 'N/A'}</p>

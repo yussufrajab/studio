@@ -30,9 +30,12 @@ interface MockPendingTerminationRequest {
   submittedBy: string;
   status: string;
   documents?: string[];
+  reviewStage: 'initial' | 'commission_review';
+  rejectionReason?: string;
+  reviewedBy?: string;
 }
 
-const mockPendingTerminationRequests: MockPendingTerminationRequest[] = [
+const initialMockPendingTerminationRequests: MockPendingTerminationRequest[] = [
   {
     id: 'TERM001',
     employeeName: 'Ali Juma Ali', 
@@ -48,6 +51,7 @@ const mockPendingTerminationRequests: MockPendingTerminationRequest[] = [
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending DO Review',
     documents: ['Misconduct Evidence & Investigation Report', 'Warning Letters', 'Letter of Request'],
+    reviewStage: 'initial',
   },
   {
     id: 'TERM002',
@@ -64,11 +68,12 @@ const mockPendingTerminationRequests: MockPendingTerminationRequest[] = [
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending HHRMD Review',
     documents: ['Misconduct Investigation Report', 'Code of Conduct Violation Details', 'Letter of Request'],
+    reviewStage: 'initial',
   },
 ];
 
 export default function TerminationPage() {
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const [zanId, setZanId] = useState('');
   const [employeeDetails, setEmployeeDetails] = useState<Employee | null>(null);
   const [isFetchingEmployee, setIsFetchingEmployee] = useState(false);
@@ -81,6 +86,7 @@ export default function TerminationPage() {
   const [letterOfRequestFile, setLetterOfRequestFile] = useState<FileList | null>(null);
   const [minProposedDate, setMinProposedDate] = useState('');
 
+  const [pendingRequests, setPendingRequests] = useState<MockPendingTerminationRequest[]>(initialMockPendingTerminationRequests);
   const [selectedRequest, setSelectedRequest] = useState<MockPendingTerminationRequest | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
@@ -153,6 +159,28 @@ export default function TerminationPage() {
     }
 
     setIsSubmitting(true);
+    const newRequestId = `TERM${Date.now().toString().slice(-3)}`;
+    let documentsList = ['Letter of Request', 'Misconduct Evidence & Investigation Report'];
+    if (supportingDocumentsFile) documentsList.push('Supporting Documents');
+
+    const newRequest: MockPendingTerminationRequest = {
+        id: newRequestId,
+        employeeName: employeeDetails.name,
+        zanId: employeeDetails.zanId,
+        department: employeeDetails.department || 'N/A',
+        cadre: employeeDetails.cadre || 'N/A',
+        employmentDate: employeeDetails.employmentDate || 'N/A',
+        dateOfBirth: employeeDetails.dateOfBirth || 'N/A',
+        institution: employeeDetails.institution || 'N/A',
+        reasonSummary: reasonTermination,
+        proposedDate: proposedDateTermination,
+        submissionDate: format(new Date(), 'yyyy-MM-dd'),
+        submittedBy: `${user?.name} (${user?.role})`,
+        status: role === ROLES.DO ? 'Pending DO Review' : (role === ROLES.HHRMD ? 'Pending HHRMD Review' : 'Pending Review'), // Simplified reviewer logic
+        documents: documentsList,
+        reviewStage: 'initial',
+    };
+
     console.log("Submitting Termination Request:", {
       employee: employeeDetails,
       reasonTermination,
@@ -163,12 +191,30 @@ export default function TerminationPage() {
     });
 
     setTimeout(() => {
+      setPendingRequests(prev => [newRequest, ...prev]);
       toast({ title: "Termination Request Submitted", description: `Request for ${employeeDetails.name} submitted successfully.` });
       setZanId('');
       setEmployeeDetails(null);
       resetFormFields();
       setIsSubmitting(false);
     }, 1500);
+  };
+
+  const handleInitialAction = (requestId: string, action: 'forward' | 'reject') => {
+    setPendingRequests(prevRequests =>
+      prevRequests.map(req => {
+        if (req.id === requestId) {
+          if (action === 'forward') {
+            toast({ title: "Request Forwarded", description: `Request ${req.id} for ${req.employeeName} forwarded to Commission.` });
+            return { ...req, status: "Request Received – Awaiting Commission Decision", reviewStage: 'commission_review', reviewedBy: role || undefined };
+          } else {
+            toast({ title: "Request Rejected", description: `Request ${req.id} for ${req.employeeName} rejected and returned to HRO.`, variant: 'destructive' });
+            return { ...req, status: `Rejected by ${role} - Awaiting HRO Correction`, reviewedBy: role || undefined };
+          }
+        }
+        return req;
+      })
+    );
   };
 
   return (
@@ -212,9 +258,9 @@ export default function TerminationPage() {
                 </div>
 
                 <div className="space-y-4">
-                  <h3 className="text-lg font-medium text-foreground">Termination Details & Documents</h3>
+                  <h3 className="text-lg font-medium text-foreground">Termination Details &amp; Documents</h3>
                   <div>
-                    <Label htmlFor="reasonTermination">Reason for Termination & Summary of Misconduct</Label>
+                    <Label htmlFor="reasonTermination">Reason for Termination &amp; Summary of Misconduct</Label>
                     <Textarea id="reasonTermination" placeholder="Clearly state the grounds for termination and summarize evidence" value={reasonTermination} onChange={(e) => setReasonTermination(e.target.value)} disabled={isSubmitting} />
                   </div>
                   <div>
@@ -222,7 +268,7 @@ export default function TerminationPage() {
                     <Input id="proposedDateTermination" type="date" value={proposedDateTermination} onChange={(e) => setProposedDateTermination(e.target.value)} disabled={isSubmitting} min={minProposedDate} />
                   </div>
                   <div>
-                    <Label htmlFor="misconductEvidenceFile" className="flex items-center"><ShieldAlert className="mr-2 h-4 w-4 text-destructive" />Upload Misconduct Evidence & Investigation Report (PDF Only)</Label>
+                    <Label htmlFor="misconductEvidenceFile" className="flex items-center"><ShieldAlert className="mr-2 h-4 w-4 text-destructive" />Upload Misconduct Evidence &amp; Investigation Report (PDF Only)</Label>
                     <Input id="misconductEvidenceFile" type="file" onChange={(e) => setMisconductEvidenceFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
                   </div>
                   <div>
@@ -263,8 +309,18 @@ export default function TerminationPage() {
             <CardDescription>Review, approve, or reject pending termination requests.</CardDescription>
           </CardHeader>
           <CardContent>
-            {mockPendingTerminationRequests.length > 0 ? (
-              mockPendingTerminationRequests.map((request) => (
+            {pendingRequests.filter(req => 
+                (role === ROLES.DO && req.status === 'Pending DO Review') ||
+                (role === ROLES.HHRMD && req.status === 'Pending HHRMD Review') ||
+                req.status === 'Request Received – Awaiting Commission Decision' ||
+                req.status.startsWith('Rejected by')
+            ).length > 0 ? (
+              pendingRequests.filter(req => 
+                (role === ROLES.DO && req.status === 'Pending DO Review') ||
+                (role === ROLES.HHRMD && req.status === 'Pending HHRMD Review') ||
+                req.status === 'Request Received – Awaiting Commission Decision' ||
+                req.status.startsWith('Rejected by')
+              ).map((request) => (
                 <div key={request.id} className="mb-4 border p-4 rounded-md space-y-2 shadow-sm bg-background hover:shadow-md transition-shadow">
                   <h3 className="font-semibold text-base">Termination for: {request.employeeName} (ZanID: {request.zanId})</h3>
                   <p className="text-sm text-muted-foreground">Reason: {request.reasonSummary}</p>
@@ -273,13 +329,17 @@ export default function TerminationPage() {
                   <p className="text-sm"><span className="font-medium">Status:</span> <span className="text-primary">{request.status}</span></p>
                   <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                     <Button size="sm" variant="outline" onClick={() => { setSelectedRequest(request); setIsDetailsModalOpen(true); }}>View Details</Button>
-                    <Button size="sm">Approve</Button>
-                    <Button size="sm" variant="destructive">Reject</Button>
+                     {request.reviewStage === 'initial' && (request.status.startsWith(`Pending ${role} Review`)) && (
+                      <>
+                        <Button size="sm" onClick={() => handleInitialAction(request.id, 'forward')}>Verify &amp; Forward to Commission</Button>
+                        <Button size="sm" variant="destructive" onClick={() => handleInitialAction(request.id, 'reject')}>Reject &amp; Return to HRO</Button>
+                      </>
+                    )}
                   </div>
                 </div>
               ))
             ) : (
-              <p className="text-muted-foreground">No termination requests pending review.</p>
+              <p className="text-muted-foreground">No termination requests pending your review.</p>
             )}
           </CardContent>
         </Card>
@@ -315,8 +375,7 @@ export default function TerminationPage() {
                     </div>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
                         <Label className="text-right text-muted-foreground">Employment Date:</Label>
-                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employmentDate ? format(parseISO(selectedRequest.employmentDate), 'PPP') : 'N/A'}</p>
-                    </div>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employmentDate ? format(parseISO(selectedRequest.employmentDate), 'PPP') : 'N/A'}</p></div>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
                         <Label className="text-right text-muted-foreground">Date of Birth:</Label>
                         <p className="col-span-2 font-medium text-foreground">{selectedRequest.dateOfBirth ? format(parseISO(selectedRequest.dateOfBirth), 'PPP') : 'N/A'}</p>
@@ -327,7 +386,7 @@ export default function TerminationPage() {
                     </div>
                 </div>
                  <div className="space-y-1">
-                    <h4 className="font-semibold text-base text-foreground mb-2">Request Information</h4>
+                     <h4 className="font-semibold text-base text-foreground mb-2">Request Information</h4>
                     <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
                         <Label className="text-right font-semibold pt-1">Reason Summary:</Label>
                         <p className="col-span-2">{selectedRequest.reasonSummary}</p>

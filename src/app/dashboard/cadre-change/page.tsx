@@ -32,9 +32,12 @@ interface MockPendingCadreChangeRequest {
   reason?: string;
   documents?: string[];
   studiedOutsideCountry?: boolean;
+  reviewStage: 'initial' | 'commission_review';
+  rejectionReason?: string;
+  reviewedBy?: string;
 }
 
-const mockPendingCadreChangeRequests: MockPendingCadreChangeRequest[] = [
+const initialMockPendingCadreChangeRequests: MockPendingCadreChangeRequest[] = [
   {
     id: 'CADRE001',
     employeeName: 'Ali Juma Ali',
@@ -51,6 +54,7 @@ const mockPendingCadreChangeRequests: MockPendingCadreChangeRequest[] = [
     reason: "Completed Masters in Public Admin and has 5 years experience.",
     documents: ['Certificate (Masters)', 'Letter of Request'],
     studiedOutsideCountry: false,
+    reviewStage: 'initial',
   },
   {
     id: 'CADRE002',
@@ -68,12 +72,13 @@ const mockPendingCadreChangeRequests: MockPendingCadreChangeRequest[] = [
     reason: "Obtained professional certification in Training and Development from recognized institution abroad.",
     documents: ['Professional Certificate', 'TCU Form', 'Letter of Request'],
     studiedOutsideCountry: true,
+    reviewStage: 'initial',
   },
 ];
 
 
 export default function CadreChangePage() {
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const [zanId, setZanId] = useState('');
   const [employeeDetails, setEmployeeDetails] = useState<Employee | null>(null);
   const [isFetchingEmployee, setIsFetchingEmployee] = useState(false);
@@ -86,6 +91,7 @@ export default function CadreChangePage() {
   const [tcuFormFile, setTcuFormFile] = useState<FileList | null>(null);
   const [letterOfRequestFile, setLetterOfRequestFile] = useState<FileList | null>(null);
 
+  const [pendingRequests, setPendingRequests] = useState<MockPendingCadreChangeRequest[]>(initialMockPendingCadreChangeRequests);
   const [selectedRequest, setSelectedRequest] = useState<MockPendingCadreChangeRequest | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
@@ -147,12 +153,43 @@ export default function CadreChangePage() {
 
     const checkPdf = (fileList: FileList | null) => fileList && fileList[0] && fileList[0].type === "application/pdf";
     
-    if (!checkPdf(certificateFile) || (studiedOutsideCountry && tcuFormFile && !checkPdf(tcuFormFile)) || !checkPdf(letterOfRequestFile)) {
-        toast({ title: "Submission Error", description: "All uploaded documents must be in PDF format.", variant: "destructive" });
+    if (!checkPdf(certificateFile)) {
+        toast({ title: "Submission Error", description: "Certificate must be a PDF.", variant: "destructive" });
+        return;
+    }
+    if (studiedOutsideCountry && tcuFormFile && !checkPdf(tcuFormFile)){
+         toast({ title: "Submission Error", description: "TCU Form must be a PDF.", variant: "destructive" });
+        return;
+    }
+    if (!checkPdf(letterOfRequestFile)) {
+        toast({ title: "Submission Error", description: "Letter of Request must be a PDF.", variant: "destructive" });
         return;
     }
 
     setIsSubmitting(true);
+    const newRequestId = `CADRE${Date.now().toString().slice(-3)}`;
+    let documentsList = ['Letter of Request', 'Certificate'];
+    if (studiedOutsideCountry) documentsList.push('TCU Form');
+
+    const newRequest: MockPendingCadreChangeRequest = {
+        id: newRequestId,
+        employeeName: employeeDetails.name,
+        zanId: employeeDetails.zanId,
+        department: employeeDetails.department || 'N/A',
+        currentCadre: employeeDetails.cadre || 'N/A',
+        employmentDate: employeeDetails.employmentDate || 'N/A',
+        dateOfBirth: employeeDetails.dateOfBirth || 'N/A',
+        institution: employeeDetails.institution || 'N/A',
+        newCadre: newCadre,
+        submissionDate: format(new Date(), 'yyyy-MM-dd'),
+        submittedBy: `${user?.name} (${user?.role})`,
+        status: role === ROLES.HHRMD ? 'Pending HHRMD Review' : 'Pending HRMO Review',
+        reason: reasonCadreChange,
+        documents: documentsList,
+        studiedOutsideCountry: studiedOutsideCountry,
+        reviewStage: 'initial',
+    };
+
     console.log("Submitting Cadre Change Request:", {
       employee: employeeDetails,
       newCadre,
@@ -164,12 +201,30 @@ export default function CadreChangePage() {
     });
 
     setTimeout(() => {
+      setPendingRequests(prev => [newRequest, ...prev]);
       toast({ title: "Cadre Change Request Submitted", description: `Request for ${employeeDetails.name} submitted successfully.` });
       setZanId('');
       setEmployeeDetails(null);
       resetFormFields();
       setIsSubmitting(false);
     }, 1500);
+  };
+  
+  const handleInitialAction = (requestId: string, action: 'forward' | 'reject') => {
+    setPendingRequests(prevRequests =>
+      prevRequests.map(req => {
+        if (req.id === requestId) {
+          if (action === 'forward') {
+            toast({ title: "Request Forwarded", description: `Request ${req.id} for ${req.employeeName} forwarded to Commission.` });
+            return { ...req, status: "Request Received – Awaiting Commission Decision", reviewStage: 'commission_review', reviewedBy: role || undefined };
+          } else {
+            toast({ title: "Request Rejected", description: `Request ${req.id} for ${req.employeeName} rejected and returned to HRO.`, variant: 'destructive' });
+            return { ...req, status: `Rejected by ${role} - Awaiting HRO Correction`, reviewedBy: role || undefined };
+          }
+        }
+        return req;
+      })
+    );
   };
 
   return (
@@ -213,7 +268,7 @@ export default function CadreChangePage() {
                 </div>
             
                 <div className="space-y-4">
-                  <h3 className="text-lg font-medium text-foreground">Cadre Change Details & Documents (PDF Only)</h3>
+                  <h3 className="text-lg font-medium text-foreground">Cadre Change Details &amp; Documents (PDF Only)</h3>
                   <div>
                     <Label htmlFor="newCadre">Proposed New Cadre</Label>
                     <Input id="newCadre" placeholder="e.g., Senior Human Resource Officer" value={newCadre} onChange={(e) => setNewCadre(e.target.value)} disabled={isSubmitting} />
@@ -272,23 +327,37 @@ export default function CadreChangePage() {
             <CardDescription>Review, approve, or reject pending cadre change requests.</CardDescription>
           </CardHeader>
           <CardContent>
-            {mockPendingCadreChangeRequests.length > 0 ? (
-              mockPendingCadreChangeRequests.map((request) => (
+            {pendingRequests.filter(req => 
+                (role === ROLES.HHRMD && req.status === 'Pending HHRMD Review') ||
+                (role === ROLES.HRMO && req.status === 'Pending HRMO Review') ||
+                req.status === 'Request Received – Awaiting Commission Decision' ||
+                req.status.startsWith('Rejected by')
+            ).length > 0 ? (
+              pendingRequests.filter(req => 
+                (role === ROLES.HHRMD && req.status === 'Pending HHRMD Review') ||
+                (role === ROLES.HRMO && req.status === 'Pending HRMO Review') ||
+                req.status === 'Request Received – Awaiting Commission Decision' ||
+                req.status.startsWith('Rejected by')
+              ).map((request) => (
                 <div key={request.id} className="mb-4 border p-4 rounded-md space-y-2 shadow-sm bg-background hover:shadow-md transition-shadow">
                   <h3 className="font-semibold text-base">Cadre Change for: {request.employeeName} (ZanID: {request.zanId})</h3>
                   <p className="text-sm text-muted-foreground">From Cadre: {request.currentCadre}</p>
                   <p className="text-sm text-muted-foreground">To Cadre: {request.newCadre}</p>
-                  <p className="text-sm text-muted-foreground">Submitted: {request.submissionDate} by {request.submittedBy}</p>
+                  <p className="text-sm text-muted-foreground">Submitted: {request.submissionDate ? format(parseISO(request.submissionDate), 'PPP') : 'N/A'} by {request.submittedBy}</p>
                   <p className="text-sm"><span className="font-medium">Status:</span> <span className="text-primary">{request.status}</span></p>
                   <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                     <Button size="sm" variant="outline" onClick={() => { setSelectedRequest(request); setIsDetailsModalOpen(true); }}>View Details</Button>
-                    <Button size="sm">Approve</Button>
-                    <Button size="sm" variant="destructive">Reject</Button>
+                    {request.reviewStage === 'initial' && (request.status.startsWith(`Pending ${role} Review`)) && (
+                      <>
+                        <Button size="sm" onClick={() => handleInitialAction(request.id, 'forward')}>Verify &amp; Forward to Commission</Button>
+                        <Button size="sm" variant="destructive" onClick={() => handleInitialAction(request.id, 'reject')}>Reject &amp; Return to HRO</Button>
+                      </>
+                    )}
                   </div>
                 </div>
               ))
             ) : (
-              <p className="text-muted-foreground">No cadre change requests pending review.</p>
+              <p className="text-muted-foreground">No cadre change requests pending your review.</p>
             )}
           </CardContent>
         </Card>
@@ -351,7 +420,7 @@ export default function CadreChangePage() {
                     </div>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
                         <Label className="text-right font-semibold">Submitted:</Label>
-                        <p className="col-span-2">{selectedRequest.submissionDate} by {selectedRequest.submittedBy}</p>
+                        <p className="col-span-2">{selectedRequest.submissionDate ? format(parseISO(selectedRequest.submissionDate), 'PPP') : 'N/A'} by {selectedRequest.submittedBy}</p>
                     </div>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
                         <Label className="text-right font-semibold">Status:</Label>

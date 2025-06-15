@@ -32,9 +32,12 @@ interface MockPendingPromotionRequest {
   status: string;
   documents?: string[];
   studiedOutsideCountry?: boolean;
+  reviewStage: 'initial' | 'commission_review';
+  rejectionReason?: string;
+  reviewedBy?: string;
 }
 
-const mockPendingPromotionRequests: MockPendingPromotionRequest[] = [
+const initialMockPendingPromotionRequests: MockPendingPromotionRequest[] = [
   {
     id: 'PROM001',
     employeeName: 'Zainab Ali Khamis',
@@ -50,6 +53,7 @@ const mockPendingPromotionRequests: MockPendingPromotionRequest[] = [
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending HHRMD Review',
     documents: ['Performance Appraisal Form (Year 1)', 'Performance Appraisal Form (Year 2)', 'Performance Appraisal Form (Year 3)', 'Civil Service Commission Promotion Form', 'Letter of Request'],
+    reviewStage: 'initial',
   },
   {
     id: 'PROM002',
@@ -67,17 +71,18 @@ const mockPendingPromotionRequests: MockPendingPromotionRequest[] = [
     status: 'Pending HRMO Review',
     documents: ['Academic Certificate (Masters)', 'TCU Form', 'Letter of Request'],
     studiedOutsideCountry: true,
+    reviewStage: 'initial', // Education advancement might follow a different review, but for consistency in structure
   },
 ];
 
 export default function PromotionPage() {
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const [zanId, setZanId] = useState('');
   const [employeeDetails, setEmployeeDetails] = useState<Employee | null>(null);
   const [isFetchingEmployee, setIsFetchingEmployee] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [promotionType, setPromotionType] = useState<'experience' | 'education' | ''>('');
+  const [promotionRequestType, setPromotionRequestType] = useState<'experience' | 'education' | ''>('');
   const [proposedCadre, setProposedCadre] = useState('');
 
   // Experience-based promotion files
@@ -94,11 +99,12 @@ export default function PromotionPage() {
   // Common file
   const [letterOfRequestFile, setLetterOfRequestFile] = useState<FileList | null>(null);
 
+  const [pendingRequests, setPendingRequests] = useState<MockPendingPromotionRequest[]>(initialMockPendingPromotionRequests);
   const [selectedRequest, setSelectedRequest] = useState<MockPendingPromotionRequest | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
   const resetFormFields = () => {
-    setPromotionType('');
+    setPromotionRequestType('');
     setProposedCadre('');
     setPerformanceAppraisalFileY1(null);
     setPerformanceAppraisalFileY2(null);
@@ -140,7 +146,7 @@ export default function PromotionPage() {
       toast({ title: "Submission Error", description: "Employee details are missing.", variant: "destructive" });
       return;
     }
-    if (!promotionType) {
+    if (!promotionRequestType) {
       toast({ title: "Submission Error", description: "Please select a Promotion Type.", variant: "destructive" });
       return;
     }
@@ -162,12 +168,14 @@ export default function PromotionPage() {
 
     let submissionData: any = {
       employee: employeeDetails,
-      promotionType,
+      promotionType: promotionRequestType,
       proposedCadre,
       letterOfRequestFile: letterOfRequestFile[0]?.name,
     };
+    let documentsList: string[] = ['Letter of Request'];
 
-    if (promotionType === 'experience') {
+
+    if (promotionRequestType === 'experience') {
       if (!performanceAppraisalFileY1) {
         toast({ title: "Submission Error", description: "Performance Appraisal Form (Year 1) is missing. Please upload the PDF document.", variant: "destructive" });
         return;
@@ -200,6 +208,7 @@ export default function PromotionPage() {
         toast({ title: "Submission Error", description: "Civil Service Commission Promotion Form must be a PDF file.", variant: "destructive" });
         return;
       }
+      documentsList.push('Performance Appraisal (Y1)', 'Performance Appraisal (Y2)', 'Performance Appraisal (Y3)', 'CSC Promotion Form');
       submissionData = {
         ...submissionData,
         performanceAppraisalFileY1: performanceAppraisalFileY1[0]?.name,
@@ -207,7 +216,7 @@ export default function PromotionPage() {
         performanceAppraisalFileY3: performanceAppraisalFileY3[0]?.name,
         cscPromotionFormFile: cscPromotionFormFile[0]?.name,
       };
-    } else if (promotionType === 'education') {
+    } else if (promotionRequestType === 'education') {
       if (!certificateFile) {
         toast({ title: "Submission Error", description: "Academic Certificate is missing. Please upload the PDF document.", variant: "destructive" });
         return;
@@ -216,6 +225,7 @@ export default function PromotionPage() {
         toast({ title: "Submission Error", description: "Academic Certificate must be a PDF file.", variant: "destructive" });
         return;
       }
+      documentsList.push('Academic Certificate');
       if (studiedOutsideCountry && !tcuFormFile) {
         toast({ title: "Submission Error", description: "TCU Form is missing as employee studied outside the country. Please upload the PDF document.", variant: "destructive" });
         return;
@@ -224,6 +234,7 @@ export default function PromotionPage() {
         toast({ title: "Submission Error", description: "TCU Form must be a PDF file.", variant: "destructive" });
         return;
       }
+      if (studiedOutsideCountry) documentsList.push('TCU Form');
       submissionData = {
         ...submissionData,
         certificateFile: certificateFile[0]?.name,
@@ -233,9 +244,29 @@ export default function PromotionPage() {
     }
 
     setIsSubmitting(true);
+    const newRequestId = `PROM${Date.now().toString().slice(-3)}`;
+    const newRequest: MockPendingPromotionRequest = {
+        id: newRequestId,
+        employeeName: employeeDetails.name,
+        zanId: employeeDetails.zanId,
+        department: employeeDetails.department || 'N/A',
+        currentCadre: employeeDetails.cadre || 'N/A',
+        employmentDate: employeeDetails.employmentDate || 'N/A',
+        dateOfBirth: employeeDetails.dateOfBirth || 'N/A',
+        institution: employeeDetails.institution || 'N/A',
+        proposedCadre: proposedCadre,
+        promotionType: promotionRequestType === 'experience' ? 'Experience' : 'Education Advancement',
+        submissionDate: format(new Date(), 'yyyy-MM-dd'),
+        submittedBy: `${user?.name} (${user?.role})`,
+        status: role === ROLES.HHRMD ? 'Pending HHRMD Review' : 'Pending HRMO Review',
+        documents: documentsList,
+        studiedOutsideCountry: promotionRequestType === 'education' ? studiedOutsideCountry : undefined,
+        reviewStage: 'initial',
+    };
     console.log("Submitting Promotion Request:", submissionData);
 
     setTimeout(() => {
+      setPendingRequests(prev => [newRequest, ...prev]);
       toast({ title: "Promotion Request Submitted", description: `Promotion request for ${employeeDetails.name} submitted successfully.` });
       setZanId('');
       setEmployeeDetails(null);
@@ -245,14 +276,54 @@ export default function PromotionPage() {
   };
   
   const isSubmitDisabled = () => {
-    if (!employeeDetails || !promotionType || !proposedCadre || !letterOfRequestFile) return true;
-    if (promotionType === 'experience') {
+    if (!employeeDetails || !promotionRequestType || !proposedCadre || !letterOfRequestFile) return true;
+    if (promotionRequestType === 'experience') {
       return !performanceAppraisalFileY1 || !performanceAppraisalFileY2 || !performanceAppraisalFileY3 || !cscPromotionFormFile || isSubmitting;
     }
-    if (promotionType === 'education') {
+    if (promotionRequestType === 'education') {
       return !certificateFile || (studiedOutsideCountry && !tcuFormFile) || isSubmitting;
     }
     return true; 
+  };
+
+  const handleInitialAction = (requestId: string, action: 'forward' | 'reject') => {
+    setPendingRequests(prevRequests =>
+      prevRequests.map(req => {
+        if (req.id === requestId) {
+          if (action === 'forward') {
+            toast({ title: "Request Forwarded", description: `Request ${req.id} for ${req.employeeName} forwarded to Commission.` });
+            return { ...req, status: "Request Received – Awaiting Commission Decision", reviewStage: 'commission_review', reviewedBy: role || undefined };
+          } else {
+            toast({ title: "Request Rejected", description: `Request ${req.id} for ${req.employeeName} rejected and returned to HRO.`, variant: 'destructive' });
+            return { ...req, status: `Rejected by ${role} - Awaiting HRO Correction`, reviewedBy: role || undefined };
+          }
+        }
+        return req;
+      })
+    );
+  };
+
+  const handleEducationPromotionApprove = (requestId: string) => {
+     setPendingRequests(prevRequests =>
+      prevRequests.map(req => {
+        if (req.id === requestId) {
+          toast({ title: "Promotion Approved", description: `Education Promotion for ${req.employeeName} has been approved.` });
+          return { ...req, status: "Approved by " + (role || "Reviewer"), reviewStage: 'commission_review' }; // Using commission_review to signify it's past initial
+        }
+        return req;
+      })
+    );
+  };
+  const handleEducationPromotionReject = (requestId: string) => {
+    setPendingRequests(prevRequests =>
+      prevRequests.map(req => {
+        if (req.id === requestId) {
+          toast({ title: "Promotion Rejected", description: `Education Promotion for ${req.employeeName} has been rejected.`, variant: 'destructive'});
+          return { ...req, status: "Rejected by " + (role || "Reviewer"), reviewStage: 'commission_review' };
+        }
+        return req;
+      })
+    );
   };
 
 
@@ -298,7 +369,7 @@ export default function PromotionPage() {
 
                 <div className="space-y-2">
                     <Label htmlFor="promotionTypeSelect" className="flex items-center"><ListFilter className="mr-2 h-4 w-4 text-primary" />Promotion Type</Label>
-                    <Select value={promotionType} onValueChange={(value) => setPromotionType(value as 'experience' | 'education' | '')} disabled={isSubmitting}>
+                    <Select value={promotionRequestType} onValueChange={(value) => setPromotionRequestType(value as 'experience' | 'education' | '')} disabled={isSubmitting}>
                       <SelectTrigger id="promotionTypeSelect">
                         <SelectValue placeholder="Select promotion type" />
                       </SelectTrigger>
@@ -309,15 +380,15 @@ export default function PromotionPage() {
                     </Select>
                 </div>
             
-                {promotionType && (
+                {promotionRequestType && (
                     <div className="space-y-4">
-                        <h3 className="text-lg font-medium text-foreground">Promotion Details & Documents (PDF Only)</h3>
+                        <h3 className="text-lg font-medium text-foreground">Promotion Details &amp; Documents (PDF Only)</h3>
                         <div>
                             <Label htmlFor="proposedCadre">Proposed New Cadre/Position</Label>
                             <Input id="proposedCadre" placeholder="e.g., Principal Officer" value={proposedCadre} onChange={(e) => setProposedCadre(e.target.value)} disabled={isSubmitting} />
                         </div>
 
-                        {promotionType === 'experience' && (
+                        {promotionRequestType === 'experience' && (
                             <>
                                 <div>
                                 <Label htmlFor="performanceAppraisalFileY1" className="flex items-center"><Star className="mr-2 h-4 w-4 text-primary" />Upload Performance Appraisal Form (Year 1)</Label>
@@ -338,7 +409,7 @@ export default function PromotionPage() {
                             </>
                         )}
 
-                        {promotionType === 'education' && (
+                        {promotionRequestType === 'education' && (
                             <>
                                 <div>
                                 <Label htmlFor="certificateFilePromo" className="flex items-center"><Award className="mr-2 h-4 w-4 text-primary" />Upload Academic Certificate</Label>
@@ -367,7 +438,7 @@ export default function PromotionPage() {
               </div>
             )}
           </CardContent>
-          {employeeDetails && promotionType && (
+          {employeeDetails && promotionRequestType && (
             <CardFooter className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2 pt-4 border-t">
                 <Button onClick={handleSubmitPromotionRequest} disabled={isSubmitDisabled()}>
                   {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -385,24 +456,44 @@ export default function PromotionPage() {
             <CardDescription>Review, approve, or reject pending promotion requests.</CardDescription>
           </CardHeader>
           <CardContent>
-            {mockPendingPromotionRequests.length > 0 ? (
-              mockPendingPromotionRequests.map((request) => (
+            {pendingRequests.filter(req => 
+                (role === ROLES.HHRMD && req.status === 'Pending HHRMD Review') ||
+                (role === ROLES.HRMO && req.status === 'Pending HRMO Review') ||
+                req.status === 'Request Received – Awaiting Commission Decision' ||
+                req.status.startsWith('Rejected by') || req.status.startsWith('Approved by') // Show approved/rejected education promos
+            ).length > 0 ? (
+              pendingRequests.filter(req => 
+                (role === ROLES.HHRMD && req.status === 'Pending HHRMD Review') ||
+                (role === ROLES.HRMO && req.status === 'Pending HRMO Review') ||
+                req.status === 'Request Received – Awaiting Commission Decision' ||
+                req.status.startsWith('Rejected by') || req.status.startsWith('Approved by')
+              ).map((request) => (
                 <div key={request.id} className="mb-4 border p-4 rounded-md space-y-2 shadow-sm bg-background hover:shadow-md transition-shadow">
                   <h3 className="font-semibold text-base">Promotion for: {request.employeeName} (ZanID: {request.zanId})</h3>
                   <p className="text-sm text-muted-foreground">Type: {request.promotionType}</p>
                   <p className="text-sm text-muted-foreground">Current Cadre: {request.currentCadre}</p>
                   <p className="text-sm text-muted-foreground">Proposed Cadre: {request.proposedCadre}</p>
-                  <p className="text-sm text-muted-foreground">Submitted: {request.submissionDate} by {request.submittedBy}</p>
+                  <p className="text-sm text-muted-foreground">Submitted: {request.submissionDate ? format(parseISO(request.submissionDate), 'PPP') : 'N/A'} by {request.submittedBy}</p>
                   <p className="text-sm"><span className="font-medium">Status:</span> <span className="text-primary">{request.status}</span></p>
                   <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                     <Button size="sm" variant="outline" onClick={() => { setSelectedRequest(request); setIsDetailsModalOpen(true); }}>View Details</Button>
-                    <Button size="sm">Approve</Button>
-                    <Button size="sm" variant="destructive">Reject</Button>
+                    {request.promotionType === 'Experience' && request.reviewStage === 'initial' && request.status.startsWith(`Pending ${role} Review`) && (
+                      <>
+                        <Button size="sm" onClick={() => handleInitialAction(request.id, 'forward')}>Verify &amp; Forward to Commission</Button>
+                        <Button size="sm" variant="destructive" onClick={() => handleInitialAction(request.id, 'reject')}>Reject &amp; Return to HRO</Button>
+                      </>
+                    )}
+                    {request.promotionType === 'Education Advancement' && request.reviewStage === 'initial' && request.status.startsWith(`Pending ${role} Review`) && (
+                      <>
+                        <Button size="sm" onClick={() => handleEducationPromotionApprove(request.id)}>Approve Education Promo</Button>
+                        <Button size="sm" variant="destructive" onClick={() => handleEducationPromotionReject(request.id)}>Reject Education Promo</Button>
+                      </>
+                    )}
                   </div>
                 </div>
               ))
             ) : (
-              <p className="text-muted-foreground">No promotion requests pending review.</p>
+              <p className="text-muted-foreground">No promotion requests pending your review.</p>
             )}
           </CardContent>
         </Card>
@@ -467,7 +558,7 @@ export default function PromotionPage() {
                     )}
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
                         <Label className="text-right font-semibold">Submitted:</Label>
-                        <p className="col-span-2">{selectedRequest.submissionDate} by {selectedRequest.submittedBy}</p>
+                        <p className="col-span-2">{selectedRequest.submissionDate ? format(parseISO(selectedRequest.submissionDate), 'PPP') : 'N/A'} by {selectedRequest.submittedBy}</p>
                     </div>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
                         <Label className="text-right font-semibold">Status:</Label>

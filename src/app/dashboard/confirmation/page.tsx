@@ -28,9 +28,12 @@ interface MockPendingConfirmationRequest {
   submittedBy: string;
   status: string;
   documents?: string[];
+  reviewStage: 'initial' | 'commission_review';
+  rejectionReason?: string;
+  reviewedBy?: string;
 }
 
-const mockPendingConfirmationRequests: MockPendingConfirmationRequest[] = [
+const initialMockPendingConfirmationRequests: MockPendingConfirmationRequest[] = [
   {
     id: 'CONF001',
     employeeName: 'Ali Juma Ali',
@@ -44,11 +47,12 @@ const mockPendingConfirmationRequests: MockPendingConfirmationRequest[] = [
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending HHRMD Review',
     documents: ['Evaluation Form', 'IPA Certificate', 'Letter of Request'],
+    reviewStage: 'initial',
   },
 ];
 
 export default function ConfirmationPage() {
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const [zanId, setZanId] = useState('');
   const [employeeToConfirm, setEmployeeToConfirm] = useState<Employee | null>(null);
   const [isFetchingEmployee, setIsFetchingEmployee] = useState(false);
@@ -59,6 +63,7 @@ export default function ConfirmationPage() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [pendingRequests, setPendingRequests] = useState<MockPendingConfirmationRequest[]>(initialMockPendingConfirmationRequests);
   const [selectedRequest, setSelectedRequest] = useState<MockPendingConfirmationRequest | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
@@ -132,24 +137,71 @@ export default function ConfirmationPage() {
     }
     
     const checkPdf = (fileList: FileList | null) => fileList && fileList[0] && fileList[0].type === "application/pdf";
-    if (!checkPdf(evaluationFormFile) || !checkPdf(ipaCertificateFile) || !checkPdf(letterOfRequestFile)) {
-        toast({ title: "Submission Error", description: "All uploaded documents must be in PDF format.", variant: "destructive" });
+    if (!checkPdf(evaluationFormFile)) {
+        toast({ title: "Submission Error", description: "Evaluation Form must be a PDF.", variant: "destructive" });
+        return;
+    }
+    if (!checkPdf(ipaCertificateFile)) {
+        toast({ title: "Submission Error", description: "IPA Certificate must be a PDF.", variant: "destructive" });
+        return;
+    }
+    if (!checkPdf(letterOfRequestFile)) {
+        toast({ title: "Submission Error", description: "Letter of Request must be a PDF.", variant: "destructive" });
         return;
     }
 
+
     setIsSubmitting(true);
+    // Mock submission: Add to pendingRequests array
+    const newRequestId = `CONF${Date.now().toString().slice(-3)}`;
+    const newRequest: MockPendingConfirmationRequest = {
+        id: newRequestId,
+        employeeName: employeeToConfirm.name,
+        zanId: employeeToConfirm.zanId,
+        department: employeeToConfirm.department || 'N/A',
+        cadre: employeeToConfirm.cadre || 'N/A',
+        employmentDate: employeeToConfirm.employmentDate || 'N/A',
+        dateOfBirth: employeeToConfirm.dateOfBirth || 'N/A',
+        institution: employeeToConfirm.institution || 'N/A',
+        submissionDate: format(new Date(), 'yyyy-MM-dd'),
+        submittedBy: `${user?.name} (${user?.role})`,
+        status: role === ROLES.HHRMD ? 'Pending HHRMD Review' : 'Pending HRMO Review', // Or determine reviewer based on logic
+        documents: ['Evaluation Form', 'IPA Certificate', 'Letter of Request'],
+        reviewStage: 'initial',
+    };
+    
     console.log("Submitting Confirmation Request:", {
       employee: employeeToConfirm,
       evaluationForm: evaluationFormFile[0]?.name,
       ipaCertificate: ipaCertificateFile[0]?.name,
       letterOfRequest: letterOfRequestFile[0]?.name,
     });
+
     setTimeout(() => {
+      // In a real app, this would come from the backend
+      setPendingRequests(prev => [newRequest, ...prev]);
       toast({ title: "Request Submitted", description: `Confirmation request for ${employeeToConfirm.name} submitted successfully.` });
       setZanId('');
       resetEmployeeAndForm();
       setIsSubmitting(false);
     }, 1500);
+  };
+
+  const handleInitialAction = (requestId: string, action: 'forward' | 'reject') => {
+    setPendingRequests(prevRequests =>
+      prevRequests.map(req => {
+        if (req.id === requestId) {
+          if (action === 'forward') {
+            toast({ title: "Request Forwarded", description: `Request ${req.id} for ${req.employeeName} forwarded to Commission.` });
+            return { ...req, status: "Request Received – Awaiting Commission Decision", reviewStage: 'commission_review', reviewedBy: role || undefined };
+          } else {
+            toast({ title: "Request Rejected", description: `Request ${req.id} for ${req.employeeName} rejected and returned to HRO.`, variant: 'destructive' });
+            return { ...req, status: `Rejected by ${role} - Awaiting HRO Correction`, reviewedBy: role || undefined };
+          }
+        }
+        return req;
+      })
+    );
   };
 
 
@@ -242,22 +294,36 @@ export default function ConfirmationPage() {
             <CardDescription>Review, approve, or reject pending employee confirmation requests.</CardDescription>
           </CardHeader>
           <CardContent>
-            {mockPendingConfirmationRequests.length > 0 ? (
-              mockPendingConfirmationRequests.map((request) => (
+            {pendingRequests.filter(req => 
+                (role === ROLES.HHRMD && req.status === 'Pending HHRMD Review') ||
+                (role === ROLES.HRMO && req.status === 'Pending HRMO Review') ||
+                req.status === 'Request Received – Awaiting Commission Decision' ||
+                req.status.startsWith('Rejected by')
+            ).length > 0 ? (
+              pendingRequests.filter(req => 
+                (role === ROLES.HHRMD && req.status === 'Pending HHRMD Review') ||
+                (role === ROLES.HRMO && req.status === 'Pending HRMO Review') ||
+                req.status === 'Request Received – Awaiting Commission Decision' ||
+                req.status.startsWith('Rejected by')
+              ).map((request) => (
                 <div key={request.id} className="mb-4 border p-4 rounded-md space-y-2 shadow-sm bg-background hover:shadow-md transition-shadow">
                   <h3 className="font-semibold text-base">Confirmation for: {request.employeeName} (ZanID: {request.zanId})</h3>
                   <p className="text-sm text-muted-foreground">Department: {request.department}</p>
-                  <p className="text-sm text-muted-foreground">Submitted: {request.submissionDate} by {request.submittedBy}</p>
+                  <p className="text-sm text-muted-foreground">Submitted: {request.submissionDate ? format(parseISO(request.submissionDate), 'PPP') : 'N/A'} by {request.submittedBy}</p>
                   <p className="text-sm"><span className="font-medium">Status:</span> <span className="text-primary">{request.status}</span></p>
                   <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                     <Button size="sm" variant="outline" onClick={() => { setSelectedRequest(request); setIsDetailsModalOpen(true); }}>View Details</Button>
-                    <Button size="sm">Approve</Button>
-                    <Button size="sm" variant="destructive">Reject</Button>
+                     {request.reviewStage === 'initial' && (request.status.startsWith(`Pending ${role} Review`)) && (
+                      <>
+                        <Button size="sm" onClick={() => handleInitialAction(request.id, 'forward')}>Verify &amp; Forward to Commission</Button>
+                        <Button size="sm" variant="destructive" onClick={() => handleInitialAction(request.id, 'reject')}>Reject &amp; Return to HRO</Button>
+                      </>
+                    )}
                   </div>
                 </div>
               ))
             ) : (
-              <p className="text-muted-foreground">No confirmation requests pending review.</p>
+              <p className="text-muted-foreground">No confirmation requests pending your review.</p>
             )}
           </CardContent>
         </Card>
@@ -309,7 +375,7 @@ export default function ConfirmationPage() {
                     <h4 className="font-semibold text-base text-foreground mb-2">Request Information</h4>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
                         <Label className="text-right font-semibold">Submitted:</Label>
-                        <p className="col-span-2">{selectedRequest.submissionDate} by {selectedRequest.submittedBy}</p>
+                        <p className="col-span-2">{selectedRequest.submissionDate ? format(parseISO(selectedRequest.submissionDate), 'PPP') : 'N/A'} by {selectedRequest.submittedBy}</p>
                     </div>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
                         <Label className="text-right font-semibold">Status:</Label>
