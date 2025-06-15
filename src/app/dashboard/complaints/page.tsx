@@ -10,13 +10,13 @@ import { useAuth } from '@/hooks/use-auth';
 import { ROLES, EMPLOYEES } from '@/lib/constants';
 import React, { useState, useEffect } from 'react';
 import { standardizeComplaintFormatting } from '@/ai/flows/complaint-rewriter';
-import type { ComplaintFormValues as OriginalComplaintFormValues, Role as UserRole } from '@/lib/types';
+import type { Role as UserRole } from '@/lib/types';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, Eye, Edit3, Send, CheckCircle, XCircle, Info, MessageSquarePlus, Edit, Filter } from 'lucide-react';
+import { Loader2, Eye, Edit3, Send, CheckCircle, XCircle, Info, MessageSquarePlus, Edit, Filter, Phone, Users } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format, parseISO } from 'date-fns';
@@ -35,6 +35,8 @@ const complaintSchema = z.object({
   complaintType: z.string().min(1, "Complaint type is required."),
   subject: z.string().min(5, "Subject must be at least 5 characters.").max(100, "Subject must be 100 characters or less."),
   complaintText: z.string().min(20, "Complaint description must be at least 20 characters."),
+  complainantPhoneNumber: z.string().optional(),
+  nextOfKinPhoneNumber: z.string().optional(),
   evidence: z.custom<FileList | null>().optional(),
 });
 
@@ -50,6 +52,8 @@ interface MockSubmittedComplaint {
   complaintType: string;
   subject: string;
   details: string; 
+  complainantPhoneNumber?: string;
+  nextOfKinPhoneNumber?: string;
   submissionDate: string;
   status: "Submitted" | "Under Review" | "Awaiting More Information" | "Resolved - Pending Employee Confirmation" | "Rejected - Pending Employee Confirmation" | "Closed - Satisfied" | "Awaiting Commission Review" | "Resolved - Approved by Commission" | "Resolved - Rejected by Commission" | "Rejected by DO - Awaiting HRO/Submitter Action" | "Rejected by HHRMD - Awaiting HRO/Submitter Action";
   attachments?: string[]; 
@@ -72,6 +76,8 @@ const initialMockComplaints: MockSubmittedComplaint[] = [
     complaintType: 'Unfair Treatment',
     subject: 'Overlooked for Training Opportunity',
     details: 'Employee states that they were unfairly overlooked for a training opportunity despite meeting all criteria and having relevant experience. This has happened multiple times.',
+    complainantPhoneNumber: '0777123456',
+    nextOfKinPhoneNumber: '0777654321',
     submissionDate: '2024-07-20',
     status: 'Submitted',
     attachments: ['Evidence_Screenshot.png', 'Criteria_Doc.pdf'],
@@ -104,6 +110,7 @@ const initialMockComplaints: MockSubmittedComplaint[] = [
     complaintType: 'Salary Issue',
     subject: 'Incorrect Overtime Payment',
     details: 'My overtime for the past two months has been calculated incorrectly. I have attached my timesheets and pay slips for review.',
+    complainantPhoneNumber: '0773987654',
     submissionDate: '2024-07-25',
     status: 'Resolved - Pending Employee Confirmation',
     attachments: ['Timesheet_June.pdf', 'Payslip_June.pdf', 'Timesheet_July.pdf', 'Payslip_July.pdf'],
@@ -139,12 +146,12 @@ export default function ComplaintsPage() {
   const [selectedComplaint, setSelectedComplaint] = useState<MockSubmittedComplaint | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   
-  const [isActionModalOpen, setIsActionModalOpen] = useState(false); // For existing Officer Action Modal
+  const [isActionModalOpen, setIsActionModalOpen] = useState(false); 
   const [officerActionComment, setOfficerActionComment] = useState('');
   const [officerInternalNote, setOfficerInternalNote] = useState(''); 
-  const [actionType, setActionType] = useState<"resolve" | "reject_initial" | "request_info" | "forward" | "commission_approve" | "commission_reject" | null>(null);
+  const [actionType, setActionType] = useState<"resolve" | "request_info" | null>(null);
 
-  const [isRejectionModalOpen, setIsRejectionModalOpen] = useState(false); // For new Rejection with Reason Modal
+  const [isRejectionModalOpen, setIsRejectionModalOpen] = useState(false); 
   const [rejectionReasonInput, setRejectionReasonInput] = useState('');
   const [currentRequestToAction, setCurrentRequestToAction] = useState<MockSubmittedComplaint | null>(null);
 
@@ -155,6 +162,8 @@ export default function ComplaintsPage() {
       complaintType: "",
       subject: "",
       complaintText: "",
+      complainantPhoneNumber: "",
+      nextOfKinPhoneNumber: "",
       evidence: null,
     },
   });
@@ -199,6 +208,8 @@ export default function ComplaintsPage() {
       complaintType: data.complaintType,
       subject: data.subject,
       details: data.complaintText,
+      complainantPhoneNumber: data.complainantPhoneNumber,
+      nextOfKinPhoneNumber: data.nextOfKinPhoneNumber,
       submissionDate: new Date().toISOString().split('T')[0], 
       status: "Submitted",
       attachments: data.evidence ? Array.from(data.evidence).map(file => file.name) : [],
@@ -218,7 +229,7 @@ export default function ComplaintsPage() {
 
     if (action === 'reject_initial') {
       setCurrentRequestToAction(complaint);
-      setRejectionReasonInput(''); // Clear previous reason
+      setRejectionReasonInput(''); 
       setIsRejectionModalOpen(true);
     } else if (action === 'forward') {
       let toastMessage = "";
@@ -261,7 +272,7 @@ export default function ComplaintsPage() {
             ...c, 
             status: `Rejected by ${rejectedByRole} - Awaiting HRO/Submitter Action` as MockSubmittedComplaint['status'], 
             rejectionReason: rejectionReasonInput, 
-            reviewStage: 'initial' // Or 'completed_rejected_by_officer' etc.
+            reviewStage: 'initial' 
           };
         }
         return c;
@@ -304,7 +315,7 @@ export default function ComplaintsPage() {
 
   const openActionModal = (complaint: MockSubmittedComplaint, type: "resolve" | "request_info") => {
     setSelectedComplaint(complaint);
-    setActionType(type); // 'resolve' or 'request_info'
+    setActionType(type); 
     setOfficerActionComment(complaint.officerComments || '');
     setOfficerInternalNote(complaint.internalNotes || '');
     setIsActionModalOpen(true);
@@ -326,7 +337,6 @@ export default function ComplaintsPage() {
       newStatus = "Awaiting More Information";
       toastMessage = `More information requested for complaint ${selectedComplaint.id}.`;
     } else {
-        // This path should ideally not be hit if modal types are correctly managed
         console.warn("Unhandled legacy action type:", actionType);
         return;
     }
@@ -341,7 +351,7 @@ export default function ComplaintsPage() {
             officerComments: officerActionComment, 
             internalNotes: officerInternalNote, 
             assignedOfficerRole: role as typeof ROLES.DO | typeof ROLES.HHRMD,
-            reviewStage: 'completed' // Simplified for legacy path
+            reviewStage: 'completed' 
           };
           return updatedComplaint;
         }
@@ -442,6 +452,32 @@ export default function ComplaintsPage() {
                        <p className="text-sm text-muted-foreground pt-1">
                         You can use the AI tool below to help refine your description for clarity and compliance.
                       </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="complainantPhoneNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center"><Phone className="mr-2 h-4 w-4 text-primary"/>Your Current Phone Number (Optional)</FormLabel>
+                      <FormControl>
+                        <Input type="tel" placeholder="Enter your phone number" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="nextOfKinPhoneNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center"><Users className="mr-2 h-4 w-4 text-primary"/>Next of Kin / Guarantor Phone Number (Optional)</FormLabel>
+                      <FormControl>
+                        <Input type="tel" placeholder="Enter next of kin's phone number" {...field} />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -615,7 +651,6 @@ export default function ComplaintsPage() {
         </Card>
       )}
 
-      {/* View Details Modal (for Officer) */}
       {selectedComplaint && isDetailsModalOpen && (
         <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
           <DialogContent className="sm:max-w-lg">
@@ -625,12 +660,24 @@ export default function ComplaintsPage() {
                 From: <strong>{selectedComplaint.employeeName}</strong> ({selectedComplaint.zanId || 'N/A'}) | Type: {selectedComplaint.complaintType}
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4 text-sm max-h-[60vh] overflow-y-auto">
+            <div className="space-y-4 py-4 text-sm max-h-[70vh] overflow-y-auto">
               <div><strong className="text-muted-foreground">Subject:</strong> <p className="mt-1">{selectedComplaint.subject}</p></div>
               <div><strong className="text-muted-foreground">Full Description:</strong> <p className="mt-1 whitespace-pre-wrap">{selectedComplaint.details}</p></div>
               <div><strong className="text-muted-foreground">Submitted On:</strong> {format(parseISO(selectedComplaint.submissionDate), 'PPP p')}</div>
               <div><strong className="text-muted-foreground">Status:</strong> <span className="text-primary">{selectedComplaint.status}</span></div>
               
+              {(role === ROLES.DO || role === ROLES.HHRMD) && (
+                <Card className="mt-3 bg-blue-50 border-blue-200">
+                  <CardHeader className="pb-2 pt-3">
+                    <CardTitle className="text-base text-blue-700">Contact Information (Confidential)</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-xs space-y-1 pb-3">
+                    <p><strong>Complainant Phone:</strong> {selectedComplaint.complainantPhoneNumber || 'Not Provided'}</p>
+                    <p><strong>Next of Kin Phone:</strong> {selectedComplaint.nextOfKinPhoneNumber || 'Not Provided'}</p>
+                  </CardContent>
+                </Card>
+              )}
+
               {selectedComplaint.zanId && (
                 <Card className="mt-3 bg-secondary/20">
                     <CardHeader className="pb-2 pt-3">
@@ -679,7 +726,6 @@ export default function ComplaintsPage() {
         </Dialog>
       )}
 
-       {/* Officer Action Modal (Legacy - for Resolve Direct / Request Info) */}
        {selectedComplaint && isActionModalOpen && (actionType === 'resolve' || actionType === 'request_info') && (
         <Dialog open={isActionModalOpen} onOpenChange={setIsActionModalOpen}>
             <DialogContent className="sm:max-w-md">
@@ -745,7 +791,6 @@ export default function ComplaintsPage() {
         </Dialog>
       )}
 
-      {/* Rejection Modal (New for Two-Stage) */}
       {currentRequestToAction && isRejectionModalOpen && (
         <Dialog open={isRejectionModalOpen} onOpenChange={setIsRejectionModalOpen}>
             <DialogContent className="sm:max-w-md">
