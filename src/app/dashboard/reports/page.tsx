@@ -94,18 +94,18 @@ const MOCK_DATA_STORE: Record<string, () => ReportOutput> = {
   }),
   lwop: () => ({
     title: 'Ripoti ya Likizo Bila Malipo',
-    headers: ["S/N", "JINA", "WIZARA/AFISI", "MUDA", "M", "F", "T", "TAREHE YA KUIDHINISHA", "TAREHE YA KUANZIA", "TAREHE YA KUMALIZA", "AWAMU YA PILI", "TAREHE YA KUMALIZA (AWAMU 2)"],
-    dataKeys: ["sn", "jina", "wizara", "muda", "m", "f", "t", "trhKuidhinisha", "trhKuanzia", "trhKumaliza", "awamu2", "trhKumaliza2"],
+    headers: ["S/N", "JINA", "WIZARA/AFISI", "MUDA", "M", "F", "T", "TAREHE YA KUIDHINISHA", "SABABU YA KUIDHINISHWA", "TAREHE YA KUANZIA", "TAREHE YA KUMALIZA", "AWAMU YA PILI", "TAREHE YA KUMALIZA (AWAMU 2)"],
+    dataKeys: ["sn", "jina", "wizara", "muda", "m", "f", "t", "trhKuidhinisha", "sababuKuidhinishwa", "trhKuanzia", "trhKumaliza", "awamu2", "trhKumaliza2"],
     data: [
-      { sn: 1, jina: 'MGENI MUSSA HAJI', wizara: 'WIZARA YA ELIMU NA MAFUNZO YA AMALI', muda: 3, m: 0, f: 1, t: 1, trhKuidhinisha: '23/10/2019', trhKuanzia: '', trhKumaliza: '', awamu2: '', trhKumaliza2: '' },
-      { sn: 2, jina: 'HASHIM CHANDE MUUMINI', wizara: 'WIZARA YA UCHUMI WA BULUU NA UVUVI', muda: 3, m: 1, f: 0, t: 1, trhKuidhinisha: '1/7/2022', trhKuanzia: '', trhKumaliza: '', awamu2: '', trhKumaliza2: '' },
-      { sn: 3, jina: 'RAJAB ALI JAKU', wizara: 'TAASISI YA ELIMU', muda: 2, m: 1, f: 0, t: 1, trhKuidhinisha: '2/8/2022', trhKuanzia: '1/8/2022', trhKumaliza: '31/07/2024', awamu2: '', trhKumaliza2: '' },
-      { sn: 4, jina: 'SALAMA MZEE SALUM', wizara: 'TUME YA UTUMISHI PEMBA', muda: 3, m: 0, f: 1, t: 1, trhKuidhinisha: '11/8/2022', trhKuanzia: '1/9/2022', trhKumaliza: '30/08/2025', awamu2: '', trhKumaliza2: '' },
-      { sn: 5, jina: 'SULEIMAN ALI BAKAR', wizara: 'WIZARA YA ELIMU NA MAFUNZO YA AMALI', muda: 1, m: 1, f: 0, t: 1, trhKuidhinisha: '29/12/2022', trhKuanzia: '1/9/2022', trhKumaliza: '30/08/2023', awamu2: '', trhKumaliza2: '' },
-      { sn: 6, jina: 'JUMA JUMBE HAJI', wizara: 'WIZARA YA ELIMU NA MAFUNZO YA AMALI', muda: 3, m: 1, f: 0, t: 1, trhKuidhinisha: '8/3/2023', trhKuanzia: '21/02/2023', trhKumaliza: '20/02/2026', awamu2: '', trhKumaliza2: '' },
-      { sn: 7, jina: 'HUSSEIN MUSSA NASSOR', wizara: 'TUME YA MIPANGO', muda: 4, m: 1, f: 0, t: 1, trhKuidhinisha: '8/4/2023', trhKuanzia: '1/1/2023', trhKumaliza: '30/12/2023', awamu2: '1/1/2024', trhKumaliza2: '30/12/2026' },
+      { sn: 1, jina: 'MGENI MUSSA HAJI', wizara: 'WIZARA YA ELIMU NA MAFUNZO YA AMALI', muda: 3, m: 0, f: 1, t: 1, trhKuidhinisha: '23/10/2019', sababuKuidhinishwa: 'Masomo zaidi', trhKuanzia: '', trhKumaliza: '', awamu2: '', trhKumaliza2: '' },
+      { sn: 2, jina: 'HASHIM CHANDE MUUMINI', wizara: 'WIZARA YA UCHUMI WA BULUU NA UVUVI', muda: 3, m: 1, f: 0, t: 1, trhKuidhinisha: '1/7/2022', sababuKuidhinishwa: 'Sababu za kifamilia', trhKuanzia: '', trhKumaliza: '', awamu2: '', trhKumaliza2: '' },
+      { sn: 3, jina: 'RAJAB ALI JAKU', wizara: 'TAASISI YA ELIMU', muda: 2, m: 1, f: 0, t: 1, trhKuidhinisha: '2/8/2022', sababuKuidhinishwa: 'Kozi ya Ualimu', trhKuanzia: '1/8/2022', trhKumaliza: '31/07/2024', awamu2: '', trhKumaliza2: '' },
+      { sn: 4, jina: 'SALAMA MZEE SALUM', wizara: 'TUME YA UTUMISHI PEMBA', muda: 3, m: 0, f: 1, t: 1, trhKuidhinisha: '11/8/2022', sababuKuidhinishwa: 'Kuuguza ndugu', trhKuanzia: '1/9/2022', trhKumaliza: '30/08/2025', awamu2: '', trhKumaliza2: '' },
+      { sn: 5, jina: 'SULEIMAN ALI BAKAR', wizara: 'WIZARA YA ELIMU NA MAFUNZO YA AMALI', muda: 1, m: 1, f: 0, t: 1, trhKuidhinisha: '29/12/2022', sababuKuidhinishwa: 'Masomo ya ziada', trhKuanzia: '1/9/2022', trhKumaliza: '30/08/2023', awamu2: '', trhKumaliza2: '' },
+      { sn: 6, jina: 'JUMA JUMBE HAJI', wizara: 'WIZARA YA ELIMU NA MAFUNZO YA AMALI', muda: 3, m: 1, f: 0, t: 1, trhKuidhinisha: '8/3/2023', sababuKuidhinishwa: 'Kujiendeleza kielimu', trhKuanzia: '21/02/2023', trhKumaliza: '20/02/2026', awamu2: '', trhKumaliza2: '' },
+      { sn: 7, jina: 'HUSSEIN MUSSA NASSOR', wizara: 'TUME YA MIPANGO', muda: 4, m: 1, f: 0, t: 1, trhKuidhinisha: '8/4/2023', sababuKuidhinishwa: 'Mikataba ya kimataifa', trhKuanzia: '1/1/2023', trhKumaliza: '30/12/2023', awamu2: '1/1/2024', trhKumaliza2: '30/12/2026' },
     ],
-    totals: { sn: 'JUMLA', wizara: '', muda: '', m: 5, f: 2, t: 7 }
+    totals: { sn: 'JUMLA', wizara: '', muda: '', m: 5, f: 2, t: 7, sababuKuidhinishwa: '' }
   }),
   promotion: () => ({
     title: 'Ripoti ya Kupandishwa Cheo',
