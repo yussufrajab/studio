@@ -1,7 +1,7 @@
 
 'use client';
 import { PageHeader } from '@/components/shared/page-header';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -40,9 +40,12 @@ interface MockPendingComplaint {
   submittedBy: string; 
   status: string;
   documents?: string[];
+  reviewStage: 'initial' | 'commission_review' | 'completed';
+  rejectionReason?: string;
+  reviewedBy?: string;
 }
 
-const mockPendingComplaints: MockPendingComplaint[] = [
+const initialMockPendingComplaints: MockPendingComplaint[] = [
   {
     id: 'COMP001',
     employeeName: 'Fatma Said Omar',
@@ -58,6 +61,7 @@ const mockPendingComplaints: MockPendingComplaint[] = [
     submittedBy: 'Fatma Said Omar (Employee)',
     status: 'Pending DO Review',
     documents: ['Evidence_Screenshot.png', 'Criteria_Doc.pdf'],
+    reviewStage: 'initial',
   },
   {
     id: 'COMP002',
@@ -73,17 +77,23 @@ const mockPendingComplaints: MockPendingComplaint[] = [
     submissionDate: '2024-07-18',
     submittedBy: 'Ali Juma Ali (Employee)',
     status: 'Pending HHRMD Review',
+    reviewStage: 'initial',
   },
 ];
 
 
 export default function ComplaintsPage() {
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const [rewrittenComplaint, setRewrittenComplaint] = useState<string | null>(null);
   const [isRewriting, setIsRewriting] = useState(false);
 
+  const [pendingComplaints, setPendingComplaints] = useState<MockPendingComplaint[]>(initialMockPendingComplaints);
   const [selectedRequest, setSelectedRequest] = useState<MockPendingComplaint | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+
+  const [isRejectionModalOpen, setIsRejectionModalOpen] = useState(false);
+  const [rejectionReasonInput, setRejectionReasonInput] = useState('');
+  const [currentRequestToAction, setCurrentRequestToAction] = useState<MockPendingComplaint | null>(null);
 
   const form = useForm<ComplaintFormValues>({
     resolver: zodResolver(complaintSchema),
@@ -116,9 +126,81 @@ export default function ComplaintsPage() {
   
   const onSubmit = (data: ComplaintFormValues) => {
     console.log("Submitting complaint:", data);
-    toast({ title: "Complaint Submitted", description: "Your complaint has been successfully submitted." });
+    // This mock submission would ideally add to the pendingComplaints list after HRO processes it
+    toast({ title: "Complaint Submitted", description: "Your complaint has been successfully submitted. It will be reviewed by the relevant department." });
     form.reset();
     setRewrittenComplaint(null);
+  };
+
+  const handleInitialAction = (complaintId: string, action: 'forward' | 'reject') => {
+    const complaint = pendingComplaints.find(c => c.id === complaintId);
+    if (!complaint) return;
+
+    if (action === 'reject') {
+      setCurrentRequestToAction(complaint);
+      setRejectionReasonInput('');
+      setIsRejectionModalOpen(true);
+    } else if (action === 'forward') {
+      let toastMessage = "";
+      setPendingComplaints(prevComplaints =>
+        prevComplaints.map(c => {
+          if (c.id === complaintId) {
+            toastMessage = `Complaint ${complaintId} for ${c.employeeName} forwarded for Commission Review.`;
+            return { ...c, status: "Awaiting Commission Review", reviewStage: 'commission_review', reviewedBy: role || undefined };
+          }
+          return c;
+        })
+      );
+      if (toastMessage) {
+        toast({ title: "Complaint Forwarded", description: toastMessage });
+      }
+    }
+  };
+
+  const handleRejectionSubmit = () => {
+    if (!currentRequestToAction || !rejectionReasonInput.trim()) {
+      toast({ title: "Rejection Error", description: "Reason for rejection is required.", variant: "destructive" });
+      return;
+    }
+    const complaintId = currentRequestToAction.id;
+    const employeeName = currentRequestToAction.employeeName;
+    let toastMessage = "";
+
+    setPendingComplaints(prevComplaints =>
+      prevComplaints.map(c => {
+        if (c.id === complaintId) {
+          toastMessage = `Complaint ${complaintId} for ${employeeName} rejected and returned.`;
+          return { ...c, status: `Rejected by ${role} - Awaiting HRO/Submitter Action`, rejectionReason: rejectionReasonInput, reviewStage: 'initial' };
+        }
+        return c;
+      })
+    );
+    if (toastMessage) {
+      toast({ title: "Complaint Rejected", description: toastMessage, variant: 'destructive' });
+    }
+    setIsRejectionModalOpen(false);
+    setCurrentRequestToAction(null);
+    setRejectionReasonInput('');
+  };
+
+  const handleCommissionDecision = (complaintId: string, decision: 'resolved_approved' | 'resolved_rejected') => {
+    const complaint = pendingComplaints.find(c => c.id === complaintId);
+    if (!complaint) return;
+
+    const finalStatus = decision === 'resolved_approved' ? "Resolved - Approved by Commission" : "Resolved - Rejected by Commission";
+    let toastMessage = "";
+    setPendingComplaints(prevComplaints =>
+      prevComplaints.map(c => {
+        if (c.id === complaintId) {
+          toastMessage = `Complaint ${complaintId} for ${c.employeeName} has been ${finalStatus.toLowerCase()}.`;
+          return { ...c, status: finalStatus, reviewStage: 'completed' };
+        }
+        return c;
+      })
+    );
+    if (toastMessage) {
+      toast({ title: `Commission Decision: ${decision === 'resolved_approved' ? 'Approved' : 'Rejected'}`, description: toastMessage });
+    }
   };
 
   return (
@@ -126,7 +208,7 @@ export default function ComplaintsPage() {
       <PageHeader title="Complaints" description="Manage employee complaints and resolutions." />
       
       {role === ROLES.EMPLOYEE && (
-        <Card className="mb-6">
+        <Card className="mb-6 shadow-lg">
           <CardHeader>
             <CardTitle>Submit a Complaint</CardTitle>
             <CardDescription>Describe your complaint clearly. You can use the AI tool to help standardize the text.</CardDescription>
@@ -194,25 +276,46 @@ export default function ComplaintsPage() {
             <CardDescription>Resolve or reject pending employee complaints.</CardDescription>
           </CardHeader>
           <CardContent>
-            {mockPendingComplaints.length > 0 ? (
-              mockPendingComplaints.map((complaint) => (
+            {pendingComplaints.filter(c => 
+              (role === ROLES.DO && c.status === 'Pending DO Review') ||
+              (role === ROLES.HHRMD && c.status === 'Pending HHRMD Review') ||
+              c.status === 'Awaiting Commission Review' ||
+              c.status.startsWith('Rejected by') || c.status.startsWith('Resolved -')
+            ).length > 0 ? (
+              pendingComplaints.filter(c => 
+                (role === ROLES.DO && c.status === 'Pending DO Review') ||
+                (role === ROLES.HHRMD && c.status === 'Pending HHRMD Review') ||
+                c.status === 'Awaiting Commission Review' ||
+                c.status.startsWith('Rejected by') || c.status.startsWith('Resolved -')
+              ).map((complaint) => (
                 <div key={complaint.id} className="mb-4 border p-4 rounded-md space-y-2 shadow-sm bg-background hover:shadow-md transition-shadow">
                   <h3 className="font-semibold text-base">Complaint #{complaint.id} - {complaint.category}</h3>
                   <p className="text-sm text-muted-foreground">
                     Employee: {complaint.employeeName} {complaint.zanId ? `(ZanID: ${complaint.zanId})` : ''}
                   </p>
-                  <p className="text-sm text-muted-foreground">Submitted: {complaint.submissionDate} by {complaint.submittedBy}</p>
+                  <p className="text-sm text-muted-foreground">Submitted: {complaint.submissionDate ? format(parseISO(complaint.submissionDate), 'PPP') : 'N/A'} by {complaint.submittedBy}</p>
                   <p className="text-sm mt-1"><strong>Details:</strong> {complaint.details}</p>
                   <p className="text-sm"><span className="font-medium">Status:</span> <span className="text-primary">{complaint.status}</span></p>
+                  {complaint.rejectionReason && <p className="text-sm text-destructive"><span className="font-medium">Rejection Reason:</span> {complaint.rejectionReason}</p>}
                   <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                     <Button size="sm" variant="outline" onClick={() => { setSelectedRequest(complaint); setIsDetailsModalOpen(true); }}>View Details</Button>
-                    <Button size="sm">Resolve</Button>
-                    <Button size="sm" variant="destructive">Reject</Button>
+                    {complaint.reviewStage === 'initial' && (complaint.status.startsWith(`Pending ${role} Review`)) && (
+                      <>
+                        <Button size="sm" onClick={() => handleInitialAction(complaint.id, 'forward')}>Verify &amp; Forward for Commission Review</Button>
+                        <Button size="sm" variant="destructive" onClick={() => handleInitialAction(complaint.id, 'reject')}>Reject Complaint</Button>
+                      </>
+                    )}
+                    {complaint.reviewStage === 'commission_review' && complaint.status === 'Awaiting Commission Review' && complaint.reviewedBy === role && (
+                        <>
+                            <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => handleCommissionDecision(complaint.id, 'resolved_approved')}>Resolve Complaint (Commission Approved)</Button>
+                            <Button size="sm" variant="destructive" onClick={() => handleCommissionDecision(complaint.id, 'resolved_rejected')}>Uphold Rejection (Commission Rejected)</Button>
+                        </>
+                    )}
                   </div>
                 </div>
               ))
             ) : (
-              <p className="text-muted-foreground">No complaints pending review.</p>
+              <p className="text-muted-foreground">No complaints pending your review.</p>
             )}
           </CardContent>
         </Card>
@@ -228,7 +331,7 @@ export default function ComplaintsPage() {
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4 text-sm">
-              {selectedRequest.zanId && ( // Only show employee details if it's not an anonymous complaint
+              {selectedRequest.zanId && ( 
                 <div className="space-y-1 border-b pb-3 mb-3">
                     <h4 className="font-semibold text-base text-foreground mb-2">Employee Information</h4>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
@@ -274,12 +377,18 @@ export default function ComplaintsPage() {
                 </div>
                 <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
                     <Label className="text-right font-semibold">Submitted:</Label>
-                    <p className="col-span-2">{selectedRequest.submissionDate} by {selectedRequest.submittedBy}</p>
+                    <p className="col-span-2">{selectedRequest.submissionDate ? format(parseISO(selectedRequest.submissionDate), 'PPP') : 'N/A'} by {selectedRequest.submittedBy}</p>
                 </div>
                 <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
                     <Label className="text-right font-semibold">Status:</Label>
                     <p className="col-span-2 text-primary">{selectedRequest.status}</p>
                 </div>
+                 {selectedRequest.rejectionReason && (
+                  <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
+                    <Label className="text-right font-semibold text-destructive pt-1">Rejection Reason:</Label>
+                    <p className="col-span-2 text-destructive">{selectedRequest.rejectionReason}</p>
+                  </div>
+                )}
                 <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
                     <Label className="text-right font-semibold pt-1">Evidence Files:</Label>
                     <div className="col-span-2">
@@ -302,6 +411,32 @@ export default function ComplaintsPage() {
           </DialogContent>
         </Dialog>
       )}
+
+       {currentRequestToAction && (
+        <Dialog open={isRejectionModalOpen} onOpenChange={setIsRejectionModalOpen}>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Reject Complaint: {currentRequestToAction.id}</DialogTitle>
+                    <DialogDescription>
+                        Please provide the reason for rejecting the complaint from <strong>{currentRequestToAction.employeeName}</strong>. This reason will be visible to the submitter/HRO.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                    <Textarea
+                        placeholder="Enter rejection reason here..."
+                        value={rejectionReasonInput}
+                        onChange={(e) => setRejectionReasonInput(e.target.value)}
+                        rows={4}
+                    />
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => { setIsRejectionModalOpen(false); setCurrentRequestToAction(null); }}>Cancel</Button>
+                    <Button variant="destructive" onClick={handleRejectionSubmit} disabled={!rejectionReasonInput.trim()}>Submit Rejection</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
+
