@@ -26,6 +26,8 @@ interface MockPendingConfirmationRequest {
   dateOfBirth: string;
   institution: string;
   submissionDate: string;
+  decisionDate?: string; // Date of HHRMD/HRMO initial decision (forward/reject)
+  commissionDecisionDate?: string; // Date of final commission decision
   submittedBy: string;
   status: string;
   documents?: string[];
@@ -49,6 +51,42 @@ const initialMockPendingConfirmationRequests: MockPendingConfirmationRequest[] =
     status: 'Pending HHRMD Review',
     documents: ['Evaluation Form', 'IPA Certificate', 'Letter of Request'],
     reviewStage: 'initial',
+  },
+  {
+    id: 'CONF002',
+    employeeName: 'Fatma Said Omar',
+    zanId: '334589123',
+    department: 'Finance',
+    cadre: 'Accountant',
+    employmentDate: "2022-05-20",
+    dateOfBirth: "1988-02-10",
+    institution: "Treasury Office",
+    submissionDate: '2024-07-20',
+    decisionDate: '2024-07-22', // HHRMD forwarded
+    commissionDecisionDate: '2024-07-25', // Commission approved
+    submittedBy: 'K. Mnyonge (HRO)',
+    status: 'Approved by Commission',
+    documents: ['Evaluation Form', 'IPA Certificate', 'Letter of Request'],
+    reviewStage: 'completed',
+    reviewedBy: ROLES.HHRMD,
+  },
+  {
+    id: 'CONF003',
+    employeeName: 'Hassan Mzee Juma',
+    zanId: '445678912',
+    department: 'ICT',
+    cadre: 'IT Support',
+    employmentDate: "2021-11-11",
+    dateOfBirth: "1975-09-01",
+    institution: "e-Government Agency",
+    submissionDate: '2024-07-15',
+    decisionDate: '2024-07-18', // HRMO rejected
+    submittedBy: 'K. Mnyonge (HRO)',
+    status: 'Rejected by HRMO - Awaiting HRO Correction',
+    documents: ['Evaluation Form', 'IPA Certificate', 'Letter of Request'],
+    reviewStage: 'initial',
+    rejectionReason: 'Incomplete IPA certificate details.',
+    reviewedBy: ROLES.HRMO,
   },
 ];
 
@@ -195,6 +233,8 @@ export default function ConfirmationPage() {
     const request = pendingRequests.find(req => req.id === requestId);
     if (!request) return;
 
+    const currentDate = format(new Date(), 'yyyy-MM-dd');
+
     if (action === 'reject') {
       setCurrentRequestToAction(request);
       setRejectionReasonInput('');
@@ -203,7 +243,7 @@ export default function ConfirmationPage() {
       setPendingRequests(prevRequests =>
         prevRequests.map(req =>
           req.id === requestId
-            ? { ...req, status: "Request Received – Awaiting Commission Decision", reviewStage: 'commission_review', reviewedBy: role || undefined }
+            ? { ...req, status: "Request Received – Awaiting Commission Decision", reviewStage: 'commission_review', reviewedBy: role || undefined, decisionDate: currentDate }
             : req
         )
       );
@@ -218,11 +258,12 @@ export default function ConfirmationPage() {
     }
     const requestId = currentRequestToAction.id;
     const employeeName = currentRequestToAction.employeeName;
+    const currentDate = format(new Date(), 'yyyy-MM-dd');
 
     setPendingRequests(prevRequests =>
       prevRequests.map(req =>
         req.id === requestId
-          ? { ...req, status: `Rejected by ${role} - Awaiting HRO Correction`, rejectionReason: rejectionReasonInput, reviewStage: 'initial' }
+          ? { ...req, status: `Rejected by ${role} - Awaiting HRO Correction`, rejectionReason: rejectionReasonInput, reviewStage: 'initial', decisionDate: currentDate }
           : req
       )
     );
@@ -237,10 +278,11 @@ export default function ConfirmationPage() {
     if (!request) return;
 
     const finalStatus = decision === 'approved' ? "Approved by Commission" : "Rejected by Commission";
+    const currentDate = format(new Date(), 'yyyy-MM-dd');
     setPendingRequests(prevRequests =>
       prevRequests.map(req =>
         req.id === requestId
-          ? { ...req, status: finalStatus, reviewStage: 'completed' }
+          ? { ...req, status: finalStatus, reviewStage: 'completed', commissionDecisionDate: currentDate, decisionDate: req.decisionDate || currentDate } // decisionDate might have been set at forwarding
           : req
       )
     );
@@ -353,6 +395,8 @@ export default function ConfirmationPage() {
                   <h3 className="font-semibold text-base">Confirmation for: {request.employeeName} (ZanID: {request.zanId})</h3>
                   <p className="text-sm text-muted-foreground">Department: {request.department}</p>
                   <p className="text-sm text-muted-foreground">Submitted: {request.submissionDate ? format(parseISO(request.submissionDate), 'PPP') : 'N/A'} by {request.submittedBy}</p>
+                  {request.decisionDate && <p className="text-sm text-muted-foreground">Initial Review Date: {format(parseISO(request.decisionDate), 'PPP')}</p>}
+                  {request.commissionDecisionDate && <p className="text-sm text-muted-foreground">Commission Decision Date: {format(parseISO(request.commissionDecisionDate), 'PPP')}</p>}
                   <p className="text-sm"><span className="font-medium">Status:</span> <span className="text-primary">{request.status}</span></p>
                   {request.rejectionReason && <p className="text-sm text-destructive"><span className="font-medium">Rejection Reason:</span> {request.rejectionReason}</p>}
                   <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
@@ -427,6 +471,18 @@ export default function ConfirmationPage() {
                         <Label className="text-right font-semibold">Submitted:</Label>
                         <p className="col-span-2">{selectedRequest.submissionDate ? format(parseISO(selectedRequest.submissionDate), 'PPP') : 'N/A'} by {selectedRequest.submittedBy}</p>
                     </div>
+                     {selectedRequest.decisionDate && (
+                       <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                            <Label className="text-right font-semibold">Initial Review Date:</Label>
+                            <p className="col-span-2">{format(parseISO(selectedRequest.decisionDate), 'PPP')}</p>
+                        </div>
+                    )}
+                    {selectedRequest.commissionDecisionDate && (
+                       <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
+                            <Label className="text-right font-semibold">Commission Decision Date:</Label>
+                            <p className="col-span-2">{format(parseISO(selectedRequest.commissionDecisionDate), 'PPP')}</p>
+                        </div>
+                    )}
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
                         <Label className="text-right font-semibold">Status:</Label>
                         <p className="col-span-2 text-primary">{selectedRequest.status}</p>
@@ -488,4 +544,6 @@ export default function ConfirmationPage() {
     </div>
   );
 }
+    
+
     
