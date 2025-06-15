@@ -11,7 +11,7 @@ import { ROLES, EMPLOYEES } from '@/lib/constants';
 import React, { useState, useEffect } from 'react';
 import type { Employee } from '@/lib/types';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, Search, FileText, CalendarDays, Paperclip, ClipboardCheck, AlertTriangle } from 'lucide-react';
+import { Loader2, Search, FileText, CalendarDays, Paperclip, ClipboardCheck, AlertTriangle, FileWarning, PauseOctagon, Files } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 
@@ -50,7 +50,7 @@ const initialMockPendingDismissalRequests: MockPendingDismissalRequest[] = [
     submissionDate: '2024-07-29',
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending DO Review',
-    documents: ['Form for Appraisal (Optional)', 'Supporting Documents (Optional)', 'Letter of Request'],
+    documents: ['Letter of Request', 'Form for Appraisal (Optional)', 'Warning Letter(s)'],
     reviewStage: 'initial',
   },
 ];
@@ -64,8 +64,21 @@ export default function DismissalPage() {
 
   const [reasonDismissal, setReasonDismissal] = useState('');
   const [proposedDateDismissal, setProposedDateDismissal] = useState('');
+  
+  // Existing optional documents
   const [appraisalFormFile, setAppraisalFormFile] = useState<FileList | null>(null);
-  const [supportingDocumentsFile, setSupportingDocumentsFile] = useState<FileList | null>(null);
+  const [supportingDocumentsFile, setSupportingDocumentsFile] = useState<FileList | null>(null); // This can be used for "other additional documents" or a specific "supporting" one
+  
+  // New optional documents
+  const [warningLettersFile, setWarningLettersFile] = useState<FileList | null>(null);
+  const [employeeExplanationLetterFile, setEmployeeExplanationLetterFile] = useState<FileList | null>(null);
+  const [suspensionLetterFile, setSuspensionLetterFile] = useState<FileList | null>(null);
+  const [summonNoticeFile, setSummonNoticeFile] = useState<FileList | null>(null);
+  const [investigationCommitteeReportFile, setInvestigationCommitteeReportFile] = useState<FileList | null>(null);
+  const [otherAdditionalDocumentsFile, setOtherAdditionalDocumentsFile] = useState<FileList | null>(null);
+
+
+  // Required document
   const [letterOfRequestFile, setLetterOfRequestFile] = useState<FileList | null>(null);
   const [minProposedDate, setMinProposedDate] = useState('');
 
@@ -89,6 +102,12 @@ export default function DismissalPage() {
     setAppraisalFormFile(null);
     setSupportingDocumentsFile(null);
     setLetterOfRequestFile(null);
+    setWarningLettersFile(null);
+    setEmployeeExplanationLetterFile(null);
+    setSuspensionLetterFile(null);
+    setSummonNoticeFile(null);
+    setInvestigationCommitteeReportFile(null);
+    setOtherAdditionalDocumentsFile(null);
     const fileInputs = document.querySelectorAll('input[type="file"]');
     fileInputs.forEach(input => (input as HTMLInputElement).value = '');
   };
@@ -143,23 +162,47 @@ export default function DismissalPage() {
     const checkPdf = (fileList: FileList | null) => !fileList || (fileList[0] && fileList[0].type === "application/pdf");
 
     if (!checkPdf(appraisalFormFile)) {
-      toast({ title: "Submission Error", description: "Appraisal Form must be a PDF file.", variant: "destructive" });
-      return;
+      toast({ title: "Submission Error", description: "Appraisal Form must be a PDF file.", variant: "destructive" }); return;
     }
-    if (!checkPdf(supportingDocumentsFile)) {
-      toast({ title: "Submission Error", description: "Supporting Document, if provided, must be a PDF file.", variant: "destructive" });
-      return;
+    if (supportingDocumentsFile && !checkPdf(supportingDocumentsFile)) { // General supporting docs
+      toast({ title: "Submission Error", description: "Supporting Documents (general) must be a PDF file.", variant: "destructive" }); return;
     }
     if (letterOfRequestFile && letterOfRequestFile[0].type !== "application/pdf") {
-      toast({ title: "Submission Error", description: "Letter of Request must be a PDF file.", variant: "destructive" });
-      return;
+      toast({ title: "Submission Error", description: "Letter of Request must be a PDF file.", variant: "destructive" }); return;
     }
+    // New optional documents PDF check
+    if (warningLettersFile && !checkPdf(warningLettersFile)) {
+      toast({ title: "Submission Error", description: "Warning Letter(s) must be a PDF file.", variant: "destructive" }); return;
+    }
+    if (employeeExplanationLetterFile && !checkPdf(employeeExplanationLetterFile)) {
+      toast({ title: "Submission Error", description: "Employee Explanation Letter must be a PDF file.", variant: "destructive" }); return;
+    }
+    if (suspensionLetterFile && !checkPdf(suspensionLetterFile)) {
+      toast({ title: "Submission Error", description: "Suspension Letter must be a PDF file.", variant: "destructive" }); return;
+    }
+    if (summonNoticeFile && !checkPdf(summonNoticeFile)) {
+      toast({ title: "Submission Error", description: "Summon Notice must be a PDF file.", variant: "destructive" }); return;
+    }
+    if (investigationCommitteeReportFile && !checkPdf(investigationCommitteeReportFile)) {
+      toast({ title: "Submission Error", description: "Investigation Committee Report must be a PDF file.", variant: "destructive" }); return;
+    }
+    if (otherAdditionalDocumentsFile && !checkPdf(otherAdditionalDocumentsFile)) {
+      toast({ title: "Submission Error", description: "Other Additional Documents must be a PDF file.", variant: "destructive" }); return;
+    }
+
 
     setIsSubmitting(true);
     const newRequestId = `DISMISS${Date.now().toString().slice(-3)}`;
     let documentsList = ['Letter of Request'];
     if (appraisalFormFile) documentsList.push('Form for Appraisal');
-    if (supportingDocumentsFile) documentsList.push('Supporting Documents');
+    if (supportingDocumentsFile) documentsList.push('Supporting Documents (General)');
+    if (warningLettersFile) documentsList.push('Warning Letter(s)');
+    if (employeeExplanationLetterFile) documentsList.push('Employee Explanation Letter');
+    if (suspensionLetterFile) documentsList.push('Suspension Letter');
+    if (summonNoticeFile) documentsList.push('Summon Notice/Invitation Letter');
+    if (investigationCommitteeReportFile) documentsList.push('Investigation Committee Report');
+    if (otherAdditionalDocumentsFile) documentsList.push('Other Additional Document(s)');
+
 
     const newRequest: MockPendingDismissalRequest = {
         id: newRequestId,
@@ -179,14 +222,7 @@ export default function DismissalPage() {
         reviewStage: 'initial',
     };
 
-    console.log("Submitting Dismissal Request:", {
-      employee: employeeDetails,
-      reasonDismissal,
-      proposedDateDismissal,
-      appraisalFormFile: appraisalFormFile ? appraisalFormFile[0]?.name : null,
-      supportingDocumentsFile: supportingDocumentsFile ? supportingDocumentsFile[0]?.name : null,
-      letterOfRequestFile: letterOfRequestFile[0]?.name,
-    });
+    console.log("Submitting Dismissal Request:", newRequest);
 
     setTimeout(() => {
       setPendingRequests(prev => [newRequest, ...prev]);
@@ -269,6 +305,13 @@ export default function DismissalPage() {
     }
   };
 
+  const isSubmitDisabled = !employeeDetails ||
+    !isDismissalAllowed ||
+    !reasonDismissal ||
+    !proposedDateDismissal ||
+    !letterOfRequestFile ||
+    isSubmitting;
+
   return (
     <div>
       <PageHeader title="Dismissal" description="Process employee dismissals for unconfirmed employees." />
@@ -327,17 +370,45 @@ export default function DismissalPage() {
                     <Label htmlFor="proposedDateDismissal" className="flex items-center"><CalendarDays className="mr-2 h-4 w-4 text-primary" />Proposed Date of Dismissal</Label>
                     <Input id="proposedDateDismissal" type="date" value={proposedDateDismissal} onChange={(e) => setProposedDateDismissal(e.target.value)} disabled={!isDismissalAllowed || isSubmitting} min={minProposedDate} />
                   </div>
+                  
+                  <h4 className="text-md font-medium text-foreground pt-2">Upload Required Documents (PDF Only)</h4>
+                   <div>
+                    <Label htmlFor="letterOfRequestFileDismissal" className="flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" />Upload Letter of Request (Required)</Label>
+                    <Input id="letterOfRequestFileDismissal" type="file" onChange={(e) => setLetterOfRequestFile(e.target.files)} accept=".pdf" disabled={!isDismissalAllowed || isSubmitting}/>
+                  </div>
+                  
+                  <h4 className="text-md font-medium text-foreground pt-2">Upload Optional Supporting Documents (PDF Only)</h4>
                   <div>
-                    <Label htmlFor="appraisalFormFile" className="flex items-center"><ClipboardCheck className="mr-2 h-4 w-4 text-primary" />Upload Form for Appraisal (Optional, PDF Only)</Label>
+                    <Label htmlFor="appraisalFormFile" className="flex items-center"><ClipboardCheck className="mr-2 h-4 w-4 text-primary" />Upload Form for Appraisal</Label>
                     <Input id="appraisalFormFile" type="file" onChange={(e) => setAppraisalFormFile(e.target.files)} accept=".pdf" disabled={!isDismissalAllowed || isSubmitting}/>
                   </div>
-                  <div>
-                    <Label htmlFor="supportingDocumentsFile" className="flex items-center"><Paperclip className="mr-2 h-4 w-4 text-primary" />Upload Supporting Documents (Optional, PDF Only)</Label>
-                    <Input id="supportingDocumentsFile" type="file" onChange={(e) => setSupportingDocumentsFile(e.target.files)} accept=".pdf" disabled={!isDismissalAllowed || isSubmitting}/>
+                   <div>
+                    <Label htmlFor="warningLettersFile" className="flex items-center"><FileWarning className="mr-2 h-4 w-4 text-orange-500" />Upload Warning Letter(s)</Label>
+                    <Input id="warningLettersFile" type="file" onChange={(e) => setWarningLettersFile(e.target.files)} accept=".pdf" disabled={!isDismissalAllowed || isSubmitting}/>
                   </div>
                   <div>
-                    <Label htmlFor="letterOfRequestFileDismissal" className="flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" />Upload Letter of Request (Required, PDF Only)</Label>
-                    <Input id="letterOfRequestFileDismissal" type="file" onChange={(e) => setLetterOfRequestFile(e.target.files)} accept=".pdf" disabled={!isDismissalAllowed || isSubmitting}/>
+                    <Label htmlFor="employeeExplanationLetterFile" className="flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" />Upload Employee Explanation Letter</Label>
+                    <Input id="employeeExplanationLetterFile" type="file" onChange={(e) => setEmployeeExplanationLetterFile(e.target.files)} accept=".pdf" disabled={!isDismissalAllowed || isSubmitting}/>
+                  </div>
+                   <div>
+                    <Label htmlFor="suspensionLetterFile" className="flex items-center"><PauseOctagon className="mr-2 h-4 w-4 text-red-500" />Upload Suspension Letter</Label>
+                    <Input id="suspensionLetterFile" type="file" onChange={(e) => setSuspensionLetterFile(e.target.files)} accept=".pdf" disabled={!isDismissalAllowed || isSubmitting}/>
+                  </div>
+                  <div>
+                    <Label htmlFor="summonNoticeFile" className="flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" />Upload Summon Notice / Invitation Letter</Label>
+                    <Input id="summonNoticeFile" type="file" onChange={(e) => setSummonNoticeFile(e.target.files)} accept=".pdf" disabled={!isDismissalAllowed || isSubmitting}/>
+                  </div>
+                  <div>
+                    <Label htmlFor="investigationCommitteeReportFile" className="flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" />Upload Investigation Committee Report</Label>
+                    <Input id="investigationCommitteeReportFile" type="file" onChange={(e) => setInvestigationCommitteeReportFile(e.target.files)} accept=".pdf" disabled={!isDismissalAllowed || isSubmitting}/>
+                  </div>
+                  <div>
+                    <Label htmlFor="supportingDocumentsFile" className="flex items-center"><Paperclip className="mr-2 h-4 w-4 text-primary" />Upload General Supporting Documents</Label>
+                    <Input id="supportingDocumentsFile" type="file" onChange={(e) => setSupportingDocumentsFile(e.target.files)} accept=".pdf" disabled={!isDismissalAllowed || isSubmitting}/>
+                  </div>
+                   <div>
+                    <Label htmlFor="otherAdditionalDocumentsFile" className="flex items-center"><Files className="mr-2 h-4 w-4 text-primary" />Upload Other Additional Documents</Label>
+                    <Input id="otherAdditionalDocumentsFile" type="file" onChange={(e) => setOtherAdditionalDocumentsFile(e.target.files)} accept=".pdf" disabled={!isDismissalAllowed || isSubmitting}/>
                   </div>
                 </div>
               </div>
@@ -347,14 +418,7 @@ export default function DismissalPage() {
             <CardFooter className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2 pt-4 border-t">
               <Button
                 onClick={handleSubmitDismissalRequest}
-                disabled={
-                    !employeeDetails ||
-                    !isDismissalAllowed ||
-                    !reasonDismissal ||
-                    !proposedDateDismissal ||
-                    !letterOfRequestFile ||
-                    isSubmitting
-                }>
+                disabled={isSubmitDisabled}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Submit Dismissal Request
               </Button>
