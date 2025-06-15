@@ -121,12 +121,12 @@ const MOCK_DATA_STORE: Record<string, () => ReportOutput> = {
   }),
   terminationDismissal: () => ({
     title: 'Ripoti ya Kufukuzwa/Kuachishwa Kazi',
-    headers: ["S.NO", "TAREHE YA KUWASILISHA OMBI", "JINA LA ANAEOMBEWA", "WIZARA/TAASISI", "MALE", "FEMALE", "JUMLA", "SABABU YA KUFUKUZWA", "TAREHE YA UAMUZI", "UAMUZI"],
-    dataKeys: ["sno", "trhKuwasilisha", "jina", "wizara", "m", "f", "jumla", "sababu", "trhUamuzi", "uamuzi"],
+    headers: ["S.NO", "TAREHE YA KUWASILISHA OMBI", "JINA LA ANAEOMBEWA", "ZANID", "WIZARA/TAASISI", "MALE", "FEMALE", "JUMLA", "SABABU YA KUFUKUZWA", "TAREHE YA UAMUZI", "UAMUZI"],
+    dataKeys: ["sno", "trhKuwasilisha", "jina", "zanId", "wizara", "m", "f", "jumla", "sababu", "trhUamuzi", "uamuzi"],
     data: [
-        { sno: 1, trhKuwasilisha: '16/03/2023', jina: 'SALUM OMAR HAJI', wizara: 'WIZARA YA ELIMU NA MAFUNZO YA AMALI', m: 1, f: 0, jumla: 1, sababu: 'Kutokua na mahudhurio mazuri kazini', trhUamuzi: '6/7/2023', uamuzi: 'Kafukuzwa kazi' },
-        { sno: 2, trhKuwasilisha: '3/3/2024', jina: 'TIBBA G. MOLLO', wizara: 'OFISI YA RAIS-IKULU', m: 0, f: 1, jumla: 1, sababu: 'Kutohudhuria kazini', trhUamuzi: '26/05/2023', uamuzi: 'Kafukuzwa kazi' },
-        { sno: 3, trhKuwasilisha: '17/07/2023', jina: 'MWALIM HAMAD ALAWI', wizara: 'WIZARA YA ELIMU NA MAFUNZO YA AMALI', m: 1, f: 0, jumla: 1, sababu: 'Kutohudhuria kazini', trhUamuzi: '7/9/2024', uamuzi: 'Ameachishwa kazi' },
+        { sno: 1, trhKuwasilisha: '16/03/2023', jina: 'SALUM OMAR HAJI', zanId: '123456789', wizara: 'WIZARA YA ELIMU NA MAFUNZO YA AMALI', m: 1, f: 0, jumla: 1, sababu: 'Kutokua na mahudhurio mazuri kazini', trhUamuzi: '6/7/2023', uamuzi: 'Kafukuzwa kazi' },
+        { sno: 2, trhKuwasilisha: '3/3/2024', jina: 'TIBBA G. MOLLO', zanId: '987654321', wizara: 'OFISI YA RAIS-IKULU', m: 0, f: 1, jumla: 1, sababu: 'Kutohudhuria kazini', trhUamuzi: '26/05/2023', uamuzi: 'Kafukuzwa kazi' },
+        { sno: 3, trhKuwasilisha: '17/07/2023', jina: 'MWALIM HAMAD ALAWI', zanId: '112233445', wizara: 'WIZARA YA ELIMU NA MAFUNZO YA AMALI', m: 1, f: 0, jumla: 1, sababu: 'Kutohudhuria kazini', trhUamuzi: '7/9/2024', uamuzi: 'Ameachishwa kazi' },
     ],
     totals: { sno: 'JUMLA', wizara: '', m: 7, f: 3, jumla: 10 }
   }),
