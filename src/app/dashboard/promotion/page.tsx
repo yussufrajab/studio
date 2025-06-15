@@ -364,38 +364,6 @@ export default function PromotionPage() {
   };
 
 
-  const handleEducationPromotionApprove = (requestId: string) => {
-    let employeeNameForToast: string | null = null;
-    setPendingRequests(prevRequests =>
-     prevRequests.map(req => {
-       if (req.id === requestId) {
-         employeeNameForToast = req.employeeName;
-         return { ...req, status: "Approved by " + (role || "Reviewer"), reviewStage: 'completed' }; // Education promo might be single stage
-       }
-       return req;
-     })
-   );
-   if(employeeNameForToast) {
-    toast({ title: "Promotion Approved", description: `Education Promotion for ${employeeNameForToast} has been approved.` });
-   }
- };
- const handleEducationPromotionReject = (requestId: string) => {
-    let employeeNameForToast: string | null = null;
-   setPendingRequests(prevRequests =>
-     prevRequests.map(req => {
-       if (req.id === requestId) {
-        employeeNameForToast = req.employeeName;
-         return { ...req, status: "Rejected by " + (role || "Reviewer"), reviewStage: 'completed' }; // Education promo might be single stage
-       }
-       return req;
-     })
-   );
-   if(employeeNameForToast) {
-    toast({ title: "Promotion Rejected", description: `Education Promotion for ${employeeNameForToast} has been rejected.`, variant: 'destructive'});
-   }
- };
-
-
   return (
     <div>
       <PageHeader title="Promotion" description="Manage employee promotions based on experience or education." />
@@ -547,26 +515,18 @@ export default function PromotionPage() {
                   {request.rejectionReason && <p className="text-sm text-destructive"><span className="font-medium">Rejection Reason:</span> {request.rejectionReason}</p>}
                   <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                     <Button size="sm" variant="outline" onClick={() => { setSelectedRequest(request); setIsDetailsModalOpen(true); }}>View Details</Button>
-                    {/* Experience Promotion - Two Stage */}
-                    {request.promotionType === 'Experience' && request.reviewStage === 'initial' && request.status.startsWith(`Pending ${role} Review`) && (
+                    
+                    {request.reviewStage === 'initial' && request.status.startsWith(`Pending ${role} Review`) && (
                       <>
                         <Button size="sm" onClick={() => handleInitialAction(request.id, 'forward')}>Verify &amp; Forward to Commission</Button>
                         <Button size="sm" variant="destructive" onClick={() => handleInitialAction(request.id, 'reject')}>Reject &amp; Return to HRO</Button>
                       </>
                     )}
-                    {request.promotionType === 'Experience' && request.reviewStage === 'commission_review' && request.status === 'Request Received – Awaiting Commission Decision' && request.reviewedBy === role && (
+                    {request.reviewStage === 'commission_review' && request.status === 'Request Received – Awaiting Commission Decision' && request.reviewedBy === role && (
                         <>
                             <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => handleCommissionDecision(request.id, 'approved')}>Approved by Commission</Button>
                             <Button size="sm" variant="destructive" onClick={() => handleCommissionDecision(request.id, 'rejected')}>Rejected by Commission</Button>
                         </>
-                    )}
-
-                    {/* Education Advancement Promotion - Simpler Review by HHRMD/HRMO */}
-                    {request.promotionType === 'Education Advancement' && request.reviewStage === 'initial' && request.status.startsWith(`Pending ${role} Review`) && (
-                      <>
-                        <Button size="sm" onClick={() => handleEducationPromotionApprove(request.id)}>Approve Education Promo</Button>
-                        <Button size="sm" variant="destructive" onClick={() => handleEducationPromotionReject(request.id)}>Reject Education Promo</Button>
-                      </>
                     )}
                   </div>
                 </div>
