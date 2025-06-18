@@ -213,4 +213,4 @@ export const EMPLOYEES: Employee[] = [
   },
 ];
 
-export const APP_NAME = "Civil Service Navigator";
+export const APP_NAME = "Civil Service Management System";

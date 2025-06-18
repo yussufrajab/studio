@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/store/auth-provider';
 
 export const metadata: Metadata = {
-  title: 'Civil Service Navigator',
+  title: 'Civil Service Management System',
   description: 'Employee Management System for Civil Service Commission',
 };
 
