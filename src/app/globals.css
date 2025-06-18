@@ -39,8 +39,8 @@ body {
     --sidebar-foreground: 215 25% 25%; /* Darker text for sidebar */
     --sidebar-primary: hsl(var(--primary)); /* Use main primary color */
     --sidebar-primary-foreground: hsl(var(--primary-foreground)); /* White text */
-    --sidebar-accent: hsl(var(--accent)); /* Active/Hover BG for menu items = main accent */
-    --sidebar-accent-foreground: hsl(var(--primary)); /* Active/Hover Text for menu items = primary blue */
+    --sidebar-accent: 217 70% 88%; /* Light blue for hover/active BG - more distinct */
+    --sidebar-accent-foreground: 217 71% 50%; /* Primary blue for hover/active text */
     --sidebar-border: 220 20% 85%; /* Slightly darker border */
     --sidebar-ring: hsl(var(--ring)); /* Use main ring color */
   }
@@ -72,12 +72,12 @@ body {
     --chart-5: 310 60% 70%;
 
     /* Dark Sidebar specific colors */
-    --sidebar-background: 210 13% 15%;
-    --sidebar-foreground: 210 25% 90%;
+    --sidebar-background: 210 13% 15%; /* Darker sidebar background */
+    --sidebar-foreground: 210 25% 90%; /* Lighter sidebar text */
     --sidebar-primary: hsl(var(--primary));
     --sidebar-primary-foreground: hsl(var(--primary-foreground));
-    --sidebar-accent: hsl(var(--accent));
-    --sidebar-accent-foreground: hsl(var(--accent-foreground));
+    --sidebar-accent: 217 60% 35%; /* Darker, more saturated blue for hover/active BG */
+    --sidebar-accent-foreground: 210 25% 95%; /* Very light text for hover/active on dark accent */
     --sidebar-border: 210 13% 22%;
     --sidebar-ring: hsl(var(--ring));
   }
