@@ -115,7 +115,7 @@ const ALL_MOCK_REQUESTS: MockTrackedRequest[] = [
 
 export default function TrackStatusPage() {
   const { role } = useAuth();
-  const [zanId, setZanId] = useState('');
+  const [zanIdInput, setZanIdInput] = useState(''); // For non-CSCS search
   const [isSearching, setIsSearching] = useState(false);
   const [searchAttempted, setSearchAttempted] = useState(false);
   const [foundRequests, setFoundRequests] = useState<MockTrackedRequest[]>([]);
@@ -125,6 +125,7 @@ export default function TrackStatusPage() {
   const [filteredRequestsCSCS, setFilteredRequestsCSCS] = useState<MockTrackedRequest[]>([]);
   const [fromDateCSCS, setFromDateCSCS] = useState('');
   const [toDateCSCS, setToDateCSCS] = useState('');
+  const [zanIdCSCSFilter, setZanIdCSCSFilter] = useState(''); // For CSCS ZanID filter input
   const [selectedRequestDetails, setSelectedRequestDetails] = useState<MockTrackedRequest | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
@@ -132,16 +133,15 @@ export default function TrackStatusPage() {
 
   useEffect(() => {
     if (role === ROLES.CSCS) {
-      // Simulate fetching latest 100 requests. For now, use all mock data.
       const sortedRequests = [...ALL_MOCK_REQUESTS].sort((a, b) => new Date(b.lastUpdatedDate).getTime() - new Date(a.lastUpdatedDate).getTime());
       setAllRequestsForCSCS(sortedRequests);
-      setFilteredRequestsCSCS(sortedRequests.slice(0, 100)); // Show latest 100 initially
-      setSearchAttempted(true); // To display the table initially for CSCS
+      setFilteredRequestsCSCS(sortedRequests.slice(0, 100)); 
+      setSearchAttempted(true); 
     }
   }, [role]);
 
   const handleSearchRequests = () => {
-    if (!zanId.trim()) {
+    if (!zanIdInput.trim()) {
       toast({ title: "ZanID Required", description: "Please enter an employee's ZanID to search.", variant: "destructive" });
       return;
     }
@@ -150,14 +150,14 @@ export default function TrackStatusPage() {
     setFoundRequests([]);
 
     setTimeout(() => {
-      const requests = ALL_MOCK_REQUESTS.filter(req => req.zanId === zanId.trim());
+      const requests = ALL_MOCK_REQUESTS.filter(req => req.zanId === zanIdInput.trim());
       setFoundRequests(requests);
       setSearchAttempted(true);
       setIsSearching(false);
       if (requests.length === 0) {
-        toast({ title: "No Requests Found", description: `No requests found for ZanID: ${zanId}.` });
+        toast({ title: "No Requests Found", description: `No requests found for ZanID: ${zanIdInput}.` });
       } else {
-        toast({ title: "Requests Found", description: `Displaying requests for ZanID: ${zanId}.` });
+        toast({ title: "Requests Found", description: `Displaying requests for ZanID: ${zanIdInput}.` });
       }
     }, 1000);
   };
@@ -175,14 +175,23 @@ export default function TrackStatusPage() {
           return isValid(submissionDate) && isWithinInterval(submissionDate, { start: startDate, end: endDate });
         });
       } else {
-         toast({ title: "Invalid Date Range", description: "End date must be after start date.", variant: "destructive"});
+         toast({ title: "Invalid Date Range", description: "End date must be after start date, if both are provided.", variant: "destructive"});
          setIsSearching(false);
          return;
       }
     }
-    setFilteredRequestsCSCS(filtered.slice(0,100)); // Apply limit after filtering
+    
+    if (zanIdCSCSFilter.trim()) {
+      filtered = filtered.filter(req => req.zanId === zanIdCSCSFilter.trim());
+    }
+
+    setFilteredRequestsCSCS(filtered.slice(0,100));
     setIsSearching(false);
-    toast({ title: "Filter Applied", description: `Displaying ${filtered.length > 100 ? 'first 100 matching ' : ''}requests based on criteria.`});
+    if (filtered.length === 0) {
+      toast({ title: "No Results", description: "No requests match your filter criteria."});
+    } else {
+      toast({ title: "Filter Applied", description: `Displaying ${filtered.length > 100 ? 'first 100 matching ' : ''}requests.`});
+    }
   };
   
   const handleViewDetailsCSCS = (request: MockTrackedRequest) => {
@@ -225,7 +234,7 @@ export default function TrackStatusPage() {
                   </div>
                    <div className="space-y-1 md:col-span-1">
                     <Label htmlFor="zanIdTrackCSCS">Optional: ZanID</Label>
-                    <Input id="zanIdTrackCSCS" placeholder="Filter by ZanID" value={zanId} onChange={(e) => setZanId(e.target.value)} disabled={isSearching}/>
+                    <Input id="zanIdTrackCSCS" placeholder="Filter by ZanID" value={zanIdCSCSFilter} onChange={(e) => setZanIdCSCSFilter(e.target.value)} disabled={isSearching}/>
                   </div>
                   <Button onClick={handleFilterCSCSRequests} disabled={isSearching} className="md:self-end">
                     {isSearching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Filter className="mr-2 h-4 w-4" />}
@@ -236,9 +245,9 @@ export default function TrackStatusPage() {
                 <div className="flex flex-col sm:flex-row sm:items-end sm:space-x-2 space-y-2 sm:space-y-0">
                   <div className="flex-grow space-y-1">
                     <Label htmlFor="zanIdTrack">Employee ZanID</Label>
-                    <Input id="zanIdTrack" placeholder="Enter ZanID" value={zanId} onChange={(e) => setZanId(e.target.value)} disabled={isSearching}/>
+                    <Input id="zanIdTrack" placeholder="Enter ZanID" value={zanIdInput} onChange={(e) => setZanIdInput(e.target.value)} disabled={isSearching}/>
                   </div>
-                  <Button onClick={handleSearchRequests} disabled={isSearching || !zanId.trim()}>
+                  <Button onClick={handleSearchRequests} disabled={isSearching || !zanIdInput.trim()}>
                     {isSearching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
                     Search Requests
                   </Button>
@@ -258,17 +267,17 @@ export default function TrackStatusPage() {
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle>
-                  {role === ROLES.CSCS ? (zanId ? `Requests for ZanID: ${zanId}` : "Request Overview") : `Request Status for ZanID: ${zanId}`}
+                  {role === ROLES.CSCS ? (zanIdCSCSFilter ? `Requests for ZanID: ${zanIdCSCSFilter}` : "Request Overview") : `Request Status for ZanID: ${zanIdInput}`}
                 </CardTitle>
                  <CardDescription>
-                  {role === ROLES.CSCS && !zanId && `Displaying latest ${displayRequests.length} requests. Use filters to refine.`}
+                  {role === ROLES.CSCS && !zanIdCSCSFilter && `Displaying latest ${displayRequests.length} requests. Use filters to refine.`}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {displayRequests.length > 0 ? (
                   <Table>
                     <TableCaption>
-                      {role === ROLES.CSCS ? "Overview of submitted requests." : `A list of recent requests for ZanID: ${zanId}.`}
+                      {role === ROLES.CSCS ? "Overview of submitted requests." : `A list of recent requests for ZanID: ${zanIdInput}.`}
                     </TableCaption>
                     <TableHeader>
                       <TableRow>
@@ -307,7 +316,7 @@ export default function TrackStatusPage() {
                   </Table>
                 ) : (
                   <p className="text-muted-foreground text-center py-4">
-                    {role === ROLES.CSCS ? "No requests match the current filter criteria." : `No requests found for ZanID: ${zanId}.`}
+                    {role === ROLES.CSCS ? "No requests match the current filter criteria." : `No requests found for ZanID: ${zanIdInput}.`}
                   </p>
                 )}
               </CardContent>
