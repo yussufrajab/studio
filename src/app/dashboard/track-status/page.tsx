@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/use-auth';
 import { ROLES, EMPLOYEES } from '@/lib/constants';
 import React, { useState, useEffect } from 'react';
-import { Loader2, Search, Eye, CalendarDays, Filter, Building } from 'lucide-react';
+import { Loader2, Search, Eye, CalendarDays, Filter, Building, ListFilter as StatusFilterIcon } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import {
   Table,
@@ -108,7 +108,7 @@ const ALL_MOCK_REQUESTS: MockTrackedRequest[] = [
   },
    {
     id: 'CONF002', employeeName: 'Safia Juma Ali', zanId: "125468957", requestType: 'Confirmation',
-    submissionDate: '2024-06-15', status: 'Awaiting Commission Decision', lastUpdatedDate: '2024-06-20', currentStage: 'HRMO Forwarded to Commission',
+    submissionDate: '2024-06-15', status: 'Request Received – Awaiting Commission Decision', lastUpdatedDate: '2024-06-20', currentStage: 'HRMO Forwarded to Commission',
     employeeInstitution: 'Civil Service Commission',
     actions: [
       { role: ROLES.HRO, actorName: 'K. Mnyonge', action: 'Submitted', date: '2024-06-15' },
@@ -127,6 +127,10 @@ const ALL_MOCK_REQUESTS: MockTrackedRequest[] = [
 ];
 
 const ALL_INSTITUTIONS_FILTER_VALUE = "__ALL_INSTITUTIONS__";
+const ALL_STATUSES_FILTER_VALUE = "__ALL_STATUSES__";
+
+const REQUEST_STATUSES_FILTER_OPTIONS = Array.from(new Set(ALL_MOCK_REQUESTS.map(req => req.status))).sort();
+
 
 export default function TrackStatusPage() {
   const { role } = useAuth();
@@ -142,6 +146,7 @@ export default function TrackStatusPage() {
   const [toDateCSCS, setToDateCSCS] = useState('');
   const [zanIdCSCSFilter, setZanIdCSCSFilter] = useState('');
   const [institutionCSCSFilter, setInstitutionCSCSFilter] = useState('');
+  const [statusCSCSFilter, setStatusCSCSFilter] = useState('');
   const [availableInstitutions, setAvailableInstitutions] = useState<string[]>([]);
   const [selectedRequestDetails, setSelectedRequestDetails] = useState<MockTrackedRequest | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
@@ -209,6 +214,10 @@ export default function TrackStatusPage() {
       filtered = filtered.filter(req => req.employeeInstitution === institutionCSCSFilter);
     }
 
+    if (statusCSCSFilter && statusCSCSFilter !== ALL_STATUSES_FILTER_VALUE) {
+      filtered = filtered.filter(req => req.status === statusCSCSFilter);
+    }
+
     setFilteredRequestsCSCS(filtered.slice(0,100));
     setIsSearching(false);
     if (filtered.length === 0) {
@@ -247,7 +256,7 @@ export default function TrackStatusPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {role === ROLES.CSCS ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
                   <div className="space-y-1">
                     <Label htmlFor="fromDateCSCS" className="flex items-center"><CalendarDays className="mr-2 h-4 w-4 text-primary"/>From Date</Label>
                     <Input id="fromDateCSCS" type="date" value={fromDateCSCS} onChange={(e) => setFromDateCSCS(e.target.value)} disabled={isSearching}/>
@@ -270,6 +279,20 @@ export default function TrackStatusPage() {
                             <SelectItem value={ALL_INSTITUTIONS_FILTER_VALUE}>All Institutions</SelectItem>
                             {availableInstitutions.map(inst => (
                                 <SelectItem key={inst} value={inst}>{inst}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="statusCSCSFilter" className="flex items-center"><StatusFilterIcon className="mr-2 h-4 w-4 text-primary"/>Status</Label>
+                    <Select value={statusCSCSFilter} onValueChange={setStatusCSCSFilter} disabled={isSearching}>
+                        <SelectTrigger id="statusCSCSFilter">
+                            <SelectValue placeholder="Filter by Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value={ALL_STATUSES_FILTER_VALUE}>All Statuses</SelectItem>
+                            {REQUEST_STATUSES_FILTER_OPTIONS.map(status => (
+                                <SelectItem key={status} value={status}>{status}</SelectItem>
                             ))}
                         </SelectContent>
                     </Select>
@@ -305,10 +328,10 @@ export default function TrackStatusPage() {
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle>
-                  {role === ROLES.CSCS ? (zanIdCSCSFilter || (institutionCSCSFilter && institutionCSCSFilter !== ALL_INSTITUTIONS_FILTER_VALUE) || (fromDateCSCS && toDateCSCS) ? "Filtered Requests" : "Request Overview") : `Request Status for ZanID: ${zanIdInput}`}
+                  {role === ROLES.CSCS ? (zanIdCSCSFilter || (institutionCSCSFilter && institutionCSCSFilter !== ALL_INSTITUTIONS_FILTER_VALUE) || (fromDateCSCS && toDateCSCS) || (statusCSCSFilter && statusCSCSFilter !== ALL_STATUSES_FILTER_VALUE) ? "Filtered Requests" : "Request Overview") : `Request Status for ZanID: ${zanIdInput}`}
                 </CardTitle>
                  <CardDescription>
-                  {role === ROLES.CSCS && !zanIdCSCSFilter && !(institutionCSCSFilter && institutionCSCSFilter !== ALL_INSTITUTIONS_FILTER_VALUE) && !(fromDateCSCS && toDateCSCS) && `Displaying latest ${displayRequests.length} requests. Use filters to refine.`}
+                  {role === ROLES.CSCS && !zanIdCSCSFilter && !(institutionCSCSFilter && institutionCSCSFilter !== ALL_INSTITUTIONS_FILTER_VALUE) && !(fromDateCSCS && toDateCSCS) && !(statusCSCSFilter && statusCSCSFilter !== ALL_STATUSES_FILTER_VALUE) && `Displaying latest ${displayRequests.length} requests. Use filters to refine.`}
                 </CardDescription>
               </CardHeader>
               <CardContent>
