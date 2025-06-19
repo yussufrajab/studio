@@ -17,7 +17,8 @@ import {
   ShieldCheck, 
   Replace,
   UserMinus,
-  ListChecks
+  ListChecks,
+  ShieldAlert // Added ShieldAlert here
 } from 'lucide-react';
 import type { NavItem, Role } from './types';
 import { ROLES } from './constants';
