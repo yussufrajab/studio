@@ -20,10 +20,7 @@ export const USERS: User[] = [
   { id: "user_po", username: "mishak", name: "Mwanakombo Is-hak", role: ROLES.PO as Role },
   { id: "user3", username: "kmnyonge", name: "Khamis Mnyonge", role: ROLES.HRO as Role },
   { id: "user5", username: "mussi", name: "Maimuna Ussi", role: ROLES.DO as Role },
-  { id: "user7", username: "hmohamed", name: "Hamid Mohamed", role: ROLES.EMPLOYEE as Role, employeeId: "emp7" },
   { id: "emp1_user", username: "alijuma", name: "Ali Juma Ali", role: ROLES.EMPLOYEE as Role, employeeId: "emp1" },
-  { id: "emp2_user", username: "safiajuma", name: "Safia Juma Ali", role: ROLES.EMPLOYEE as Role, employeeId: "emp2" },
-  { id: "emp3_user", username: "fatmasaid", name: "Fatma Said Omar", role: ROLES.EMPLOYEE as Role, employeeId: "emp3" },
 ];
 
 export const EMPLOYEES: Employee[] = [
@@ -220,4 +217,3 @@ export const EMPLOYEES: Employee[] = [
 ];
 
 export const APP_NAME = "Civil Service Management System";
-
