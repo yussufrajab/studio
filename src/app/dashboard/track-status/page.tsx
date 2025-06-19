@@ -6,9 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/use-auth';
-import { ROLES } from '@/lib/constants';
+import { ROLES, EMPLOYEES } from '@/lib/constants';
 import React, { useState, useEffect } from 'react';
-import { Loader2, Search, Eye, CalendarDays, Filter } from 'lucide-react';
+import { Loader2, Search, Eye, CalendarDays, Filter, Building } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import {
   Table,
@@ -20,6 +20,7 @@ import {
   TableCaption,
 } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format, parseISO, isValid, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 
 interface RequestAction {
@@ -35,10 +36,11 @@ interface MockTrackedRequest {
   employeeName: string;
   zanId: string;
   requestType: string;
-  submissionDate: string; // Date HRO submitted
-  status: string; // Current overall status: Pending HHRMD, Pending DO, Approved, Rejected, etc.
-  lastUpdatedDate: string; // Date of the last action
-  currentStage: string; // More specific stage: e.g., "Pending Initial Review (HHRMD)", "Awaiting Commission Decision (DO Forwarded)", "Completed - Approved"
+  submissionDate: string; 
+  status: string; 
+  lastUpdatedDate: string; 
+  currentStage: string; 
+  employeeInstitution?: string; 
   actions?: RequestAction[];
 }
 
@@ -46,26 +48,31 @@ const ALL_MOCK_REQUESTS: MockTrackedRequest[] = [
   {
     id: 'CONF001', employeeName: 'Ali Juma Ali', zanId: "221458232", requestType: 'Confirmation',
     submissionDate: '2024-07-28', status: 'Pending HHRMD Review', lastUpdatedDate: '2024-07-28', currentStage: 'Awaiting HHRMD Verification',
+    employeeInstitution: 'Central Government Office',
     actions: [{ role: ROLES.HRO, actorName: 'K. Mnyonge', action: 'Submitted', date: '2024-07-28', comments: 'Initial submission for confirmation.' }]
   },
   {
     id: 'LWOP001', employeeName: 'Fatma Said Omar', zanId: "334589123", requestType: 'LWOP',
     submissionDate: '2024-07-25', status: 'Pending HHRMD Review', lastUpdatedDate: '2024-07-25', currentStage: 'Awaiting HHRMD Review',
+    employeeInstitution: 'Treasury Office',
     actions: [{ role: ROLES.HRO, actorName: 'K. Mnyonge', action: 'Submitted', date: '2024-07-25', comments: 'LWOP for further studies.' }]
   },
   {
     id: 'PROM002', employeeName: 'Juma Omar Ali', zanId: "667890456", requestType: 'Promotion',
     submissionDate: '2024-07-26', status: 'Pending HRMO Review', lastUpdatedDate: '2024-07-26', currentStage: 'Awaiting HRMO Verification',
+    employeeInstitution: 'Government Procurement Services Agency',
     actions: [{ role: ROLES.HRO, actorName: 'K. Mnyonge', action: 'Submitted', date: '2024-07-26', comments: 'Promotion based on Education Advancement.' }]
   },
   {
     id: 'CADRE001', employeeName: 'Ali Juma Ali', zanId: "221458232", requestType: 'Change of Cadre',
     submissionDate: '2024-07-29', status: 'Pending HHRMD Review', lastUpdatedDate: '2024-07-29', currentStage: 'Awaiting HHRMD Review',
+    employeeInstitution: 'Central Government Office',
     actions: [{ role: ROLES.HRO, actorName: 'K. Mnyonge', action: 'Submitted', date: '2024-07-29', comments: 'Request for cadre change to Senior Officer.' }]
   },
   {
     id: 'RETIRE002', employeeName: 'Juma Omar Ali', zanId: "667890456", requestType: 'Retirement',
     submissionDate: '2024-07-28', status: 'Approved by Commission', lastUpdatedDate: '2024-08-05', currentStage: 'Completed - Approved',
+    employeeInstitution: 'Government Procurement Services Agency',
     actions: [
       { role: ROLES.HRO, actorName: 'K. Mnyonge', action: 'Submitted', date: '2024-07-28', comments: 'Voluntary retirement application.' },
       { role: ROLES.HRMO, actorName: 'F. Iddi', action: 'Verified & Forwarded to Commission', date: '2024-07-30', comments: 'All documents in order.' },
@@ -75,6 +82,7 @@ const ALL_MOCK_REQUESTS: MockTrackedRequest[] = [
   {
     id: 'SEXT001', employeeName: 'Hamid Khalfan Abdalla', zanId: "778901234", requestType: 'Service Extension',
     submissionDate: '2024-07-20', status: 'Rejected by Commission', lastUpdatedDate: '2024-08-02', currentStage: 'Completed - Rejected',
+    employeeInstitution: 'Government Garage',
     actions: [
       { role: ROLES.HRO, actorName: 'K. Mnyonge', action: 'Submitted', date: '2024-07-20', comments: 'Service extension for critical project.' },
       { role: ROLES.HHRMD, actorName: 'S. Khamis', action: 'Verified & Forwarded to Commission', date: '2024-07-25', comments: 'Justification seems valid.' },
@@ -84,11 +92,13 @@ const ALL_MOCK_REQUESTS: MockTrackedRequest[] = [
   {
     id: 'TERM001', employeeName: 'Ali Juma Ali', zanId: "221458232", requestType: 'Termination',
     submissionDate: '2024-07-25', status: 'Pending DO Review', lastUpdatedDate: '2024-07-25', currentStage: 'Awaiting DO Initial Review',
+    employeeInstitution: 'Central Government Office',
     actions: [{ role: ROLES.HRO, actorName: 'K. Mnyonge', action: 'Submitted', date: '2024-07-25', comments: 'Termination due to unauthorized absence.' }]
   },
   {
     id: 'COMP001', employeeName: 'Fatma Said Omar', zanId: "334589123", requestType: 'Complaints',
     submissionDate: '2024-07-20', status: 'Resolved - Pending Employee Confirmation', lastUpdatedDate: '2024-07-28', currentStage: 'DO Resolved, Awaiting Confirmation',
+    employeeInstitution: 'Treasury Office',
     actions: [
       { role: ROLES.EMPLOYEE, actorName: 'Fatma Said Omar', action: 'Submitted', date: '2024-07-20', comments: 'Complaint about unfair treatment.' },
       { role: ROLES.DO, actorName: 'M. Ussi', action: 'Reviewed & Resolved', date: '2024-07-28', comments: 'Issue addressed with department head.' }
@@ -97,6 +107,7 @@ const ALL_MOCK_REQUESTS: MockTrackedRequest[] = [
    {
     id: 'CONF002', employeeName: 'Safia Juma Ali', zanId: "125468957", requestType: 'Confirmation',
     submissionDate: '2024-06-15', status: 'Awaiting Commission Decision', lastUpdatedDate: '2024-06-20', currentStage: 'HRMO Forwarded to Commission',
+    employeeInstitution: 'Civil Service Commission',
     actions: [
       { role: ROLES.HRO, actorName: 'K. Mnyonge', action: 'Submitted', date: '2024-06-15' },
       { role: ROLES.HRMO, actorName: 'F. Iddi', action: 'Verified & Forwarded', date: '2024-06-20', comments: 'Ready for commission review.' }
@@ -105,6 +116,7 @@ const ALL_MOCK_REQUESTS: MockTrackedRequest[] = [
   {
     id: 'PROM001', employeeName: 'Zainab Ali Khamis', zanId: "556789345", requestType: 'Promotion',
     submissionDate: '2024-05-10', status: 'Rejected by HHRMD - Awaiting HRO Correction', lastUpdatedDate: '2024-05-15', currentStage: 'HHRMD Rejected, HRO to Correct',
+    employeeInstitution: 'Planning Commission',
     actions: [
       { role: ROLES.HRO, actorName: 'K. Mnyonge', action: 'Submitted', date: '2024-05-10' },
       { role: ROLES.HHRMD, actorName: 'S. Khamis', action: 'Rejected', date: '2024-05-15', comments: 'Incomplete performance appraisals submitted.' }
@@ -115,17 +127,19 @@ const ALL_MOCK_REQUESTS: MockTrackedRequest[] = [
 
 export default function TrackStatusPage() {
   const { role } = useAuth();
-  const [zanIdInput, setZanIdInput] = useState(''); // For non-CSCS search
+  const [zanIdInput, setZanIdInput] = useState(''); 
   const [isSearching, setIsSearching] = useState(false);
   const [searchAttempted, setSearchAttempted] = useState(false);
   const [foundRequests, setFoundRequests] = useState<MockTrackedRequest[]>([]);
 
-  // CSCS specific state
+  
   const [allRequestsForCSCS, setAllRequestsForCSCS] = useState<MockTrackedRequest[]>([]);
   const [filteredRequestsCSCS, setFilteredRequestsCSCS] = useState<MockTrackedRequest[]>([]);
   const [fromDateCSCS, setFromDateCSCS] = useState('');
   const [toDateCSCS, setToDateCSCS] = useState('');
-  const [zanIdCSCSFilter, setZanIdCSCSFilter] = useState(''); // For CSCS ZanID filter input
+  const [zanIdCSCSFilter, setZanIdCSCSFilter] = useState(''); 
+  const [institutionCSCSFilter, setInstitutionCSCSFilter] = useState('');
+  const [availableInstitutions, setAvailableInstitutions] = useState<string[]>([]);
   const [selectedRequestDetails, setSelectedRequestDetails] = useState<MockTrackedRequest | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
@@ -137,6 +151,9 @@ export default function TrackStatusPage() {
       setAllRequestsForCSCS(sortedRequests);
       setFilteredRequestsCSCS(sortedRequests.slice(0, 100)); 
       setSearchAttempted(true); 
+      
+      const institutions = Array.from(new Set(sortedRequests.map(req => req.employeeInstitution).filter(Boolean) as string[]));
+      setAvailableInstitutions(institutions.sort());
     }
   }, [role]);
 
@@ -185,6 +202,10 @@ export default function TrackStatusPage() {
       filtered = filtered.filter(req => req.zanId === zanIdCSCSFilter.trim());
     }
 
+    if (institutionCSCSFilter) {
+      filtered = filtered.filter(req => req.employeeInstitution === institutionCSCSFilter);
+    }
+
     setFilteredRequestsCSCS(filtered.slice(0,100));
     setIsSearching(false);
     if (filtered.length === 0) {
@@ -223,20 +244,34 @@ export default function TrackStatusPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {role === ROLES.CSCS ? (
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                  <div className="space-y-1 md:col-span-1">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+                  <div className="space-y-1">
                     <Label htmlFor="fromDateCSCS" className="flex items-center"><CalendarDays className="mr-2 h-4 w-4 text-primary"/>From Date</Label>
                     <Input id="fromDateCSCS" type="date" value={fromDateCSCS} onChange={(e) => setFromDateCSCS(e.target.value)} disabled={isSearching}/>
                   </div>
-                  <div className="space-y-1 md:col-span-1">
+                  <div className="space-y-1">
                     <Label htmlFor="toDateCSCS" className="flex items-center"><CalendarDays className="mr-2 h-4 w-4 text-primary"/>To Date</Label>
                     <Input id="toDateCSCS" type="date" value={toDateCSCS} onChange={(e) => setToDateCSCS(e.target.value)} disabled={isSearching}/>
                   </div>
-                   <div className="space-y-1 md:col-span-1">
-                    <Label htmlFor="zanIdTrackCSCS">Optional: ZanID</Label>
+                   <div className="space-y-1">
+                    <Label htmlFor="zanIdTrackCSCS">ZanID</Label>
                     <Input id="zanIdTrackCSCS" placeholder="Filter by ZanID" value={zanIdCSCSFilter} onChange={(e) => setZanIdCSCSFilter(e.target.value)} disabled={isSearching}/>
                   </div>
-                  <Button onClick={handleFilterCSCSRequests} disabled={isSearching} className="md:self-end">
+                  <div className="space-y-1">
+                    <Label htmlFor="institutionCSCSFilter" className="flex items-center"><Building className="mr-2 h-4 w-4 text-primary"/>Institution</Label>
+                    <Select value={institutionCSCSFilter} onValueChange={setInstitutionCSCSFilter} disabled={isSearching}>
+                        <SelectTrigger id="institutionCSCSFilter">
+                            <SelectValue placeholder="Filter by Institution" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="">All Institutions</SelectItem>
+                            {availableInstitutions.map(inst => (
+                                <SelectItem key={inst} value={inst}>{inst}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                  </div>
+                  <Button onClick={handleFilterCSCSRequests} disabled={isSearching} className="md:self-end lg:mt-0 mt-4">
                     {isSearching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Filter className="mr-2 h-4 w-4" />}
                     Filter Requests
                   </Button>
@@ -267,10 +302,10 @@ export default function TrackStatusPage() {
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle>
-                  {role === ROLES.CSCS ? (zanIdCSCSFilter ? `Requests for ZanID: ${zanIdCSCSFilter}` : "Request Overview") : `Request Status for ZanID: ${zanIdInput}`}
+                  {role === ROLES.CSCS ? (zanIdCSCSFilter || institutionCSCSFilter || (fromDateCSCS && toDateCSCS) ? "Filtered Requests" : "Request Overview") : `Request Status for ZanID: ${zanIdInput}`}
                 </CardTitle>
                  <CardDescription>
-                  {role === ROLES.CSCS && !zanIdCSCSFilter && `Displaying latest ${displayRequests.length} requests. Use filters to refine.`}
+                  {role === ROLES.CSCS && !zanIdCSCSFilter && !institutionCSCSFilter && !(fromDateCSCS && toDateCSCS) && `Displaying latest ${displayRequests.length} requests. Use filters to refine.`}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -281,9 +316,10 @@ export default function TrackStatusPage() {
                     </TableCaption>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-[150px]">Request ID</TableHead>
+                        <TableHead className="w-[120px]">Request ID</TableHead>
                         <TableHead>Employee Name</TableHead>
                         <TableHead>ZanID</TableHead>
+                        {role === ROLES.CSCS && <TableHead>Institution</TableHead>}
                         <TableHead>Request Type</TableHead>
                         <TableHead>Submission Date</TableHead>
                         <TableHead>Last Updated</TableHead>
@@ -298,6 +334,7 @@ export default function TrackStatusPage() {
                           <TableCell className="font-medium">{request.id}</TableCell>
                           <TableCell>{request.employeeName}</TableCell>
                           <TableCell>{request.zanId}</TableCell>
+                          {role === ROLES.CSCS && <TableCell>{request.employeeInstitution || 'N/A'}</TableCell>}
                           <TableCell>{request.requestType}</TableCell>
                           <TableCell>{format(parseISO(request.submissionDate), 'PPP')}</TableCell>
                           <TableCell>{format(parseISO(request.lastUpdatedDate), 'PPP')}</TableCell>
@@ -340,6 +377,7 @@ export default function TrackStatusPage() {
               <DialogTitle>Request Details: {selectedRequestDetails.id}</DialogTitle>
               <DialogDescription>
                 <strong>Employee:</strong> {selectedRequestDetails.employeeName} (ZanID: {selectedRequestDetails.zanId}) <br />
+                <strong>Institution:</strong> {selectedRequestDetails.employeeInstitution || 'N/A'} <br />
                 <strong>Request Type:</strong> {selectedRequestDetails.requestType}
               </DialogDescription>
             </DialogHeader>
@@ -382,4 +420,3 @@ export default function TrackStatusPage() {
     </div>
   );
 }
-
