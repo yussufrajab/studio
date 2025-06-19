@@ -18,7 +18,8 @@ import {
   Replace,
   UserMinus,
   ListChecks,
-  ShieldAlert // Added ShieldAlert here
+  ShieldAlert,
+  LineChart, // Added for PO - better representation for analytics/dashboard
 } from 'lucide-react';
 import type { NavItem, Role } from './types';
 import { ROLES } from './constants';
@@ -27,22 +28,22 @@ export const NAV_ITEMS: NavItem[] = [
   {
     title: 'Dashboard',
     href: '/dashboard',
-    icon: LayoutDashboard,
-    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO, ROLES.DO, ROLES.EMPLOYEE, ROLES.CSCS, ROLES.HRRP],
+    icon: LayoutDashboard, // Could use LineChart for PO if specific dashboard exists
+    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO, ROLES.DO, ROLES.EMPLOYEE, ROLES.CSCS, ROLES.HRRP, ROLES.PO],
     description: 'Overview of your activities and quick access to modules.',
   },
   {
     title: 'Employee Profiles',
     href: '/dashboard/profile',
     icon: UserCog,
-    roles: [ROLES.HRO, ROLES.EMPLOYEE, ROLES.HHRMD, ROLES.HRMO, ROLES.DO, ROLES.CSCS, ROLES.HRRP],
+    roles: [ROLES.HRO, ROLES.EMPLOYEE, ROLES.HHRMD, ROLES.HRMO, ROLES.DO, ROLES.CSCS, ROLES.HRRP, ROLES.PO],
     description: 'View and manage employee profile information.',
   },
   {
     title: 'Employee Confirmation',
     href: '/dashboard/confirmation',
     icon: UserCheck,
-    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO], // CSCS/HRRP view via Track Status/Dashboard
+    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO], 
     description: 'Manage employee confirmation processes.',
   },
   {
@@ -112,21 +113,21 @@ export const NAV_ITEMS: NavItem[] = [
     title: 'Track Status',
     href: '/dashboard/track-status',
     icon: ListChecks,
-    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO, ROLES.DO, ROLES.CSCS, ROLES.HRRP],
+    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO, ROLES.DO, ROLES.CSCS, ROLES.HRRP, ROLES.PO],
     description: 'Track the status of submitted requests.',
   },
   {
     title: 'Reports & Analytics',
     href: '/dashboard/reports',
     icon: BarChart3,
-    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO, ROLES.DO, ROLES.CSCS, ROLES.HRRP],
+    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO, ROLES.DO, ROLES.CSCS, ROLES.HRRP, ROLES.PO],
     description: 'Generate and view various system reports.',
   },
   {
     title: 'Audit Trail',
     href: '/dashboard/audit-trail',
     icon: ClipboardList,
-    roles: [ROLES.HRO, ROLES.CSCS], // CSCS might also need this
+    roles: [ROLES.HRO, ROLES.CSCS, ROLES.PO], // Added PO
     disabled: true, 
     description: 'View a log of system activities and changes (coming soon).',
   },
@@ -136,3 +137,4 @@ export function getNavItemsForRole(role: Role | null): NavItem[] {
   if (!role) return [];
   return NAV_ITEMS.filter(item => item.roles.includes(role));
 }
+

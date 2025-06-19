@@ -1,5 +1,5 @@
 
-export type Role = "HRO" | "HHRMD" | "HRMO" | "DO" | "EMPLOYEE" | "CSCS" | "HRRP" | null;
+export type Role = "HRO" | "HHRMD" | "HRMO" | "DO" | "EMPLOYEE" | "CSCS" | "HRRP" | "PO" | null;
 
 export interface User {
   id: string;
@@ -101,3 +101,4 @@ export interface RequestFormValues {
   details: string;
   documents?: File[];
 }
+

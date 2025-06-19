@@ -140,30 +140,31 @@ export default function TrackStatusPage() {
   const [foundRequests, setFoundRequests] = useState<MockTrackedRequest[]>([]);
 
 
-  const [allRequestsForCSCS, setAllRequestsForCSCS] = useState<MockTrackedRequest[]>([]);
-  const [filteredRequestsCSCS, setFilteredRequestsCSCS] = useState<MockTrackedRequest[]>([]);
-  const [fromDateCSCS, setFromDateCSCS] = useState('');
-  const [toDateCSCS, setToDateCSCS] = useState('');
-  const [zanIdCSCSFilter, setZanIdCSCSFilter] = useState('');
-  const [institutionCSCSFilter, setInstitutionCSCSFilter] = useState('');
-  const [statusCSCSFilter, setStatusCSCSFilter] = useState('');
+  const [allRequestsForPrivilegedUsers, setAllRequestsForPrivilegedUsers] = useState<MockTrackedRequest[]>([]);
+  const [filteredRequestsPrivileged, setFilteredRequestsPrivileged] = useState<MockTrackedRequest[]>([]);
+  const [fromDateFilter, setFromDateFilter] = useState('');
+  const [toDateFilter, setToDateFilter] = useState('');
+  const [zanIdFilter, setZanIdFilter] = useState('');
+  const [institutionFilter, setInstitutionFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [availableInstitutions, setAvailableInstitutions] = useState<string[]>([]);
   const [selectedRequestDetails, setSelectedRequestDetails] = useState<MockTrackedRequest | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
-  const canAccessModule = role === ROLES.HRO || role === ROLES.HHRMD || role === ROLES.HRMO || role === ROLES.DO || role === ROLES.CSCS || role === ROLES.HRRP;
+  const isPrivilegedViewer = role === ROLES.CSCS || role === ROLES.PO || role === ROLES.HRRP; // HRRP will have institution-filtered view later
+  const canAccessModule = role === ROLES.HRO || role === ROLES.HHRMD || role === ROLES.HRMO || role === ROLES.DO || isPrivilegedViewer;
 
   useEffect(() => {
-    if (role === ROLES.CSCS) {
+    if (isPrivilegedViewer) {
       const sortedRequests = [...ALL_MOCK_REQUESTS].sort((a, b) => new Date(b.lastUpdatedDate).getTime() - new Date(a.lastUpdatedDate).getTime());
-      setAllRequestsForCSCS(sortedRequests);
-      setFilteredRequestsCSCS(sortedRequests.slice(0, 100));
+      setAllRequestsForPrivilegedUsers(sortedRequests);
+      setFilteredRequestsPrivileged(sortedRequests.slice(0, 100));
       setSearchAttempted(true);
 
       const institutions = Array.from(new Set(sortedRequests.map(req => req.employeeInstitution).filter(Boolean) as string[]));
       setAvailableInstitutions(institutions.sort());
     }
-  }, [role]);
+  }, [role, isPrivilegedViewer]);
 
   const handleSearchRequests = () => {
     if (!zanIdInput.trim()) {
@@ -187,13 +188,13 @@ export default function TrackStatusPage() {
     }, 1000);
   };
 
-  const handleFilterCSCSRequests = () => {
+  const handleFilterPrivilegedRequests = () => {
     setIsSearching(true);
-    let filtered = [...allRequestsForCSCS];
+    let filtered = [...allRequestsForPrivilegedUsers];
 
-    if (fromDateCSCS && toDateCSCS) {
-      const startDate = startOfDay(parseISO(fromDateCSCS));
-      const endDate = endOfDay(parseISO(toDateCSCS));
+    if (fromDateFilter && toDateFilter) {
+      const startDate = startOfDay(parseISO(fromDateFilter));
+      const endDate = endOfDay(parseISO(toDateFilter));
       if (isValid(startDate) && isValid(endDate) && !isWithinInterval(endDate, { start: new Date(0), end: startDate })) {
          filtered = filtered.filter(req => {
           const submissionDate = parseISO(req.submissionDate);
@@ -206,19 +207,19 @@ export default function TrackStatusPage() {
       }
     }
 
-    if (zanIdCSCSFilter.trim()) {
-      filtered = filtered.filter(req => req.zanId === zanIdCSCSFilter.trim());
+    if (zanIdFilter.trim()) {
+      filtered = filtered.filter(req => req.zanId === zanIdFilter.trim());
     }
 
-    if (institutionCSCSFilter && institutionCSCSFilter !== ALL_INSTITUTIONS_FILTER_VALUE) {
-      filtered = filtered.filter(req => req.employeeInstitution === institutionCSCSFilter);
+    if (institutionFilter && institutionFilter !== ALL_INSTITUTIONS_FILTER_VALUE) {
+      filtered = filtered.filter(req => req.employeeInstitution === institutionFilter);
     }
 
-    if (statusCSCSFilter && statusCSCSFilter !== ALL_STATUSES_FILTER_VALUE) {
-      filtered = filtered.filter(req => req.status === statusCSCSFilter);
+    if (statusFilter && statusFilter !== ALL_STATUSES_FILTER_VALUE) {
+      filtered = filtered.filter(req => req.status === statusFilter);
     }
 
-    setFilteredRequestsCSCS(filtered.slice(0,100));
+    setFilteredRequestsPrivileged(filtered.slice(0,100));
     setIsSearching(false);
     if (filtered.length === 0) {
       toast({ title: "No Results", description: "No requests match your filter criteria."});
@@ -227,12 +228,12 @@ export default function TrackStatusPage() {
     }
   };
 
-  const handleViewDetailsCSCS = (request: MockTrackedRequest) => {
+  const handleViewDetails = (request: MockTrackedRequest) => {
     setSelectedRequestDetails(request);
     setIsDetailsModalOpen(true);
   };
 
-  const displayRequests = role === ROLES.CSCS ? filteredRequestsCSCS : foundRequests;
+  const displayRequests = isPrivilegedViewer ? filteredRequestsPrivileged : foundRequests;
 
 
   return (
@@ -247,32 +248,32 @@ export default function TrackStatusPage() {
         <>
           <Card className="shadow-lg mb-6">
             <CardHeader>
-              <CardTitle>{role === ROLES.CSCS ? "All Submitted Requests" : "Search Employee Requests"}</CardTitle>
+              <CardTitle>{isPrivilegedViewer ? "All Submitted Requests" : "Search Employee Requests"}</CardTitle>
               <CardDescription>
-                {role === ROLES.CSCS
+                {isPrivilegedViewer
                   ? "View and filter all submitted requests. Click on a request to see details."
                   : "Enter an employee's ZanID to view the status of their submitted requests."}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {role === ROLES.CSCS ? (
+              {isPrivilegedViewer ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
                   <div className="space-y-1">
-                    <Label htmlFor="fromDateCSCS" className="flex items-center"><CalendarDays className="mr-2 h-4 w-4 text-primary"/>From Date</Label>
-                    <Input id="fromDateCSCS" type="date" value={fromDateCSCS} onChange={(e) => setFromDateCSCS(e.target.value)} disabled={isSearching}/>
+                    <Label htmlFor="fromDateFilter" className="flex items-center"><CalendarDays className="mr-2 h-4 w-4 text-primary"/>From Date</Label>
+                    <Input id="fromDateFilter" type="date" value={fromDateFilter} onChange={(e) => setFromDateFilter(e.target.value)} disabled={isSearching}/>
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="toDateCSCS" className="flex items-center"><CalendarDays className="mr-2 h-4 w-4 text-primary"/>To Date</Label>
-                    <Input id="toDateCSCS" type="date" value={toDateCSCS} onChange={(e) => setToDateCSCS(e.target.value)} disabled={isSearching}/>
+                    <Label htmlFor="toDateFilter" className="flex items-center"><CalendarDays className="mr-2 h-4 w-4 text-primary"/>To Date</Label>
+                    <Input id="toDateFilter" type="date" value={toDateFilter} onChange={(e) => setToDateFilter(e.target.value)} disabled={isSearching}/>
                   </div>
                    <div className="space-y-1">
-                    <Label htmlFor="zanIdTrackCSCS">ZanID</Label>
-                    <Input id="zanIdTrackCSCS" placeholder="Filter by ZanID" value={zanIdCSCSFilter} onChange={(e) => setZanIdCSCSFilter(e.target.value)} disabled={isSearching}/>
+                    <Label htmlFor="zanIdFilter">ZanID</Label>
+                    <Input id="zanIdFilter" placeholder="Filter by ZanID" value={zanIdFilter} onChange={(e) => setZanIdFilter(e.target.value)} disabled={isSearching}/>
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="institutionCSCSFilter" className="flex items-center"><Building className="mr-2 h-4 w-4 text-primary"/>Institution</Label>
-                    <Select value={institutionCSCSFilter} onValueChange={setInstitutionCSCSFilter} disabled={isSearching}>
-                        <SelectTrigger id="institutionCSCSFilter">
+                    <Label htmlFor="institutionFilter" className="flex items-center"><Building className="mr-2 h-4 w-4 text-primary"/>Institution</Label>
+                    <Select value={institutionFilter} onValueChange={setInstitutionFilter} disabled={isSearching}>
+                        <SelectTrigger id="institutionFilter">
                             <SelectValue placeholder="Filter by Institution" />
                         </SelectTrigger>
                         <SelectContent>
@@ -284,9 +285,9 @@ export default function TrackStatusPage() {
                     </Select>
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="statusCSCSFilter" className="flex items-center"><StatusFilterIcon className="mr-2 h-4 w-4 text-primary"/>Status</Label>
-                    <Select value={statusCSCSFilter} onValueChange={setStatusCSCSFilter} disabled={isSearching}>
-                        <SelectTrigger id="statusCSCSFilter">
+                    <Label htmlFor="statusFilter" className="flex items-center"><StatusFilterIcon className="mr-2 h-4 w-4 text-primary"/>Status</Label>
+                    <Select value={statusFilter} onValueChange={setStatusFilter} disabled={isSearching}>
+                        <SelectTrigger id="statusFilter">
                             <SelectValue placeholder="Filter by Status" />
                         </SelectTrigger>
                         <SelectContent>
@@ -297,7 +298,7 @@ export default function TrackStatusPage() {
                         </SelectContent>
                     </Select>
                   </div>
-                  <Button onClick={handleFilterCSCSRequests} disabled={isSearching} className="md:self-end lg:mt-0 mt-4">
+                  <Button onClick={handleFilterPrivilegedRequests} disabled={isSearching} className="md:self-end lg:mt-0 mt-4">
                     {isSearching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Filter className="mr-2 h-4 w-4" />}
                     Filter Requests
                   </Button>
@@ -305,8 +306,8 @@ export default function TrackStatusPage() {
               ) : (
                 <div className="flex flex-col sm:flex-row sm:items-end sm:space-x-2 space-y-2 sm:space-y-0">
                   <div className="flex-grow space-y-1">
-                    <Label htmlFor="zanIdTrack">Employee ZanID</Label>
-                    <Input id="zanIdTrack" placeholder="Enter ZanID" value={zanIdInput} onChange={(e) => setZanIdInput(e.target.value)} disabled={isSearching}/>
+                    <Label htmlFor="zanIdInput">Employee ZanID</Label>
+                    <Input id="zanIdInput" placeholder="Enter ZanID" value={zanIdInput} onChange={(e) => setZanIdInput(e.target.value)} disabled={isSearching}/>
                   </div>
                   <Button onClick={handleSearchRequests} disabled={isSearching || !zanIdInput.trim()}>
                     {isSearching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
@@ -328,47 +329,47 @@ export default function TrackStatusPage() {
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle>
-                  {role === ROLES.CSCS ? (zanIdCSCSFilter || (institutionCSCSFilter && institutionCSCSFilter !== ALL_INSTITUTIONS_FILTER_VALUE) || (fromDateCSCS && toDateCSCS) || (statusCSCSFilter && statusCSCSFilter !== ALL_STATUSES_FILTER_VALUE) ? "Filtered Requests" : "Request Overview") : `Request Status for ZanID: ${zanIdInput}`}
+                  {isPrivilegedViewer ? (zanIdFilter || (institutionFilter && institutionFilter !== ALL_INSTITUTIONS_FILTER_VALUE) || (fromDateFilter && toDateFilter) || (statusFilter && statusFilter !== ALL_STATUSES_FILTER_VALUE) ? "Filtered Requests" : "Request Overview") : `Request Status for ZanID: ${zanIdInput}`}
                 </CardTitle>
                  <CardDescription>
-                  {role === ROLES.CSCS && !zanIdCSCSFilter && !(institutionCSCSFilter && institutionCSCSFilter !== ALL_INSTITUTIONS_FILTER_VALUE) && !(fromDateCSCS && toDateCSCS) && !(statusCSCSFilter && statusCSCSFilter !== ALL_STATUSES_FILTER_VALUE) && `Displaying latest ${displayRequests.length} requests. Use filters to refine.`}
+                  {isPrivilegedViewer && !zanIdFilter && !(institutionFilter && institutionFilter !== ALL_INSTITUTIONS_FILTER_VALUE) && !(fromDateFilter && toDateFilter) && !(statusFilter && statusFilter !== ALL_STATUSES_FILTER_VALUE) && `Displaying latest ${displayRequests.length} requests. Use filters to refine.`}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {displayRequests.length > 0 ? (
                   <Table>
                     <TableCaption>
-                      {role === ROLES.CSCS ? "Overview of submitted requests." : `A list of recent requests for ZanID: ${zanIdInput}.`}
+                      {isPrivilegedViewer ? "Overview of submitted requests." : `A list of recent requests for ZanID: ${zanIdInput}.`}
                     </TableCaption>
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-[120px]">Request ID</TableHead>
                         <TableHead>Employee Name</TableHead>
                         <TableHead>ZanID</TableHead>
-                        {role === ROLES.CSCS && <TableHead>Institution</TableHead>}
+                        {isPrivilegedViewer && <TableHead>Institution</TableHead>}
                         <TableHead>Request Type</TableHead>
                         <TableHead>Submission Date</TableHead>
                         <TableHead>Last Updated</TableHead>
                         <TableHead>Current Stage</TableHead>
                         <TableHead className="text-right">Status</TableHead>
-                        {role === ROLES.CSCS && <TableHead className="text-right">Actions</TableHead>}
+                        {isPrivilegedViewer && <TableHead className="text-right">Actions</TableHead>}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {displayRequests.map((request) => (
-                        <TableRow key={request.id} onClick={() => role === ROLES.CSCS && handleViewDetailsCSCS(request)} className={role === ROLES.CSCS ? "cursor-pointer hover:bg-muted/50" : ""}>
+                        <TableRow key={request.id} onClick={() => isPrivilegedViewer && handleViewDetails(request)} className={isPrivilegedViewer ? "cursor-pointer hover:bg-muted/50" : ""}>
                           <TableCell className="font-medium">{request.id}</TableCell>
                           <TableCell>{request.employeeName}</TableCell>
                           <TableCell>{request.zanId}</TableCell>
-                          {role === ROLES.CSCS && <TableCell>{request.employeeInstitution || 'N/A'}</TableCell>}
+                          {isPrivilegedViewer && <TableCell>{request.employeeInstitution || 'N/A'}</TableCell>}
                           <TableCell>{request.requestType}</TableCell>
                           <TableCell>{format(parseISO(request.submissionDate), 'PPP')}</TableCell>
                           <TableCell>{format(parseISO(request.lastUpdatedDate), 'PPP')}</TableCell>
                           <TableCell>{request.currentStage}</TableCell>
                           <TableCell className="text-right">{request.status}</TableCell>
-                          {role === ROLES.CSCS && (
+                          {isPrivilegedViewer && (
                             <TableCell className="text-right">
-                              <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleViewDetailsCSCS(request); }}>
+                              <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleViewDetails(request); }}>
                                 <Eye className="mr-1 h-3 w-3" /> Details
                               </Button>
                             </TableCell>
@@ -379,14 +380,14 @@ export default function TrackStatusPage() {
                   </Table>
                 ) : (
                   <p className="text-muted-foreground text-center py-4">
-                    {role === ROLES.CSCS ? "No requests match the current filter criteria." : `No requests found for ZanID: ${zanIdInput}.`}
+                    {isPrivilegedViewer ? "No requests match the current filter criteria." : `No requests found for ZanID: ${zanIdInput}.`}
                   </p>
                 )}
               </CardContent>
             </Card>
           )}
 
-          {role !== ROLES.CSCS && !isSearching && !searchAttempted && (
+          {!isPrivilegedViewer && !isSearching && !searchAttempted && (
             <Card className="shadow-lg">
               <CardContent className="pt-6">
                 <p className="text-muted-foreground text-center">Please enter an employee's ZanID above and click "Search Requests" to view their request history.</p>

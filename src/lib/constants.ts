@@ -9,6 +9,7 @@ export const ROLES: Record<string, Role> = {
   EMPLOYEE: "EMPLOYEE",
   CSCS: "CSCS", // Civil Service Commission Secretary
   HRRP: "HRRP", // Human Resource Responsible Personnel
+  PO: "PO", // Planning Officer
 };
 
 export const USERS: User[] = [
@@ -16,6 +17,7 @@ export const USERS: User[] = [
   { id: "user2", username: "skhamis", name: "Safia Khamis", role: ROLES.HHRMD as Role },
   { id: "user_hrmo", username: "fiddi", name: "Fauzia Iddi", role: ROLES.HRMO as Role },
   { id: "user_hrrp", username: "khamadi", name: "Khamis Hamadi", role: ROLES.HRRP as Role },
+  { id: "user_po", username: "mishak", name: "Mwanakombo Is-hak", role: ROLES.PO as Role },
   { id: "user3", username: "kmnyonge", name: "Khamis Mnyonge", role: ROLES.HRO as Role },
   { id: "user5", username: "mussi", name: "Maimuna Ussi", role: ROLES.DO as Role },
   { id: "user7", username: "hmohamed", name: "Hamid Mohamed", role: ROLES.EMPLOYEE as Role, employeeId: "emp7" },
@@ -218,3 +220,4 @@ export const EMPLOYEES: Employee[] = [
 ];
 
 export const APP_NAME = "Civil Service Management System";
+

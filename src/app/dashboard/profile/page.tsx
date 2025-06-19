@@ -25,7 +25,7 @@ export default function ProfilePage() {
   const [searchType, setSearchType] = useState<'zanId' | 'zssfNumber' | 'payrollNumber'>('zanId');
   const [isSearching, setIsSearching] = useState(false);
 
-  const canSearch = role === ROLES.HRO || role === ROLES.HHRMD || role === ROLES.HRMO || role === ROLES.DO || role === ROLES.CSCS || role === ROLES.HRRP;
+  const canSearch = role === ROLES.HRO || role === ROLES.HHRMD || role === ROLES.HRMO || role === ROLES.DO || role === ROLES.CSCS || role === ROLES.HRRP || role === ROLES.PO;
 
   useEffect(() => {
     setPageLoading(true);
@@ -275,3 +275,4 @@ export default function ProfilePage() {
     </div>
   );
 }
+
