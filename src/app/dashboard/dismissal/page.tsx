@@ -65,11 +65,9 @@ export default function DismissalPage() {
   const [reasonDismissal, setReasonDismissal] = useState('');
   const [proposedDateDismissal, setProposedDateDismissal] = useState('');
   
-  // Existing optional documents
   const [appraisalFormFile, setAppraisalFormFile] = useState<FileList | null>(null);
-  const [supportingDocumentsFile, setSupportingDocumentsFile] = useState<FileList | null>(null); // This can be used for "other additional documents" or a specific "supporting" one
+  const [supportingDocumentsFile, setSupportingDocumentsFile] = useState<FileList | null>(null); 
   
-  // New optional documents
   const [warningLettersFile, setWarningLettersFile] = useState<FileList | null>(null);
   const [employeeExplanationLetterFile, setEmployeeExplanationLetterFile] = useState<FileList | null>(null);
   const [suspensionLetterFile, setSuspensionLetterFile] = useState<FileList | null>(null);
@@ -77,8 +75,6 @@ export default function DismissalPage() {
   const [investigationCommitteeReportFile, setInvestigationCommitteeReportFile] = useState<FileList | null>(null);
   const [otherAdditionalDocumentsFile, setOtherAdditionalDocumentsFile] = useState<FileList | null>(null);
 
-
-  // Required document
   const [letterOfRequestFile, setLetterOfRequestFile] = useState<FileList | null>(null);
   const [minProposedDate, setMinProposedDate] = useState('');
 
@@ -125,14 +121,15 @@ export default function DismissalPage() {
       const foundEmployee = EMPLOYEES.find(emp => emp.zanId === zanId);
       if (foundEmployee) {
         setEmployeeDetails(foundEmployee);
-        toast({ title: "Employee Found", description: `Details for ${foundEmployee.name} loaded.` });
         if (foundEmployee.status !== 'On Probation') {
           toast({
             title: "Dismissal Not Applicable",
-            description: `Dismissal is for 'On Probation' employees. This employee is ${foundEmployee.status}.`,
-            variant: "warning",
-            duration: 5000,
+            description: `Dismissal is only for 'On Probation' employees. This employee is '${foundEmployee.status}'.`,
+            variant: "destructive",
+            duration: 7000,
           });
+        } else {
+           toast({ title: "Employee Found", description: `Details for ${foundEmployee.name} loaded.` });
         }
       } else {
         toast({ title: "Employee Not Found", description: `No employee found with ZanID: ${zanId}.`, variant: "destructive" });
@@ -147,7 +144,7 @@ export default function DismissalPage() {
       return;
     }
     if (!isDismissalAllowed) {
-      toast({ title: "Submission Error", description: "Dismissal is only applicable to employees 'On Probation'.", variant: "destructive" });
+      toast({ title: "Submission Error", description: `Dismissal is only applicable to employees 'On Probation'. This employee is '${employeeDetails.status}'.`, variant: "destructive", duration: 7000 });
       return;
     }
     if (!reasonDismissal || !proposedDateDismissal) {
@@ -164,13 +161,12 @@ export default function DismissalPage() {
     if (!checkPdf(appraisalFormFile)) {
       toast({ title: "Submission Error", description: "Appraisal Form must be a PDF file.", variant: "destructive" }); return;
     }
-    if (supportingDocumentsFile && !checkPdf(supportingDocumentsFile)) { // General supporting docs
+    if (supportingDocumentsFile && !checkPdf(supportingDocumentsFile)) { 
       toast({ title: "Submission Error", description: "Supporting Documents (general) must be a PDF file.", variant: "destructive" }); return;
     }
     if (letterOfRequestFile && letterOfRequestFile[0].type !== "application/pdf") {
       toast({ title: "Submission Error", description: "Letter of Request must be a PDF file.", variant: "destructive" }); return;
     }
-    // New optional documents PDF check
     if (warningLettersFile && !checkPdf(warningLettersFile)) {
       toast({ title: "Submission Error", description: "Warning Letter(s) must be a PDF file.", variant: "destructive" }); return;
     }
@@ -190,7 +186,6 @@ export default function DismissalPage() {
       toast({ title: "Submission Error", description: "Other Additional Documents must be a PDF file.", variant: "destructive" }); return;
     }
 
-
     setIsSubmitting(true);
     const newRequestId = `DISMISS${Date.now().toString().slice(-3)}`;
     let documentsList = ['Letter of Request'];
@@ -202,7 +197,6 @@ export default function DismissalPage() {
     if (summonNoticeFile) documentsList.push('Summon Notice/Invitation Letter');
     if (investigationCommitteeReportFile) documentsList.push('Investigation Committee Report');
     if (otherAdditionalDocumentsFile) documentsList.push('Other Additional Document(s)');
-
 
     const newRequest: MockPendingDismissalRequest = {
         id: newRequestId,
@@ -305,7 +299,7 @@ export default function DismissalPage() {
     }
   };
 
-  const isSubmitDisabled = !employeeDetails ||
+  const isSubmitButtonDisabled = !employeeDetails ||
     !isDismissalAllowed ||
     !reasonDismissal ||
     !proposedDateDismissal ||
@@ -356,7 +350,7 @@ export default function DismissalPage() {
                 {!isDismissalAllowed && (
                   <div className="flex items-center p-4 mt-4 text-sm text-destructive border border-destructive/50 rounded-md bg-destructive/10">
                     <AlertTriangle className="h-5 w-5 mr-3" />
-                    <span>Dismissal is only applicable to employees 'On Probation'. This employee is {employeeDetails.status}.</span>
+                    <span>Dismissal is only applicable to employees 'On Probation'. This employee is '{employeeDetails.status}'. Form submission is disabled.</span>
                   </div>
                 )}
 
@@ -418,7 +412,7 @@ export default function DismissalPage() {
             <CardFooter className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2 pt-4 border-t">
               <Button
                 onClick={handleSubmitDismissalRequest}
-                disabled={isSubmitDisabled}>
+                disabled={isSubmitButtonDisabled}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Submit Dismissal Request
               </Button>
