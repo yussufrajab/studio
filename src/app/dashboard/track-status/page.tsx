@@ -22,6 +22,8 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format, parseISO, isValid, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import type { Role as UserRoleType } from '@/lib/types';
+
 
 interface RequestAction {
   role: string;
@@ -36,11 +38,11 @@ interface MockTrackedRequest {
   employeeName: string;
   zanId: string;
   requestType: string;
-  submissionDate: string; 
-  status: string; 
-  lastUpdatedDate: string; 
-  currentStage: string; 
-  employeeInstitution?: string; 
+  submissionDate: string;
+  status: string;
+  lastUpdatedDate: string;
+  currentStage: string;
+  employeeInstitution?: string;
   actions?: RequestAction[];
 }
 
@@ -124,20 +126,21 @@ const ALL_MOCK_REQUESTS: MockTrackedRequest[] = [
   }
 ];
 
+const ALL_INSTITUTIONS_FILTER_VALUE = "__ALL_INSTITUTIONS__";
 
 export default function TrackStatusPage() {
   const { role } = useAuth();
-  const [zanIdInput, setZanIdInput] = useState(''); 
+  const [zanIdInput, setZanIdInput] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [searchAttempted, setSearchAttempted] = useState(false);
   const [foundRequests, setFoundRequests] = useState<MockTrackedRequest[]>([]);
 
-  
+
   const [allRequestsForCSCS, setAllRequestsForCSCS] = useState<MockTrackedRequest[]>([]);
   const [filteredRequestsCSCS, setFilteredRequestsCSCS] = useState<MockTrackedRequest[]>([]);
   const [fromDateCSCS, setFromDateCSCS] = useState('');
   const [toDateCSCS, setToDateCSCS] = useState('');
-  const [zanIdCSCSFilter, setZanIdCSCSFilter] = useState(''); 
+  const [zanIdCSCSFilter, setZanIdCSCSFilter] = useState('');
   const [institutionCSCSFilter, setInstitutionCSCSFilter] = useState('');
   const [availableInstitutions, setAvailableInstitutions] = useState<string[]>([]);
   const [selectedRequestDetails, setSelectedRequestDetails] = useState<MockTrackedRequest | null>(null);
@@ -149,9 +152,9 @@ export default function TrackStatusPage() {
     if (role === ROLES.CSCS) {
       const sortedRequests = [...ALL_MOCK_REQUESTS].sort((a, b) => new Date(b.lastUpdatedDate).getTime() - new Date(a.lastUpdatedDate).getTime());
       setAllRequestsForCSCS(sortedRequests);
-      setFilteredRequestsCSCS(sortedRequests.slice(0, 100)); 
-      setSearchAttempted(true); 
-      
+      setFilteredRequestsCSCS(sortedRequests.slice(0, 100));
+      setSearchAttempted(true);
+
       const institutions = Array.from(new Set(sortedRequests.map(req => req.employeeInstitution).filter(Boolean) as string[]));
       setAvailableInstitutions(institutions.sort());
     }
@@ -197,12 +200,12 @@ export default function TrackStatusPage() {
          return;
       }
     }
-    
+
     if (zanIdCSCSFilter.trim()) {
       filtered = filtered.filter(req => req.zanId === zanIdCSCSFilter.trim());
     }
 
-    if (institutionCSCSFilter) {
+    if (institutionCSCSFilter && institutionCSCSFilter !== ALL_INSTITUTIONS_FILTER_VALUE) {
       filtered = filtered.filter(req => req.employeeInstitution === institutionCSCSFilter);
     }
 
@@ -211,15 +214,15 @@ export default function TrackStatusPage() {
     if (filtered.length === 0) {
       toast({ title: "No Results", description: "No requests match your filter criteria."});
     } else {
-      toast({ title: "Filter Applied", description: `Displaying ${filtered.length > 100 ? 'first 100 matching ' : ''}requests.`});
+      toast({ title: "Filter Applied", description: `Displaying ${filtered.length >= 100 ? 'first 100 matching ' : ''}requests.`});
     }
   };
-  
+
   const handleViewDetailsCSCS = (request: MockTrackedRequest) => {
     setSelectedRequestDetails(request);
     setIsDetailsModalOpen(true);
   };
-  
+
   const displayRequests = role === ROLES.CSCS ? filteredRequestsCSCS : foundRequests;
 
 
@@ -264,7 +267,7 @@ export default function TrackStatusPage() {
                             <SelectValue placeholder="Filter by Institution" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="">All Institutions</SelectItem>
+                            <SelectItem value={ALL_INSTITUTIONS_FILTER_VALUE}>All Institutions</SelectItem>
                             {availableInstitutions.map(inst => (
                                 <SelectItem key={inst} value={inst}>{inst}</SelectItem>
                             ))}
@@ -302,10 +305,10 @@ export default function TrackStatusPage() {
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle>
-                  {role === ROLES.CSCS ? (zanIdCSCSFilter || institutionCSCSFilter || (fromDateCSCS && toDateCSCS) ? "Filtered Requests" : "Request Overview") : `Request Status for ZanID: ${zanIdInput}`}
+                  {role === ROLES.CSCS ? (zanIdCSCSFilter || (institutionCSCSFilter && institutionCSCSFilter !== ALL_INSTITUTIONS_FILTER_VALUE) || (fromDateCSCS && toDateCSCS) ? "Filtered Requests" : "Request Overview") : `Request Status for ZanID: ${zanIdInput}`}
                 </CardTitle>
                  <CardDescription>
-                  {role === ROLES.CSCS && !zanIdCSCSFilter && !institutionCSCSFilter && !(fromDateCSCS && toDateCSCS) && `Displaying latest ${displayRequests.length} requests. Use filters to refine.`}
+                  {role === ROLES.CSCS && !zanIdCSCSFilter && !(institutionCSCSFilter && institutionCSCSFilter !== ALL_INSTITUTIONS_FILTER_VALUE) && !(fromDateCSCS && toDateCSCS) && `Displaying latest ${displayRequests.length} requests. Use filters to refine.`}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -388,7 +391,7 @@ export default function TrackStatusPage() {
                 <div><Label className="font-semibold">Current Status:</Label> <p className="text-primary">{selectedRequestDetails.status}</p></div>
                 <div><Label className="font-semibold">Current Stage:</Label> <p>{selectedRequestDetails.currentStage}</p></div>
               </div>
-              
+
               <h4 className="font-semibold text-md mt-4 pt-3 border-t">Workflow History</h4>
               {selectedRequestDetails.actions && selectedRequestDetails.actions.length > 0 ? (
                 <div className="space-y-3">
@@ -420,3 +423,4 @@ export default function TrackStatusPage() {
     </div>
   );
 }
+
