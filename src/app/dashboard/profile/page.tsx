@@ -25,7 +25,7 @@ export default function ProfilePage() {
   const [searchType, setSearchType] = useState<'zanId' | 'zssfNumber' | 'payrollNumber'>('zanId');
   const [isSearching, setIsSearching] = useState(false);
 
-  const canSearch = role === ROLES.HRO || role === ROLES.HHRMD || role === ROLES.HRMO || role === ROLES.DO;
+  const canSearch = role === ROLES.HRO || role === ROLES.HHRMD || role === ROLES.HRMO || role === ROLES.DO || role === ROLES.CSCS || role === ROLES.HRRP;
 
   useEffect(() => {
     setPageLoading(true);
@@ -37,7 +37,7 @@ export default function ProfilePage() {
           toast({ title: "Profile Not Found", description: "Your employee profile could not be loaded. Please contact HR.", variant: "destructive" });
         }
       } else if (canSearch) {
-        setProfileData(null); // HRO, HHRMD, HRMO, DO must search
+        setProfileData(null); 
       }
     }
     setPageLoading(false);
@@ -57,7 +57,7 @@ export default function ProfilePage() {
     }
     setIsSearching(true);
     setProfileData(null);
-    setTimeout(() => { // Simulate API call
+    setTimeout(() => { 
       const found = EMPLOYEES.find(emp => {
         if (searchType === 'zanId') return emp.zanId === searchTerm.trim();
         if (searchType === 'zssfNumber') return emp.zssfNumber === searchTerm.trim();
@@ -85,7 +85,7 @@ export default function ProfilePage() {
         <CardDescription>ZanID: {emp.zanId} | Status: <span className={`font-semibold ${emp.status === 'Confirmed' ? 'text-green-600' : 'text-orange-500'}`}>{emp.status || 'N/A'}</span></CardDescription>
       </CardHeader>
       <CardContent className="pt-6 space-y-8">
-        {/* Personal Information Section */}
+        
         <section>
           <div className="flex items-center mb-4">
             <UserCircle className="h-6 w-6 mr-3 text-primary" />
@@ -105,7 +105,7 @@ export default function ProfilePage() {
           </Card>
         </section>
 
-        {/* Employment Summary Section */}
+        
         <section>
            <div className="flex items-center mb-4">
             <Briefcase className="h-6 w-6 mr-3 text-primary" />
@@ -128,7 +128,7 @@ export default function ProfilePage() {
           </Card>
         </section>
 
-        {/* Employee Documents Section */}
+        
         <section>
           <div className="flex items-center mb-4">
             <FileText className="h-6 w-6 mr-3 text-primary" />
@@ -250,7 +250,7 @@ export default function ProfilePage() {
       {profileData ? (
         renderEmployeeDetails(profileData)
       ) : (
-        role === ROLES.EMPLOYEE && !authLoading && !pageLoading && ( // Show only if employee tried to load their own profile and it failed
+        role === ROLES.EMPLOYEE && !authLoading && !pageLoading && ( 
           <Card>
             <CardHeader>
               <CardTitle>Profile Not Found</CardTitle>
@@ -262,7 +262,7 @@ export default function ProfilePage() {
         )
       )}
       
-      {canSearch && !isSearching && !profileData && searchTerm && ( // HRO/HHRMD/HRMO/DO searched but no result
+      {canSearch && !isSearching && !profileData && searchTerm && ( 
          <Card className="mt-6">
             <CardHeader>
               <CardTitle>No Results</CardTitle>

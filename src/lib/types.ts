@@ -1,26 +1,27 @@
 
-export type Role = "HRO" | "HHRMD_HRMO" | "DO" | "EMPLOYEE" | null;
+export type Role = "HRO" | "HHRMD" | "HRMO" | "DO" | "EMPLOYEE" | "CSCS" | "HRRP" | null;
 
 export interface User {
   id: string;
   username: string;
   name: string;
   role: Role;
-  employeeId?: string; // Link to Employee if user is an employee
+  employeeId?: string; 
+  institutionId?: string; // For HRRP to identify their institution
 }
 
 export interface EmployeeCertificate {
   type: "Certificate" | "Diploma" | "Bachelor Degree" | "Master Degree" | "PhD" | "Other";
-  name: string; // e.g., "Advanced Certificate in HR", "BSc Computer Science"
-  url: string; // URL to the document
+  name: string; 
+  url: string; 
 }
 
 export interface Employee {
   id: string;
   employeeEntityId: string;
   name: string;
-  profileImageUrl?: string; // URL for profile image
-  dateOfBirth?: string; // e.g., "1985-07-20"
+  profileImageUrl?: string; 
+  dateOfBirth?: string; 
   placeOfBirth?: string;
   region?: string;
   countryOfBirth?: string;
@@ -28,21 +29,21 @@ export interface Employee {
   zssfNumber?: string;
   payrollNumber?: string;
 
-  // Employment Summary
-  cadre?: string; // Rank
+  
+  cadre?: string; 
   ministry?: string;
-  institution?: string;
+  institution?: string; // Institution the employee belongs to
   department?: string;
-  appointmentType?: string; // e.g., "Permanent", "Contract"
-  contractType?: string; // e.g., "Full-time", "Part-time"
-  recentTitleDate?: string; // Date of last promotion/title change
+  appointmentType?: string; 
+  contractType?: string; 
+  recentTitleDate?: string; 
   currentReportingOffice?: string;
   currentWorkplace?: string;
-  employmentDate?: string; // Initial date of employment
-  confirmationDate?: string; // Date of confirmation
-  status?: string; // e.g., "Confirmed", "On Probation"
+  employmentDate?: string; 
+  confirmationDate?: string; 
+  status?: string; 
 
-  // Employee Documents (URLs or identifiers)
+  
   ardhilHaliUrl?: string;
   confirmationLetterUrl?: string;
   certificates?: EmployeeCertificate[];
@@ -63,12 +64,12 @@ export type RequestType =
 export interface Request {
   id: string;
   type: RequestType;
-  employeeId: string; // Employee this request is about
-  submittedBy: string; // User ID of submitter
-  submittedDate: string; // ISO Date string
+  employeeId: string; 
+  submittedBy: string; 
+  submittedDate: string; 
   status: "Pending" | "Approved" | "Rejected" | "Resolved";
-  details: Record<string, any>; // Request specific details
-  documents?: File[]; // Attached documents
+  details: Record<string, any>; 
+  documents?: File[]; 
   reviewHistory?: Array<{
     reviewerId: string;
     decision: "Approved" | "Rejected" | "Resolved";
@@ -85,8 +86,8 @@ export interface NavItem {
   external?: boolean;
   label?: string;
   description?: string;
-  roles: Role[]; // Roles that can see this nav item
-  children?: NavItem[]; // For sub-menus
+  roles: Role[]; 
+  children?: NavItem[]; 
 }
 
 export interface ComplaintFormValues {

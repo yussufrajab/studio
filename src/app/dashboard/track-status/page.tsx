@@ -22,7 +22,7 @@ import {
 
 interface MockRequest {
   id: string;
-  employeeName: string; // Assuming we can get this, or use ZanID
+  employeeName: string; 
   zanId: string;
   requestType: string;
   submissionDate: string;
@@ -30,14 +30,14 @@ interface MockRequest {
 }
 
 const MOCK_DATA_STORE: { [key: string]: MockRequest[] } = {
-  "221458232": [ // Ali Juma Ali
+  "221458232": [ 
     { id: 'REQ-2024-001', employeeName: 'Ali Juma Ali', zanId: "221458232", requestType: 'Confirmation', submissionDate: '2024-07-15', status: 'Pending HHRMD Review' },
     { id: 'REQ-2024-005', employeeName: 'Ali Juma Ali', zanId: "221458232", requestType: 'LWOP', submissionDate: '2024-06-10', status: 'Approved by DO' },
   ],
-  "125468957": [ // Safia Juma Ali
+  "125468957": [ 
     { id: 'REQ-2024-002', employeeName: 'Safia Juma Ali', zanId: "125468957", requestType: 'Promotion', submissionDate: '2024-07-10', status: 'Approved by DO' },
   ],
-  "emp_no_requests": [] // For testing no requests found
+  "emp_no_requests": [] 
 };
 
 
@@ -48,7 +48,7 @@ export default function TrackStatusPage() {
   const [searchAttempted, setSearchAttempted] = useState(false);
   const [foundRequests, setFoundRequests] = useState<MockRequest[]>([]);
 
-  const canAccessModule = role === ROLES.HRO || role === ROLES.HHRMD || role === ROLES.HRMO || role === ROLES.DO;
+  const canAccessModule = role === ROLES.HRO || role === ROLES.HHRMD || role === ROLES.HRMO || role === ROLES.DO || role === ROLES.CSCS || role === ROLES.HRRP;
 
   const handleSearchRequests = () => {
     if (!zanId.trim()) {
@@ -56,16 +56,16 @@ export default function TrackStatusPage() {
       return;
     }
     setIsSearching(true);
-    setSearchAttempted(false); // Reset on new search
+    setSearchAttempted(false); 
     setFoundRequests([]);
 
-    // Simulate API call
+    
     setTimeout(() => {
       const requests = MOCK_DATA_STORE[zanId.trim()];
       if (requests) {
         setFoundRequests(requests);
       } else {
-        // Simulate finding employee but no requests, or employee not found by returning empty
+        
         setFoundRequests([]); 
       }
       setSearchAttempted(true);

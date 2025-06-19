@@ -7,13 +7,17 @@ export const ROLES: Record<string, Role> = {
   HRMO: "HRMO",
   DO: "DO",
   EMPLOYEE: "EMPLOYEE",
+  CSCS: "CSCS", // Civil Service Commission Secretary
+  HRRP: "HRRP", // Human Resource Responsible Personnel
 };
 
 export const USERS: User[] = [
-  { id: "user2", username: "skhamis", name: "Safia Khamis", role: ROLES.HHRMD as Role }, // Updated HHRMD
-  { id: "user_hrmo", username: "fiddi", name: "Fauzia Iddi", role: ROLES.HRMO as Role }, // Updated HRMO
-  { id: "user3", username: "kmnyonge", name: "Khamis Mnyonge", role: ROLES.HRO as Role }, // Updated HRO
-  { id: "user5", username: "mussi", name: "Maimuna Ussi", role: ROLES.DO as Role }, // Updated DO
+  { id: "user_cscs", username: "zhaji", name: "Zaituni Haji", role: ROLES.CSCS as Role },
+  { id: "user2", username: "skhamis", name: "Safia Khamis", role: ROLES.HHRMD as Role },
+  { id: "user_hrmo", username: "fiddi", name: "Fauzia Iddi", role: ROLES.HRMO as Role },
+  { id: "user_hrrp", username: "khamadi", name: "Khamis Hamadi", role: ROLES.HRRP as Role },
+  { id: "user3", username: "kmnyonge", name: "Khamis Mnyonge", role: ROLES.HRO as Role },
+  { id: "user5", username: "mussi", name: "Maimuna Ussi", role: ROLES.DO as Role },
   { id: "user7", username: "hmohamed", name: "Hamid Mohamed", role: ROLES.EMPLOYEE as Role, employeeId: "emp7" },
   { id: "emp1_user", username: "alijuma", name: "Ali Juma Ali", role: ROLES.EMPLOYEE as Role, employeeId: "emp1" },
   { id: "emp2_user", username: "safiajuma", name: "Safia Juma Ali", role: ROLES.EMPLOYEE as Role, employeeId: "emp2" },
@@ -36,14 +40,14 @@ export const EMPLOYEES: Employee[] = [
     cadre: "Administrative Officer", 
     department: "Administration",
     ministry: "Public Service and Good Governance",
-    institution: "Central Government Office",
+    institution: "Central Government Office", // Example institution
     appointmentType: "Permanent",
     contractType: "Full-time",
     recentTitleDate: "2023-01-10",
     currentReportingOffice: "Director of Administration",
     currentWorkplace: "HQ Office",
     employmentDate: "2023-01-10",
-    confirmationDate: undefined, // Not yet confirmed
+    confirmationDate: undefined, 
     ardhilHaliUrl: "https://placehold.co/ardhil-hali.pdf",
     confirmationLetterUrl: undefined,
     profileImageUrl: "https://placehold.co/100x100.png?text=AJA",
@@ -67,7 +71,7 @@ export const EMPLOYEES: Employee[] = [
     cadre: "HR Officer", 
     department: "Human Resources",
     ministry: "Public Service and Good Governance",
-    institution: "Civil Service Commission",
+    institution: "Civil Service Commission", // Example institution
     appointmentType: "Permanent",
     contractType: "Full-time",
     recentTitleDate: "2021-06-01",
@@ -98,7 +102,7 @@ export const EMPLOYEES: Employee[] = [
     cadre: "Accountant", 
     department: "Finance",
     ministry: "Finance and Planning",
-    institution: "Treasury Office",
+    institution: "Treasury Office", // Example institution
     appointmentType: "Permanent",
     contractType: "Full-time",
     recentTitleDate: "2019-03-15",
@@ -127,7 +131,7 @@ export const EMPLOYEES: Employee[] = [
     cadre: "IT Support", 
     department: "ICT",
     ministry: "Information, Communication and Information Technology",
-    institution: "e-Government Agency",
+    institution: "e-Government Agency", // Example institution
     appointmentType: "Permanent",
     contractType: "Full-time",
     recentTitleDate: "2017-07-20",
@@ -135,7 +139,7 @@ export const EMPLOYEES: Employee[] = [
     currentWorkplace: "Tech Park",
     employmentDate: "2017-01-20",
     confirmationDate: "2017-07-20",
-    certificates: [], // No certificates listed for this employee
+    certificates: [], 
   },
   { 
     id: "emp5", 
@@ -152,7 +156,7 @@ export const EMPLOYEES: Employee[] = [
     cadre: "Planning Officer", 
     department: "Planning",
     ministry: "Finance and Planning",
-    institution: "Planning Commission",
+    institution: "Planning Commission", // Example institution
     appointmentType: "Permanent",
     contractType: "Full-time",
     recentTitleDate: "2022-08-01",
@@ -176,7 +180,7 @@ export const EMPLOYEES: Employee[] = [
     cadre: "Procurement Officer", 
     department: "Procurement",
     ministry: "Finance and Planning",
-    institution: "Government Procurement Services Agency",
+    institution: "Government Procurement Services Agency", // Example institution
     appointmentType: "Permanent",
     contractType: "Full-time",
     recentTitleDate: "2016-04-11",
@@ -200,7 +204,7 @@ export const EMPLOYEES: Employee[] = [
     cadre: "Senior Driver", 
     department: "Transport",
     ministry: "Works and Transport",
-    institution: "Government Garage",
+    institution: "Government Garage", // Example institution
     appointmentType: "Permanent",
     contractType: "Full-time",
     recentTitleDate: "2015-01-01",
