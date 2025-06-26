@@ -12,10 +12,10 @@ import { ROLES, EMPLOYEES } from '@/lib/constants';
 import React, { useState } from 'react';
 import type { Employee } from '@/lib/types';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, Search, FileText, Award, ChevronsUpDown, ListFilter, Star } from 'lucide-react';
+import { Loader2, Search, FileText, Award, ChevronsUpDown, ListFilter, Star, AlertTriangle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
-import { format, parseISO } from 'date-fns';
-import { Textarea } from '@/components/ui/textarea';
+import { format, parseISO, differenceInYears } from 'date-fns';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface MockPendingPromotionRequest {
   id: string;
@@ -108,6 +108,8 @@ export default function PromotionPage() {
   const [rejectionReasonInput, setRejectionReasonInput] = useState('');
   const [currentRequestToAction, setCurrentRequestToAction] = useState<MockPendingPromotionRequest | null>(null);
 
+  const [eligibilityError, setEligibilityError] = useState<string | null>(null);
+
 
   const resetFormFields = () => {
     setPromotionRequestType('');
@@ -134,12 +136,30 @@ export default function PromotionPage() {
     setIsFetchingEmployee(true);
     setEmployeeDetails(null);
     resetFormFields();
+    setEligibilityError(null);
 
     setTimeout(() => {
       const foundEmployee = EMPLOYEES.find(emp => emp.zanId === zanId);
       if (foundEmployee) {
+        let error = null;
+        if (foundEmployee.status === 'On Probation' || foundEmployee.status === 'On LWOP') {
+          error = `Employee is currently '${foundEmployee.status}' and is not eligible for promotion.`;
+        } else if (foundEmployee.employmentDate) {
+          const yearsOfService = differenceInYears(new Date(), parseISO(foundEmployee.employmentDate));
+          if (yearsOfService < 3) {
+            error = `Employee must have at least 3 years of service for promotion. Current service: ${yearsOfService} years.`;
+          }
+        }
+
         setEmployeeDetails(foundEmployee);
-        toast({ title: "Employee Found", description: `Details for ${foundEmployee.name} loaded.` });
+
+        if (error) {
+          setEligibilityError(error);
+          toast({ title: "Employee Ineligible", description: error, variant: "destructive", duration: 7000 });
+        } else {
+          setEligibilityError(null);
+          toast({ title: "Employee Found", description: `Details for ${foundEmployee.name} loaded.` });
+        }
       } else {
         toast({ title: "Employee Not Found", description: `No employee found with ZanID: ${zanId}.`, variant: "destructive" });
       }
@@ -148,6 +168,10 @@ export default function PromotionPage() {
   };
 
   const handleSubmitPromotionRequest = () => {
+    if (!!eligibilityError) {
+      toast({ title: "Submission Error", description: "This employee is ineligible for promotion.", variant: "destructive" });
+      return;
+    }
     if (!employeeDetails) {
       toast({ title: "Submission Error", description: "Employee details are missing.", variant: "destructive" });
       return;
@@ -282,6 +306,7 @@ export default function PromotionPage() {
   };
   
   const isSubmitDisabled = () => {
+    if (!!eligibilityError) return true;
     if (!employeeDetails || !promotionRequestType || !proposedCadre || !letterOfRequestFile) return true;
     if (promotionRequestType === 'experience') {
       return !performanceAppraisalFileY1 || !performanceAppraisalFileY2 || !performanceAppraisalFileY3 || !cscPromotionFormFile || isSubmitting;
@@ -403,10 +428,20 @@ export default function PromotionPage() {
                     </div>
                   </div>
                 </div>
+                
+                {eligibilityError && (
+                  <Alert variant="destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Ineligibility Notice</AlertTitle>
+                    <AlertDescription>
+                      {eligibilityError}
+                    </AlertDescription>
+                  </Alert>
+                )}
 
                 <div className="space-y-2">
                     <Label htmlFor="promotionTypeSelect" className="flex items-center"><ListFilter className="mr-2 h-4 w-4 text-primary" />Promotion Type</Label>
-                    <Select value={promotionRequestType} onValueChange={(value) => setPromotionRequestType(value as 'experience' | 'education' | '')} disabled={isSubmitting}>
+                    <Select value={promotionRequestType} onValueChange={(value) => setPromotionRequestType(value as 'experience' | 'education' | '')} disabled={isSubmitting || !!eligibilityError}>
                       <SelectTrigger id="promotionTypeSelect">
                         <SelectValue placeholder="Select promotion type" />
                       </SelectTrigger>
@@ -418,30 +453,30 @@ export default function PromotionPage() {
                 </div>
             
                 {promotionRequestType && (
-                    <div className="space-y-4">
+                    <div className={`space-y-4 ${!!eligibilityError ? 'opacity-50 cursor-not-allowed' : ''}`}>
                         <h3 className="text-lg font-medium text-foreground">Promotion Details &amp; Documents (PDF Only)</h3>
                         <div>
                             <Label htmlFor="proposedCadre">Proposed New Cadre/Position</Label>
-                            <Input id="proposedCadre" placeholder="e.g., Principal Officer" value={proposedCadre} onChange={(e) => setProposedCadre(e.target.value)} disabled={isSubmitting} />
+                            <Input id="proposedCadre" placeholder="e.g., Principal Officer" value={proposedCadre} onChange={(e) => setProposedCadre(e.target.value)} disabled={isSubmitting || !!eligibilityError} />
                         </div>
 
                         {promotionRequestType === 'experience' && (
                             <>
                                 <div>
                                 <Label htmlFor="performanceAppraisalFileY1" className="flex items-center"><Star className="mr-2 h-4 w-4 text-primary" />Upload Performance Appraisal Form (Year 1)</Label>
-                                <Input id="performanceAppraisalFileY1" type="file" onChange={(e) => setPerformanceAppraisalFileY1(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
+                                <Input id="performanceAppraisalFileY1" type="file" onChange={(e) => setPerformanceAppraisalFileY1(e.target.files)} accept=".pdf" disabled={isSubmitting || !!eligibilityError}/>
                                 </div>
                                 <div>
                                 <Label htmlFor="performanceAppraisalFileY2" className="flex items-center"><Star className="mr-2 h-4 w-4 text-primary" />Upload Performance Appraisal Form (Year 2)</Label>
-                                <Input id="performanceAppraisalFileY2" type="file" onChange={(e) => setPerformanceAppraisalFileY2(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
+                                <Input id="performanceAppraisalFileY2" type="file" onChange={(e) => setPerformanceAppraisalFileY2(e.target.files)} accept=".pdf" disabled={isSubmitting || !!eligibilityError}/>
                                 </div>
                                 <div>
                                 <Label htmlFor="performanceAppraisalFileY3" className="flex items-center"><Star className="mr-2 h-4 w-4 text-primary" />Upload Performance Appraisal Form (Year 3)</Label>
-                                <Input id="performanceAppraisalFileY3" type="file" onChange={(e) => setPerformanceAppraisalFileY3(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
+                                <Input id="performanceAppraisalFileY3" type="file" onChange={(e) => setPerformanceAppraisalFileY3(e.target.files)} accept=".pdf" disabled={isSubmitting || !!eligibilityError}/>
                                 </div>
                                 <div>
                                 <Label htmlFor="cscPromotionFormFile" className="flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" />Upload Civil Service Commission Promotion Form (Tume ya Utumishi)</Label>
-                                <Input id="cscPromotionFormFile" type="file" onChange={(e) => setCscPromotionFormFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
+                                <Input id="cscPromotionFormFile" type="file" onChange={(e) => setCscPromotionFormFile(e.target.files)} accept=".pdf" disabled={isSubmitting || !!eligibilityError}/>
                                 </div>
                             </>
                         )}
@@ -450,10 +485,10 @@ export default function PromotionPage() {
                             <>
                                 <div>
                                 <Label htmlFor="certificateFilePromo" className="flex items-center"><Award className="mr-2 h-4 w-4 text-primary" />Upload Academic Certificate</Label>
-                                <Input id="certificateFilePromo" type="file" onChange={(e) => setCertificateFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
+                                <Input id="certificateFilePromo" type="file" onChange={(e) => setCertificateFile(e.target.files)} accept=".pdf" disabled={isSubmitting || !!eligibilityError}/>
                                 </div>
                                 <div className="flex items-center space-x-2">
-                                <Checkbox id="studiedOutsideCountryPromo" checked={studiedOutsideCountry} onCheckedChange={(checked) => setStudiedOutsideCountry(checked as boolean)} disabled={isSubmitting} />
+                                <Checkbox id="studiedOutsideCountryPromo" checked={studiedOutsideCountry} onCheckedChange={(checked) => setStudiedOutsideCountry(checked as boolean)} disabled={isSubmitting || !!eligibilityError} />
                                 <Label htmlFor="studiedOutsideCountryPromo" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                                     Employee studied outside the country? (Requires TCU Form)
                                 </Label>
@@ -461,14 +496,14 @@ export default function PromotionPage() {
                                 {studiedOutsideCountry && (
                                 <div>
                                     <Label htmlFor="tcuFormFilePromo" className="flex items-center"><ChevronsUpDown className="mr-2 h-4 w-4 text-primary" />Upload TCU Form</Label>
-                                    <Input id="tcuFormFilePromo" type="file" onChange={(e) => setTcuFormFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
+                                    <Input id="tcuFormFilePromo" type="file" onChange={(e) => setTcuFormFile(e.target.files)} accept=".pdf" disabled={isSubmitting || !!eligibilityError}/>
                                 </div>
                                 )}
                             </>
                         )}
                         <div>
                             <Label htmlFor="letterOfRequestPromo" className="flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" />Upload Letter of Request</Label>
-                            <Input id="letterOfRequestPromo" type="file" onChange={(e) => setLetterOfRequestFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
+                            <Input id="letterOfRequestPromo" type="file" onChange={(e) => setLetterOfRequestFile(e.target.files)} accept=".pdf" disabled={isSubmitting || !!eligibilityError}/>
                         </div>
                     </div>
                 )}
@@ -659,4 +694,3 @@ export default function PromotionPage() {
     </div>
   );
 }
-

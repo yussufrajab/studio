@@ -12,9 +12,10 @@ import { ROLES, EMPLOYEES } from '@/lib/constants';
 import React, { useState } from 'react';
 import type { Employee } from '@/lib/types';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, Search, FileText, Award, ChevronsUpDown } from 'lucide-react';
+import { Loader2, Search, FileText, Award, ChevronsUpDown, AlertTriangle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, differenceInYears } from 'date-fns';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface MockPendingCadreChangeRequest {
   id: string;
@@ -99,6 +100,8 @@ export default function CadreChangePage() {
   const [rejectionReasonInput, setRejectionReasonInput] = useState('');
   const [currentRequestToAction, setCurrentRequestToAction] = useState<MockPendingCadreChangeRequest | null>(null);
 
+  const [eligibilityError, setEligibilityError] = useState<string | null>(null);
+
   const resetFormFields = () => {
     setNewCadre('');
     setReasonCadreChange('');
@@ -120,12 +123,30 @@ export default function CadreChangePage() {
     setIsFetchingEmployee(true);
     setEmployeeDetails(null);
     resetFormFields();
+    setEligibilityError(null);
 
     setTimeout(() => {
       const foundEmployee = EMPLOYEES.find(emp => emp.zanId === zanId);
       if (foundEmployee) {
+        let error = null;
+        if (foundEmployee.status === 'On Probation' || foundEmployee.status === 'On LWOP') {
+          error = `Employee is currently '${foundEmployee.status}' and is not eligible for a cadre change.`;
+        } else if (foundEmployee.employmentDate) {
+          const yearsOfService = differenceInYears(new Date(), parseISO(foundEmployee.employmentDate));
+          if (yearsOfService < 3) {
+            error = `Employee must have at least 3 years of service for a cadre change. Current service: ${yearsOfService} years.`;
+          }
+        }
+        
         setEmployeeDetails(foundEmployee);
-        toast({ title: "Employee Found", description: `Details for ${foundEmployee.name} loaded.` });
+        
+        if (error) {
+          setEligibilityError(error);
+          toast({ title: "Employee Ineligible", description: error, variant: "destructive", duration: 7000 });
+        } else {
+          setEligibilityError(null);
+          toast({ title: "Employee Found", description: `Details for ${foundEmployee.name} loaded.` });
+        }
       } else {
         toast({ title: "Employee Not Found", description: `No employee found with ZanID: ${zanId}.`, variant: "destructive" });
       }
@@ -134,6 +155,10 @@ export default function CadreChangePage() {
   };
 
   const handleSubmitRequest = () => {
+    if (!!eligibilityError) {
+      toast({ title: "Submission Error", description: "This employee is ineligible for a cadre change.", variant: "destructive" });
+      return;
+    }
     if (!employeeDetails) {
       toast({ title: "Submission Error", description: "Employee details are missing.", variant: "destructive" });
       return;
@@ -324,23 +349,33 @@ export default function CadreChangePage() {
                     </div>
                   </div>
                 </div>
+
+                {eligibilityError && (
+                  <Alert variant="destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Ineligibility Notice</AlertTitle>
+                    <AlertDescription>
+                      {eligibilityError}
+                    </AlertDescription>
+                  </Alert>
+                )}
             
-                <div className="space-y-4">
+                <div className={`space-y-4 ${!!eligibilityError ? 'opacity-50 cursor-not-allowed' : ''}`}>
                   <h3 className="text-lg font-medium text-foreground">Cadre Change Details &amp; Documents (PDF Only)</h3>
                   <div>
                     <Label htmlFor="newCadre">Proposed New Cadre</Label>
-                    <Input id="newCadre" placeholder="e.g., Senior Human Resource Officer" value={newCadre} onChange={(e) => setNewCadre(e.target.value)} disabled={isSubmitting} />
+                    <Input id="newCadre" placeholder="e.g., Senior Human Resource Officer" value={newCadre} onChange={(e) => setNewCadre(e.target.value)} disabled={isSubmitting || !!eligibilityError} />
                   </div>
                   <div>
                     <Label htmlFor="reasonCadreChange">Reason for Cadre Change &amp; Qualifications</Label>
-                    <Textarea id="reasonCadreChange" placeholder="Explain the reason and list relevant qualifications" value={reasonCadreChange} onChange={(e) => setReasonCadreChange(e.target.value)} disabled={isSubmitting} />
+                    <Textarea id="reasonCadreChange" placeholder="Explain the reason and list relevant qualifications" value={reasonCadreChange} onChange={(e) => setReasonCadreChange(e.target.value)} disabled={isSubmitting || !!eligibilityError} />
                   </div>
                   <div>
                     <Label htmlFor="certificateFileCadre" className="flex items-center"><Award className="mr-2 h-4 w-4 text-primary" />Upload Certificate</Label>
-                    <Input id="certificateFileCadre" type="file" onChange={(e) => setCertificateFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
+                    <Input id="certificateFileCadre" type="file" onChange={(e) => setCertificateFile(e.target.files)} accept=".pdf" disabled={isSubmitting || !!eligibilityError}/>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Checkbox id="studiedOutsideCountryCadre" checked={studiedOutsideCountry} onCheckedChange={(checked) => setStudiedOutsideCountry(checked as boolean)} disabled={isSubmitting} />
+                    <Checkbox id="studiedOutsideCountryCadre" checked={studiedOutsideCountry} onCheckedChange={(checked) => setStudiedOutsideCountry(checked as boolean)} disabled={isSubmitting || !!eligibilityError} />
                     <Label htmlFor="studiedOutsideCountryCadre" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                       Employee studied outside the country? (Requires TCU Form)
                     </Label>
@@ -348,12 +383,12 @@ export default function CadreChangePage() {
                   {studiedOutsideCountry && (
                     <div>
                       <Label htmlFor="tcuFormFileCadre" className="flex items-center"><ChevronsUpDown className="mr-2 h-4 w-4 text-primary" />Upload TCU Form</Label>
-                      <Input id="tcuFormFileCadre" type="file" onChange={(e) => setTcuFormFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
+                      <Input id="tcuFormFileCadre" type="file" onChange={(e) => setTcuFormFile(e.target.files)} accept=".pdf" disabled={isSubmitting || !!eligibilityError}/>
                     </div>
                   )}
                   <div>
                     <Label htmlFor="letterOfRequestCadre" className="flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" />Upload Letter of Request</Label>
-                    <Input id="letterOfRequestCadre" type="file" onChange={(e) => setLetterOfRequestFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
+                    <Input id="letterOfRequestCadre" type="file" onChange={(e) => setLetterOfRequestFile(e.target.files)} accept=".pdf" disabled={isSubmitting || !!eligibilityError}/>
                   </div>
                 </div>
               </div>
@@ -363,6 +398,7 @@ export default function CadreChangePage() {
             <CardFooter className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2 pt-4 border-t">
                 <Button onClick={handleSubmitRequest} 
                         disabled={
+                            !!eligibilityError ||
                             !employeeDetails || 
                             !newCadre || 
                             !reasonCadreChange ||
