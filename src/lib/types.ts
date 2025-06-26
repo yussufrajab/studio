@@ -27,6 +27,7 @@ export interface Employee {
   region?: string;
   countryOfBirth?: string;
   zanId: string;
+  phoneNumber?: string;
   zssfNumber?: string;
   payrollNumber?: string;
   
