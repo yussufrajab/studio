@@ -7,7 +7,7 @@ export interface User {
   name: string;
   role: Role;
   employeeId?: string; 
-  institutionId?: string; // For HRRP to identify their institution
+  institutionId?: string; // For HRRP/HRO to identify their institution
 }
 
 export interface EmployeeCertificate {
@@ -20,6 +20,7 @@ export interface Employee {
   id: string;
   employeeEntityId: string;
   name: string;
+  gender: 'Male' | 'Female';
   profileImageUrl?: string; 
   dateOfBirth?: string; 
   placeOfBirth?: string;
@@ -28,10 +29,10 @@ export interface Employee {
   zanId: string;
   zssfNumber?: string;
   payrollNumber?: string;
-
   
   cadre?: string; 
   ministry?: string;
+  institutionId?: string; // To link employee to an institution
   institution?: string; // Institution the employee belongs to
   department?: string;
   appointmentType?: string; 
@@ -101,4 +102,3 @@ export interface RequestFormValues {
   details: string;
   documents?: File[];
 }
-
