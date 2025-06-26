@@ -19,6 +19,7 @@ import {
   UserMinus,
   ListChecks,
   ShieldAlert,
+  AlertTriangle,
   LineChart, // Added for PO - better representation for analytics/dashboard
 } from 'lucide-react';
 import type { NavItem, Role } from './types';
@@ -31,6 +32,13 @@ export const NAV_ITEMS: NavItem[] = [
     icon: LayoutDashboard, // Could use LineChart for PO if specific dashboard exists
     roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO, ROLES.DO, ROLES.EMPLOYEE, ROLES.CSCS, ROLES.HRRP, ROLES.PO],
     description: 'Overview of your activities and quick access to modules.',
+  },
+  {
+    title: 'Urgent Actions',
+    href: '/dashboard/urgent-actions',
+    icon: AlertTriangle,
+    roles: [ROLES.HRO, ROLES.HRRP],
+    description: 'View employees needing immediate attention.',
   },
   {
     title: 'Employee Profiles',
@@ -137,4 +145,3 @@ export function getNavItemsForRole(role: Role | null): NavItem[] {
   if (!role) return [];
   return NAV_ITEMS.filter(item => item.roles.includes(role));
 }
-

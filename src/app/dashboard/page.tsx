@@ -10,8 +10,9 @@ import {
   CalendarOff,
   ShieldAlert,
   MessageSquareWarning,
-  ArrowUpRight,
+  AlertTriangle,
 } from 'lucide-react';
+import { differenceInMonths, parseISO } from 'date-fns';
 
 import { PageHeader } from '@/components/shared/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -19,7 +20,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/use-auth';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
+import { ROLES, EMPLOYEES } from '@/lib/constants';
 
 const recentActivities = [
   { id: 'CONF-001', type: 'Confirmation', employee: 'Ali Juma Ali', status: 'Pending HHRMD', href: '/dashboard/confirmation' },
@@ -36,7 +37,36 @@ const getStatusVariant = (status: string) => {
 };
 
 export default function DashboardPage() {
-  const { isLoading } = useAuth();
+  const { isLoading, user, role } = useAuth();
+
+  const urgentCount = React.useMemo(() => {
+    if (role !== ROLES.HRO && role !== ROLES.HRRP) return 0;
+    if (!user?.institutionId) return 0;
+
+    const institutionEmployees = EMPLOYEES.filter(e => e.institutionId === user.institutionId);
+
+    const probationOverdue = institutionEmployees.filter(emp => {
+      if (!emp.employmentDate || emp.status !== 'On Probation') return false;
+      try {
+        return differenceInMonths(new Date(), parseISO(emp.employmentDate)) >= 6;
+      } catch {
+        return false;
+      }
+    }).length;
+
+    const nearingRetirement = institutionEmployees.filter(emp => {
+      if (!emp.dateOfBirth) return false;
+      try {
+        const ageInYears = (new Date().getTime() - parseISO(emp.dateOfBirth).getTime()) / 31557600000; // 1000*60*60*24*365.25
+        return ageInYears >= 59.5 && ageInYears < 60;
+      } catch {
+        return false;
+      }
+    }).length;
+    
+    return probationOverdue + nearingRetirement;
+  }, [role, user]);
+
 
   if (isLoading) {
     return (
@@ -135,16 +165,31 @@ export default function DashboardPage() {
             <p className="text-xs text-muted-foreground">Updated just now</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Open Complaints</CardTitle>
-            <MessageSquareWarning className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">5</div>
-            <p className="text-xs text-muted-foreground">Updated just now</p>
-          </CardContent>
-        </Card>
+        {(role === ROLES.HRO || role === ROLES.HRRP) ? (
+          <Link href="/dashboard/urgent-actions">
+            <Card className="hover:bg-accent hover:text-accent-foreground transition-colors">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Urgent Actions</CardTitle>
+                <AlertTriangle className="h-4 w-4 text-destructive" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-destructive">{urgentCount}</div>
+                <p className="text-xs text-muted-foreground">Items needing review</p>
+              </CardContent>
+            </Card>
+          </Link>
+        ) : (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Open Complaints</CardTitle>
+              <MessageSquareWarning className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">5</div>
+              <p className="text-xs text-muted-foreground">Updated just now</p>
+            </CardContent>
+          </Card>
+        )}
       </div>
       
       <div className="pt-4">
