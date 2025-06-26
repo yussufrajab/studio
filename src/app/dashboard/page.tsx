@@ -1,115 +1,185 @@
+
 'use client';
 
 import * as React from 'react';
-import { PageHeader } from '@/components/shared/page-header';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuth } from '@/hooks/use-auth';
-import { getNavItemsForRole } from '@/lib/navigation';
-import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import {
+  Users,
+  UserCheck,
+  TrendingUp,
+  CalendarOff,
+  ShieldAlert,
+  MessageSquareWarning,
+  ArrowUpRight,
+} from 'lucide-react';
+
+import { PageHeader } from '@/components/shared/page-header';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/hooks/use-auth';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ROLES } from '@/lib/constants'; 
+import { Button } from '@/components/ui/button';
+
+const recentActivities = [
+  { id: 'CONF-001', type: 'Confirmation', employee: 'Ali Juma Ali', status: 'Pending HHRMD', href: '/dashboard/confirmation' },
+  { id: 'PROM-002', type: 'Promotion', employee: 'Safia Juma Ali', status: 'Approved', href: '/dashboard/promotion' },
+  { id: 'LWOP-003', type: 'LWOP', employee: 'Fatma Said Omar', status: 'Pending HRMO', href: '/dashboard/lwop' },
+  { id: 'COMP-001', type: 'Complaint', employee: 'Hassan Mzee Juma', status: 'Pending DO', href: '/dashboard/complaints' },
+  { id: 'RET-004', type: 'Retirement', employee: 'Zainab Ali Khamis', status: 'Rejected', href: '/dashboard/retirement' },
+];
+
+const getStatusVariant = (status: string) => {
+  if (status.toLowerCase().includes('approved')) return 'default';
+  if (status.toLowerCase().includes('rejected')) return 'destructive';
+  return 'secondary';
+};
 
 export default function DashboardPage() {
-  const { user, role, isLoading } = useAuth();
+  const { isLoading } = useAuth();
 
-
-  if (isLoading || !user || !role) {
+  if (isLoading) {
     return (
       <div>
-        <PageHeader title="Dashboard" description="Overview of your activities." />
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {[...Array(3)].map((_, i) => (
+        <PageHeader title="Dashboard" description="Manage all your HR processes in one place." />
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 mb-8">
+          {[...Array(6)].map((_, i) => (
             <Card key={i}>
-              <CardHeader>
-                <Skeleton className="h-6 w-3/4" />
-                <Skeleton className="h-4 w-1/2 mt-1" />
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Skeleton className="h-5 w-3/4" />
               </CardHeader>
               <CardContent>
-                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-7 w-1/2 mb-1" />
+                <Skeleton className="h-3 w-1/2" />
               </CardContent>
             </Card>
           ))}
         </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Activities</CardTitle>
+            <CardDescription>An overview of the latest requests and their statuses.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="flex items-center">
+                  <Skeleton className="h-6 w-1/4" />
+                  <Skeleton className="ml-4 h-6 w-1/4" />
+                  <Skeleton className="ml-4 h-6 w-1/4" />
+                  <Skeleton className="ml-auto h-6 w-1/5" />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
-  const roleNavItems = getNavItemsForRole(role).filter(item => item.href !== '/dashboard' && !item.disabled);
-
   return (
-    <div>
+    <div className="flex-1 space-y-4">
       <PageHeader
-        title={`Welcome, ${user.name}!`}
-        description={`Your ${role} dashboard. Access your modules below.`}
+        title="Dashboard"
+        description="Manage all your HR processes in one place."
       />
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {roleNavItems.map((item) => {
-          let description = item.description || `Manage ${item.title.toLowerCase()}.`;
-          // Conditional description for Complaints module for roles that manage complaints
-          if (item.href === '/dashboard/complaints' && (role === ROLES.DO || role === ROLES.HHRMD)) {
-            description = 'View and Manage employee complaints.';
-          }
-
-          return (
-            <Link href={item.href} key={item.href} passHref legacyBehavior>
-              <a className="block hover:no-underline">
-                <Card className="h-full hover:shadow-lg transition-shadow duration-200 ease-in-out hover:border-primary">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-lg font-medium font-headline">
-                      {item.title}
-                    </CardTitle>
-                    <item.icon className="h-6 w-6 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                      {description}
-                    </p>
-                  </CardContent>
-                </Card>
-              </a>
-            </Link>
-          );
-        })}
-        {roleNavItems.length === 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>No Modules Available</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">There are no modules assigned to your role at this time.</p>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-
-      {/* Example Stats - to be made dynamic */}
-      <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Requests</CardTitle>
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="h-4 w-4 text-muted-foreground">
-              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-              <circle cx="9" cy="7" r="4" />
-              <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
-            </svg>
+            <CardTitle className="text-sm font-medium">Total Employees</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12</div>
-            <p className="text-xs text-muted-foreground">+5 from last week</p>
+            <div className="text-2xl font-bold">50,123</div>
+            <p className="text-xs text-muted-foreground">Updated just now</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Employees</CardTitle>
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="h-4 w-4 text-muted-foreground">
-              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-              <circle cx="9" cy="7" r="4" />
-            </svg>
+            <CardTitle className="text-sm font-medium">Pending Confirmations</CardTitle>
+            <UserCheck className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">345</div>
-            <p className="text-xs text-muted-foreground">Managed by the commission</p>
+            <div className="text-2xl font-bold">15</div>
+            <p className="text-xs text-muted-foreground">Updated just now</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending Promotions</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">8</div>
+            <p className="text-xs text-muted-foreground">Updated just now</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Employees on LWOP</CardTitle>
+            <CalendarOff className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">42</div>
+            <p className="text-xs text-muted-foreground">Updated just now</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending Terminations</CardTitle>
+            <ShieldAlert className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">2</div>
+            <p className="text-xs text-muted-foreground">Updated just now</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Open Complaints</CardTitle>
+            <MessageSquareWarning className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">5</div>
+            <p className="text-xs text-muted-foreground">Updated just now</p>
+          </CardContent>
+        </Card>
+      </div>
+      
+      <div className="pt-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Activities</CardTitle>
+            <CardDescription>An overview of the latest requests and their statuses.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Request ID</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Employee</TableHead>
+                  <TableHead className="text-right">Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {recentActivities.map((activity) => (
+                  <TableRow key={activity.id}>
+                    <TableCell>
+                      <Link href={activity.href} passHref legacyBehavior>
+                        <a className="font-medium text-primary hover:underline">{activity.id}</a>
+                      </Link>
+                    </TableCell>
+                    <TableCell>{activity.type}</TableCell>
+                    <TableCell>{activity.employee}</TableCell>
+                    <TableCell className="text-right">
+                      <Badge variant={getStatusVariant(activity.status)}>{activity.status}</Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
       </div>
