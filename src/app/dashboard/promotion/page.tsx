@@ -181,7 +181,7 @@ export default function PromotionPage() {
       return;
     }
     if (!proposedCadre) {
-      toast({ title: "Submission Error", description: "Proposed New Cadre/Position is required.", variant: "destructive" });
+      toast({ title: "Submission Error", description: "Proposed New Grade is required.", variant: "destructive" });
       return;
     }
     if (!letterOfRequestFile) {
@@ -456,8 +456,8 @@ export default function PromotionPage() {
                     <div className={`space-y-4 ${!!eligibilityError ? 'opacity-50 cursor-not-allowed' : ''}`}>
                         <h3 className="text-lg font-medium text-foreground">Promotion Details &amp; Documents (PDF Only)</h3>
                         <div>
-                            <Label htmlFor="proposedCadre">Proposed New Cadre/Position</Label>
-                            <Input id="proposedCadre" placeholder="e.g., Principal Officer" value={proposedCadre} onChange={(e) => setProposedCadre(e.target.value)} disabled={isSubmitting || !!eligibilityError} />
+                            <Label htmlFor="proposedCadre">Proposed New Grade</Label>
+                            <Input id="proposedCadre" placeholder="e.g., Senior Officer Grade I" value={proposedCadre} onChange={(e) => setProposedCadre(e.target.value)} disabled={isSubmitting || !!eligibilityError} />
                         </div>
 
                         {promotionRequestType === 'experience' && (
@@ -544,7 +544,7 @@ export default function PromotionPage() {
                   <h3 className="font-semibold text-base">Promotion for: {request.employeeName} (ZanID: {request.zanId})</h3>
                   <p className="text-sm text-muted-foreground">Type: {request.promotionType}</p>
                   <p className="text-sm text-muted-foreground">Current Cadre: {request.currentCadre}</p>
-                  <p className="text-sm text-muted-foreground">Proposed Cadre: {request.proposedCadre}</p>
+                  <p className="text-sm text-muted-foreground">Proposed Grade: {request.proposedCadre}</p>
                   <p className="text-sm text-muted-foreground">Submitted: {request.submissionDate ? format(parseISO(request.submissionDate), 'PPP') : 'N/A'} by {request.submittedBy}</p>
                   <p className="text-sm"><span className="font-medium">Status:</span> <span className="text-primary">{request.status}</span></p>
                   {request.rejectionReason && <p className="text-sm text-destructive"><span className="font-medium">Rejection Reason:</span> {request.rejectionReason}</p>}
@@ -621,7 +621,7 @@ export default function PromotionPage() {
                         <p className="col-span-2">{selectedRequest.promotionType}</p>
                     </div>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
-                        <Label className="text-right font-semibold">Proposed Cadre:</Label>
+                        <Label className="text-right font-semibold">Proposed Grade:</Label>
                         <p className="col-span-2">{selectedRequest.proposedCadre}</p>
                     </div>
                     {selectedRequest.promotionType === 'Education Advancement' && (
