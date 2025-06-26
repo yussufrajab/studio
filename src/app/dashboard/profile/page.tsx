@@ -104,6 +104,14 @@ const EmployeeDetailsCard = ({ emp, onBack }: { emp: Employee, onBack: () => voi
               <Label className="font-medium text-foreground">Confirmation Letter:</Label>
               {emp.confirmationLetterUrl ? <Button asChild variant="link" size="sm"><a href={emp.confirmationLetterUrl} target="_blank" rel="noopener noreferrer">View Document</a></Button> : <span className="text-muted-foreground">Not Available</span>}
             </div>
+            <div className="flex items-center justify-between p-3 rounded-md border bg-background">
+              <Label className="font-medium text-foreground">Job Contract:</Label>
+              {emp.jobContractUrl ? <Button asChild variant="link" size="sm"><a href={emp.jobContractUrl} target="_blank" rel="noopener noreferrer">View Document</a></Button> : <span className="text-muted-foreground">Not Available</span>}
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-md border bg-background">
+              <Label className="font-medium text-foreground">Birth Certificate:</Label>
+              {emp.birthCertificateUrl ? <Button asChild variant="link" size="sm"><a href={emp.birthCertificateUrl} target="_blank" rel="noopener noreferrer">View Document</a></Button> : <span className="text-muted-foreground">Not Available</span>}
+            </div>
           </CardContent>
         </Card>
          <Card className="bg-secondary/20 shadow-sm">

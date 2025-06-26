@@ -54,6 +54,8 @@ export const EMPLOYEES: Employee[] = [
     retirementDate: "2040-05-15",
     ardhilHaliUrl: "https://placehold.co/ardhil-hali.pdf",
     confirmationLetterUrl: undefined,
+    jobContractUrl: "https://placehold.co/job-contract-ali.pdf",
+    birthCertificateUrl: "https://placehold.co/birth-cert-ali.pdf",
     profileImageUrl: "https://placehold.co/100x100.png?text=AJA",
     certificates: [
       { type: "Bachelor Degree", name: "B.A. Public Administration", url: "https://placehold.co/bachelor-ali.pdf" },
@@ -90,6 +92,8 @@ export const EMPLOYEES: Employee[] = [
     retirementDate: "2050-11-22",
     ardhilHaliUrl: "https://placehold.co/ardhil-hali-safia.pdf",
     confirmationLetterUrl: "https://placehold.co/confirmation-safia.pdf",
+    jobContractUrl: "https://placehold.co/job-contract-safia.pdf",
+    birthCertificateUrl: undefined,
     profileImageUrl: "https://placehold.co/100x100.png?text=SJA",
     certificates: [
       { type: "Master Degree", name: "MSc Human Resource Management", url: "https://placehold.co/masters-safia.pdf" },
@@ -126,6 +130,8 @@ export const EMPLOYEES: Employee[] = [
     retirementDate: "2048-02-10",
     ardhilHaliUrl: "https://placehold.co/ardhil-hali-fatma.pdf",
     confirmationLetterUrl: "https://placehold.co/confirmation-fatma.pdf",
+    jobContractUrl: undefined,
+    birthCertificateUrl: "https://placehold.co/birth-cert-fatma.pdf",
     certificates: [
       { type: "Diploma", name: "Diploma in Accountancy", url: "https://placehold.co/diploma-fatma.pdf" },
     ],
@@ -158,6 +164,8 @@ export const EMPLOYEES: Employee[] = [
     employmentDate: "2017-01-20",
     confirmationDate: "2017-07-20",
     retirementDate: "2035-09-01",
+    jobContractUrl: "https://placehold.co/job-contract-hassan.pdf",
+    birthCertificateUrl: "https://placehold.co/birth-cert-hassan.pdf",
     certificates: [], 
   },
   { 
@@ -188,6 +196,8 @@ export const EMPLOYEES: Employee[] = [
     employmentDate: "2022-02-01",
     confirmationDate: "2022-08-01",
     retirementDate: "2052-12-30",
+    jobContractUrl: undefined,
+    birthCertificateUrl: undefined,
   },
   { 
     id: "emp6", 
@@ -217,6 +227,8 @@ export const EMPLOYEES: Employee[] = [
     employmentDate: "2015-10-11",
     confirmationDate: "2016-04-11",
     retirementDate: "2043-06-18",
+    jobContractUrl: "https://placehold.co/job-contract-juma.pdf",
+    birthCertificateUrl: "https://placehold.co/birth-cert-juma.pdf",
   },
   { 
     id: "emp7", 
@@ -248,6 +260,8 @@ export const EMPLOYEES: Employee[] = [
     retirementDate: "2038-03-25",
     ardhilHaliUrl: "https://placehold.co/ardhil-hali-hamid.pdf",
     confirmationLetterUrl: "https://placehold.co/confirmation-hamid.pdf",
+    jobContractUrl: "https://placehold.co/job-contract-hamid.pdf",
+    birthCertificateUrl: "https://placehold.co/birth-cert-hamid.pdf",
   },
 ];
 

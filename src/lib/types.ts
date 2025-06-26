@@ -50,6 +50,8 @@ export interface Employee {
   
   ardhilHaliUrl?: string;
   confirmationLetterUrl?: string;
+  jobContractUrl?: string;
+  birthCertificateUrl?: string;
   certificates?: EmployeeCertificate[];
 }
 
