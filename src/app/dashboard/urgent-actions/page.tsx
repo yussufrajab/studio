@@ -37,7 +37,7 @@ export default function UrgentActionsPage() {
     const overdue: Employee[] = institutionEmployees.filter(emp => {
       if (!emp.employmentDate || emp.status !== 'On Probation') return false;
       try {
-        return differenceInMonths(new Date(), parseISO(emp.employmentDate)) >= 6;
+        return differenceInMonths(new Date(), parseISO(emp.employmentDate)) >= 12;
       } catch {
         return false;
       }
@@ -77,7 +77,7 @@ export default function UrgentActionsPage() {
         <Card>
           <CardHeader>
             <CardTitle>Overdue Confirmations</CardTitle>
-            <CardDescription>Employees on probation for 6 or more months who need confirmation.</CardDescription>
+            <CardDescription>Employees on probation for 12 or more months who need confirmation.</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>

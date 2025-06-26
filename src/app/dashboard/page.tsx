@@ -48,7 +48,7 @@ export default function DashboardPage() {
     const probationOverdue = institutionEmployees.filter(emp => {
       if (!emp.employmentDate || emp.status !== 'On Probation') return false;
       try {
-        return differenceInMonths(new Date(), parseISO(emp.employmentDate)) >= 6;
+        return differenceInMonths(new Date(), parseISO(emp.employmentDate)) >= 12;
       } catch {
         return false;
       }
