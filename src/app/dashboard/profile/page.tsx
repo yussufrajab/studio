@@ -23,6 +23,8 @@ const getInitials = (name?: string) => {
   return (names[0][0] + names[names.length - 1][0]).toUpperCase();
 };
 
+const CERTIFICATE_ORDER: EmployeeCertificate['type'][] = ['Certificate', 'Diploma', 'Bachelor Degree', 'Master Degree'];
+
 // Component to render the detailed profile view
 const EmployeeDetailsCard = ({ emp, onBack }: { emp: Employee, onBack: () => void }) => (
   <Card className="mt-6 shadow-lg">
@@ -107,14 +109,28 @@ const EmployeeDetailsCard = ({ emp, onBack }: { emp: Employee, onBack: () => voi
          <Card className="bg-secondary/20 shadow-sm">
            <CardHeader className="pb-3 pt-4"><div className="flex items-center"><Award className="h-5 w-5 mr-2 text-primary" /><CardTitle className="text-base">Employee Certificates</CardTitle></div></CardHeader>
           <CardContent className="pt-0 pb-4 space-y-3 text-sm">
-            {(emp.certificates && emp.certificates.length > 0) ? (
-              emp.certificates.map((cert: EmployeeCertificate, index: number) => (
-                <div key={index} className="flex items-center justify-between p-3 rounded-md border bg-background">
-                  <div><Label className="font-medium text-foreground">{cert.type}:</Label><p className="text-muted-foreground text-xs">{cert.name}</p></div>
-                  {cert.url ? <Button asChild variant="link" size="sm"><a href={cert.url} target="_blank" rel="noopener noreferrer">View Document</a></Button> : <span className="text-muted-foreground">Not Available</span>}
+            {CERTIFICATE_ORDER.map((certType) => {
+              const cert = emp.certificates?.find(c => c.type === certType);
+              return (
+                <div key={certType} className="flex items-center justify-between p-3 rounded-md border bg-background">
+                  <div>
+                    <Label className="font-medium text-foreground">{certType}:</Label>
+                    {cert ? (
+                      <p className="text-muted-foreground text-xs">{cert.name}</p>
+                    ) : (
+                      <p className="text-muted-foreground text-xs italic">Not Available</p>
+                    )}
+                  </div>
+                  {cert?.url ? (
+                    <Button asChild variant="link" size="sm">
+                      <a href={cert.url} target="_blank" rel="noopener noreferrer">View Document</a>
+                    </Button>
+                  ) : (
+                    <span className="text-muted-foreground text-xs">No Document</span>
+                  )}
                 </div>
-              ))
-            ) : (<p className="text-muted-foreground p-3">No certificates available for this employee.</p>)}
+              );
+            })}
           </CardContent>
         </Card>
       </section>
