@@ -32,6 +32,7 @@ export interface Employee {
   payrollNumber?: string;
   
   cadre?: string; 
+  salaryScale?: string;
   ministry?: string;
   institutionId?: string; // To link employee to an institution
   institution?: string; // Institution the employee belongs to
@@ -43,6 +44,7 @@ export interface Employee {
   currentWorkplace?: string;
   employmentDate?: string; 
   confirmationDate?: string; 
+  retirementDate?: string;
   status?: string; 
 
   

@@ -71,6 +71,7 @@ const EmployeeDetailsCard = ({ emp, onBack }: { emp: Employee, onBack: () => voi
         <Card className="bg-secondary/20 shadow-sm">
           <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4 text-sm">
             <div><Label className="text-muted-foreground">Rank (Cadre):</Label><p className="font-medium text-foreground">{emp.cadre || 'N/A'}</p></div>
+            <div><Label className="text-muted-foreground">Salary Scale:</Label><p className="font-medium text-foreground">{emp.salaryScale || 'N/A'}</p></div>
             <div><Label className="text-muted-foreground">Ministry:</Label><p className="font-medium text-foreground">{emp.ministry || 'N/A'}</p></div>
             <div><Label className="text-muted-foreground">Institution:</Label><p className="font-medium text-foreground">{emp.institution || 'N/A'}</p></div>
             <div><Label className="text-muted-foreground">Department:</Label><p className="font-medium text-foreground">{emp.department || 'N/A'}</p></div>
@@ -81,6 +82,7 @@ const EmployeeDetailsCard = ({ emp, onBack }: { emp: Employee, onBack: () => voi
             <div><Label className="text-muted-foreground">Current Workplace:</Label><p className="font-medium text-foreground">{emp.currentWorkplace || 'N/A'}</p></div>
             <div><Label className="text-muted-foreground">Employment Date:</Label><p className="font-medium text-foreground">{emp.employmentDate ? new Date(emp.employmentDate).toLocaleDateString() : 'N/A'}</p></div>
             <div><Label className="text-muted-foreground">Confirmation Date:</Label><p className="font-medium text-foreground">{emp.confirmationDate ? new Date(emp.confirmationDate).toLocaleDateString() : 'N/A'}</p></div>
+            <div><Label className="text-muted-foreground">Retirement Date:</Label><p className="font-medium text-foreground">{emp.retirementDate ? new Date(emp.retirementDate).toLocaleDateString() : 'N/A'}</p></div>
           </CardContent>
         </Card>
       </section>
