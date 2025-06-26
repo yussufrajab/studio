@@ -11,7 +11,7 @@ import { ROLES, EMPLOYEES } from '@/lib/constants';
 import React, { useState } from 'react';
 import type { Employee } from '@/lib/types';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, Search, FileText, AlertTriangle } from 'lucide-react';
+import { Loader2, Search, FileText, AlertTriangle, CheckSquare } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { format, parseISO } from 'date-fns';
 
@@ -50,7 +50,7 @@ const initialMockPendingLWOPRequests: MockPendingLWOPRequest[] = [
     submissionDate: '2024-07-25',
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending HHRMD Review',
-    documents: ['Letter of Request', 'Admission Letter Scan'],
+    documents: ['Letter of Request', 'Employee Consent Letter', 'Admission Letter Scan'],
     reviewStage: 'initial',
   },
   {
@@ -67,7 +67,7 @@ const initialMockPendingLWOPRequests: MockPendingLWOPRequest[] = [
     submissionDate: '2024-07-22',
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending HRMO Review',
-    documents: ['Letter of Request'],
+    documents: ['Letter of Request', 'Employee Consent Letter'],
     reviewStage: 'initial',
   },
 ];
@@ -104,6 +104,7 @@ export default function LwopPage() {
   const [duration, setDuration] = useState('');
   const [reason, setReason] = useState('');
   const [letterOfRequestFile, setLetterOfRequestFile] = useState<FileList | null>(null);
+  const [employeeConsentLetterFile, setEmployeeConsentLetterFile] = useState<FileList | null>(null);
 
   const [pendingRequests, setPendingRequests] = useState<MockPendingLWOPRequest[]>(initialMockPendingLWOPRequests);
   const [selectedRequest, setSelectedRequest] = useState<MockPendingLWOPRequest | null>(null);
@@ -125,8 +126,9 @@ export default function LwopPage() {
     setDuration('');
     setReason('');
     setLetterOfRequestFile(null);
-    const fileInput = document.getElementById('letterOfRequestLwop') as HTMLInputElement;
-    if (fileInput) fileInput.value = '';
+    setEmployeeConsentLetterFile(null);
+    const fileInputs = document.querySelectorAll('input[type="file"]');
+    fileInputs.forEach(input => (input as HTMLInputElement).value = '');
 
 
     setTimeout(() => {
@@ -195,6 +197,14 @@ export default function LwopPage() {
         toast({ title: "Submission Error", description: "The Letter of Request must be a PDF file.", variant: "destructive" });
         return;
     }
+    if (!employeeConsentLetterFile) {
+      toast({ title: "Submission Error", description: "Employee's Consent Letter is missing. Please upload the PDF document.", variant: "destructive" });
+      return;
+    }
+    if (employeeConsentLetterFile && employeeConsentLetterFile[0] && employeeConsentLetterFile[0].type !== "application/pdf") {
+      toast({ title: "Submission Error", description: "The Employee's Consent Letter must be a PDF file.", variant: "destructive" });
+      return;
+    }
 
     setIsSubmitting(true);
      const newRequestId = `LWOP${Date.now().toString().slice(-3)}`;
@@ -212,7 +222,7 @@ export default function LwopPage() {
         submissionDate: format(new Date(), 'yyyy-MM-dd'),
         submittedBy: `${user?.name} (${user?.role})`,
         status: role === ROLES.HHRMD ? 'Pending HHRMD Review' : 'Pending HRMO Review', 
-        documents: ['Letter of Request'],
+        documents: ['Letter of Request', 'Employee Consent Letter'],
         reviewStage: 'initial',
     };
     console.log("Submitting LWOP Request:", {
@@ -221,6 +231,7 @@ export default function LwopPage() {
       parsedMonths,
       reason,
       letterOfRequest: letterOfRequestFile[0]?.name,
+      employeeConsentLetter: employeeConsentLetterFile[0]?.name,
     });
     setTimeout(() => {
       setPendingRequests(prev => [newRequest, ...prev]);
@@ -230,8 +241,9 @@ export default function LwopPage() {
       setDuration('');
       setReason('');
       setLetterOfRequestFile(null);
-      const fileInput = document.getElementById('letterOfRequestLwop') as HTMLInputElement;
-      if (fileInput) fileInput.value = '';
+      setEmployeeConsentLetterFile(null);
+      const fileInputs = document.querySelectorAll('input[type="file"]');
+      fileInputs.forEach(input => (input as HTMLInputElement).value = '');
       setIsSubmitting(false);
     }, 1500);
   };
@@ -370,13 +382,17 @@ export default function LwopPage() {
                     <Label htmlFor="letterOfRequestLwop" className="flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" />Upload Letter of Request (PDF Only)</Label>
                     <Input id="letterOfRequestLwop" type="file" onChange={(e) => setLetterOfRequestFile(e.target.files)} accept=".pdf" disabled={isSubmitting || isEmployeeOnProbation} />
                   </div>
+                   <div>
+                    <Label htmlFor="employeeConsentLwop" className="flex items-center"><CheckSquare className="mr-2 h-4 w-4 text-primary" />Upload Employee's Consent Letter (PDF Only)</Label>
+                    <Input id="employeeConsentLwop" type="file" onChange={(e) => setEmployeeConsentLetterFile(e.target.files)} accept=".pdf" disabled={isSubmitting || isEmployeeOnProbation} />
+                  </div>
                 </div>
               </div>
             )}
           </CardContent>
           {employeeDetails && (
             <CardFooter className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2 pt-4 border-t">
-                <Button onClick={handleSubmitLwopRequest} disabled={!employeeDetails || !duration || !reason || !letterOfRequestFile || isSubmitting || isEmployeeOnProbation}>
+                <Button onClick={handleSubmitLwopRequest} disabled={!employeeDetails || !duration || !reason || !letterOfRequestFile || !employeeConsentLetterFile || isSubmitting || isEmployeeOnProbation}>
                   {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Submit LWOP Request
                 </Button>
