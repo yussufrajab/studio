@@ -23,9 +23,10 @@ import { format, parseISO } from 'date-fns';
 
 const COMPLAINT_TYPES = [
   "Harassment",
-  "Salary Issue",
   "Promotion Delay",
+  "Confirmation delay",
   "Unfair Treatment",
+  "unfair decision",
   "Workplace Safety",
   "Discrimination",
   "Other",
