@@ -36,6 +36,7 @@ interface MockPendingRetirementRequest {
   reviewStage: 'initial' | 'commission_review' | 'completed';
   rejectionReason?: string;
   reviewedBy?: string;
+  delayReason?: string;
 }
 
 const initialMockPendingRetirementRequests: MockPendingRetirementRequest[] = [
@@ -112,6 +113,10 @@ export default function RetirementPage() {
   const [minRetirementDate, setMinRetirementDate] = useState('');
   const [ageEligibilityError, setAgeEligibilityError] = useState<string | null>(null);
 
+  const [delayReason, setDelayReason] = useState('');
+  const [delayDocumentFile, setDelayDocumentFile] = useState<FileList | null>(null);
+  const [showDelayFields, setShowDelayFields] = useState(false);
+
   const [pendingRequests, setPendingRequests] = useState<MockPendingRetirementRequest[]>(initialMockPendingRetirementRequests);
   const [selectedRequest, setSelectedRequest] = useState<MockPendingRetirementRequest | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
@@ -126,16 +131,26 @@ export default function RetirementPage() {
   }, []);
 
   useEffect(() => {
-    setAgeEligibilityError(null); 
+    setAgeEligibilityError(null);
+    setShowDelayFields(false);
+
     if (employeeDetails && employeeDetails.dateOfBirth && retirementType && retirementDate) {
       const birthDate = parseISO(employeeDetails.dateOfBirth);
       const proposedRetirementDate = parseISO(retirementDate);
       const ageAtRetirement = differenceInYears(proposedRetirementDate, birthDate);
 
-      if (retirementType === 'compulsory' && ageAtRetirement < COMPULSORY_RETIREMENT_AGE) {
-        setAgeEligibilityError(`Employee will be ${ageAtRetirement} and not meet the compulsory retirement age (${COMPULSORY_RETIREMENT_AGE}) by the proposed date. Retirement request cannot be submitted.`);
-      } else if (retirementType === 'voluntary' && ageAtRetirement < VOLUNTARY_RETIREMENT_AGE) {
-        setAgeEligibilityError(`Employee will be ${ageAtRetirement} and not meet the voluntary retirement age (${VOLUNTARY_RETIREMENT_AGE}) by the proposed date. Retirement request cannot be submitted.`);
+      if (retirementType === 'compulsory') {
+        if (ageAtRetirement > COMPULSORY_RETIREMENT_AGE) {
+          setShowDelayFields(true);
+        } else if (ageAtRetirement < COMPULSORY_RETIREMENT_AGE) {
+          setAgeEligibilityError(`Employee will be ${ageAtRetirement} and not meet the compulsory retirement age (${COMPULSORY_RETIREMENT_AGE}) by the proposed date.`);
+        }
+      } else if (retirementType === 'voluntary') {
+        if (ageAtRetirement >= COMPULSORY_RETIREMENT_AGE) {
+          setAgeEligibilityError(`Employee is aged ${ageAtRetirement} and qualifies for compulsory retirement. Please select 'Compulsory (Age 60)' as the retirement type.`);
+        } else if (ageAtRetirement < VOLUNTARY_RETIREMENT_AGE) {
+          setAgeEligibilityError(`Employee will be ${ageAtRetirement} and not meet the voluntary retirement age (${VOLUNTARY_RETIREMENT_AGE}) by the proposed date.`);
+        }
       }
     }
   }, [employeeDetails, retirementType, retirementDate]);
@@ -148,6 +163,9 @@ export default function RetirementPage() {
     setIllnessLeaveLetterFile(null);
     setLetterOfRequestFile(null);
     setAgeEligibilityError(null);
+    setDelayReason('');
+    setDelayDocumentFile(null);
+    setShowDelayFields(false);
     const fileInputs = document.querySelectorAll('input[type="file"]');
     fileInputs.forEach(input => (input as HTMLInputElement).value = '');
   };
@@ -189,26 +207,11 @@ export default function RetirementPage() {
       toast({ title: "Submission Error", description: "Proposed Retirement Date is required.", variant: "destructive" });
       return;
     }
-
-    if (employeeDetails.dateOfBirth && retirementType && retirementDate) {
-        const birthDate = parseISO(employeeDetails.dateOfBirth);
-        const proposedRetirementDateObj = parseISO(retirementDate);
-        const ageAtRetirement = differenceInYears(proposedRetirementDateObj, birthDate);
-
-        if (retirementType === 'compulsory' && ageAtRetirement < COMPULSORY_RETIREMENT_AGE) {
-            toast({ title: "Submission Error", description: `Employee will be ${ageAtRetirement} and not meet the compulsory retirement age (${COMPULSORY_RETIREMENT_AGE}) by the proposed date. Retirement request cannot be submitted.`, variant: "destructive", duration: 7000 });
-            return;
-        }
-        if (retirementType === 'voluntary' && ageAtRetirement < VOLUNTARY_RETIREMENT_AGE) {
-            toast({ title: "Submission Error", description: `Employee will be ${ageAtRetirement} and not meet the voluntary retirement age (${VOLUNTARY_RETIREMENT_AGE}) by the proposed date. Retirement request cannot be submitted.`, variant: "destructive", duration: 7000 });
-            return;
-        }
-    } else if (retirementType !== 'illness' && !employeeDetails.dateOfBirth) {
-        toast({ title: "Submission Error", description: "Employee date of birth is missing. Cannot validate retirement age.", variant: "destructive", duration: 7000 });
-        return;
+    if (ageEligibilityError && !showDelayFields) {
+      toast({ title: "Submission Error", description: ageEligibilityError, variant: "destructive", duration: 7000 });
+      return;
     }
-
-
+    
     const proposedDateObj = parseISO(retirementDate);
     const sixMonthsFromToday = addMonths(new Date(), 6);
     sixMonthsFromToday.setHours(0, 0, 0, 0); 
@@ -236,22 +239,22 @@ export default function RetirementPage() {
         return;
       }
     }
+    if (showDelayFields) {
+        if (!delayReason.trim()) {
+            toast({ title: "Submission Error", description: "A reason for the submission delay is required.", variant: "destructive" });
+            return;
+        }
+        if (!delayDocumentFile) {
+            toast({ title: "Submission Error", description: "A supporting document for the delay is required.", variant: "destructive" });
+            return;
+        }
+    }
 
     const checkPdf = (fileList: FileList | null) => fileList && fileList[0] && fileList[0].type === "application/pdf";
 
-    if (!checkPdf(letterOfRequestFile)) {
-      toast({ title: "Submission Error", description: "Letter of Request must be a PDF file.", variant: "destructive" });
+    if (!checkPdf(letterOfRequestFile) || (medicalFormFile && !checkPdf(medicalFormFile)) || (illnessLeaveLetterFile && !checkPdf(illnessLeaveLetterFile)) || (delayDocumentFile && !checkPdf(delayDocumentFile))) {
+      toast({ title: "Submission Error", description: "All uploaded documents must be PDF files.", variant: "destructive" });
       return;
-    }
-    if (retirementType === 'illness') {
-      if (medicalFormFile && !checkPdf(medicalFormFile)) {
-        toast({ title: "Submission Error", description: "Medical Form must be a PDF file.", variant: "destructive" });
-        return;
-      }
-      if (illnessLeaveLetterFile && !checkPdf(illnessLeaveLetterFile)) {
-        toast({ title: "Submission Error", description: "Leave Due to Illness Letter must be a PDF file.", variant: "destructive" });
-        return;
-      }
     }
     
     setIsSubmitting(true);
@@ -262,6 +265,9 @@ export default function RetirementPage() {
         documentsList.push('Birth Certificate Copy (or equivalent)');
     } else if (retirementType === 'voluntary') {
         documentsList.push('Service Record Summary');
+    }
+    if (showDelayFields) {
+        documentsList.push('Delay Justification Document');
     }
 
     const newRequestId = `RET${Date.now().toString().slice(-3)}`;
@@ -276,6 +282,7 @@ export default function RetirementPage() {
         institution: employeeDetails.institution || 'N/A',
         retirementType: retirementType,
         illnessDescription: retirementType === 'illness' ? illnessDescription : undefined,
+        delayReason: showDelayFields ? delayReason : undefined,
         proposedDate: retirementDate,
         submissionDate: format(new Date(), 'yyyy-MM-dd'),
         submittedBy: `${user?.name} (${user?.role})`,
@@ -302,8 +309,9 @@ export default function RetirementPage() {
     !retirementDate || 
     !letterOfRequestFile || 
     (retirementType === 'illness' && (!medicalFormFile || !illnessLeaveLetterFile || !illnessDescription)) || 
-    isSubmitting ||
-    !!ageEligibilityError;
+    (showDelayFields && (!delayReason.trim() || !delayDocumentFile)) ||
+    (ageEligibilityError && !showDelayFields) ||
+    isSubmitting;
 
   const handleInitialAction = (requestId: string, action: 'forward' | 'reject') => {
     const request = pendingRequests.find(req => req.id === requestId);
@@ -419,17 +427,16 @@ export default function RetirementPage() {
                  {ageEligibilityError && (
                   <Alert variant="destructive">
                     <AlertTriangle className="h-4 w-4" />
-                    <AlertTitle>Age Eligibility Error</AlertTitle>
+                    <AlertTitle>Eligibility Error</AlertTitle>
                     <AlertDescription>{ageEligibilityError}</AlertDescription>
                   </Alert>
                 )}
 
-
-                <div className={`space-y-4 ${!!ageEligibilityError ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                <div className={`space-y-4 ${ageEligibilityError && !showDelayFields ? 'opacity-50 cursor-not-allowed' : ''}`}>
                   <h3 className="text-lg font-medium text-foreground">Retirement Details &amp; Documents (PDF Only)</h3>
                   <div>
                     <Label htmlFor="retirementType" className="flex items-center"><ListFilter className="mr-2 h-4 w-4 text-primary" />Retirement Type</Label>
-                    <Select value={retirementType} onValueChange={setRetirementType} disabled={isSubmitting || !!ageEligibilityError}>
+                    <Select value={retirementType} onValueChange={setRetirementType} disabled={isSubmitting || (ageEligibilityError && !showDelayFields)}>
                       <SelectTrigger id="retirementTypeTrigger">
                         <SelectValue placeholder="Select retirement type" />
                       </SelectTrigger>
@@ -442,7 +449,7 @@ export default function RetirementPage() {
                   </div>
                   <div>
                     <Label htmlFor="retirementDate" className="flex items-center"><CalendarDays className="mr-2 h-4 w-4 text-primary" />Proposed Retirement Date</Label>
-                    <Input id="retirementDate" type="date" value={retirementDate} onChange={(e) => setRetirementDate(e.target.value)} disabled={isSubmitting || !!ageEligibilityError} min={minRetirementDate} />
+                    <Input id="retirementDate" type="date" value={retirementDate} onChange={(e) => setRetirementDate(e.target.value)} disabled={isSubmitting || (ageEligibilityError && !showDelayFields)} min={minRetirementDate} />
                   </div>
                   
                   {retirementType === 'illness' && (
@@ -454,26 +461,55 @@ export default function RetirementPage() {
                           placeholder="Describe the illness as per the medical report" 
                           value={illnessDescription} 
                           onChange={(e) => setIllnessDescription(e.target.value)} 
-                          disabled={isSubmitting || !!ageEligibilityError}
+                          disabled={isSubmitting || (ageEligibilityError && !showDelayFields)}
                         />
                       </div>
                       <div>
                         <Label htmlFor="medicalFormFile" className="flex items-center"><Stethoscope className="mr-2 h-4 w-4 text-primary" />Upload Medical Form</Label>
-                        <Input id="medicalFormFile" type="file" onChange={(e) => setMedicalFormFile(e.target.files)} accept=".pdf" disabled={isSubmitting || !!ageEligibilityError}/>
+                        <Input id="medicalFormFile" type="file" onChange={(e) => setMedicalFormFile(e.target.files)} accept=".pdf" disabled={isSubmitting || (ageEligibilityError && !showDelayFields)}/>
                       </div>
                       <div>
                         <Label htmlFor="illnessLeaveLetterFile" className="flex items-center"><ClipboardCheck className="mr-2 h-4 w-4 text-primary" />Upload Leave Due to Illness Letter</Label>
-                        <Input id="illnessLeaveLetterFile" type="file" onChange={(e) => setIllnessLeaveLetterFile(e.target.files)} accept=".pdf" disabled={isSubmitting || !!ageEligibilityError}/>
+                        <Input id="illnessLeaveLetterFile" type="file" onChange={(e) => setIllnessLeaveLetterFile(e.target.files)} accept=".pdf" disabled={isSubmitting || (ageEligibilityError && !showDelayFields)}/>
                       </div>
                     </>
+                  )}
+                  
+                  {showDelayFields && (
+                    <div className="space-y-4 pt-2 border-t border-yellow-300">
+                      <Alert variant="default" className="bg-yellow-50 border-yellow-300 text-yellow-800">
+                        <AlertTriangle className="h-4 w-4 !text-yellow-800" />
+                        <AlertTitle>Delayed Compulsory Retirement</AlertTitle>
+                        <AlertDescription>
+                          This employee is over {COMPULSORY_RETIREMENT_AGE}. Please provide a reason for the delay and upload a supporting document.
+                        </AlertDescription>
+                      </Alert>
+                      <div>
+                        <Label htmlFor="delayReason">Reason for Delay</Label>
+                        <Textarea
+                          id="delayReason"
+                          placeholder="e.g., The employee was granted a service extension."
+                          value={delayReason}
+                          onChange={(e) => setDelayReason(e.target.value)}
+                          disabled={isSubmitting}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="delayDocumentFile" className="flex items-center">
+                          <FileText className="mr-2 h-4 w-4 text-primary" />
+                          Upload Supporting Document for Delay (e.g., Extension Letter)
+                        </Label>
+                        <Input id="delayDocumentFile" type="file" onChange={(e) => setDelayDocumentFile(e.target.files)} accept=".pdf" disabled={isSubmitting} />
+                      </div>
+                    </div>
                   )}
 
                   <div>
                     <Label htmlFor="letterOfRequestRetirement" className="flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" />Upload Letter of Request</Label>
-                    <Input id="letterOfRequestRetirement" type="file" onChange={(e) => setLetterOfRequestFile(e.target.files)} accept=".pdf" disabled={isSubmitting || !!ageEligibilityError}/>
+                    <Input id="letterOfRequestRetirement" type="file" onChange={(e) => setLetterOfRequestFile(e.target.files)} accept=".pdf" disabled={isSubmitting || (ageEligibilityError && !showDelayFields)}/>
                   </div>
                    <p className="text-xs text-muted-foreground">
-                    Note: Proposed retirement date must be at least 6 months from today. Age validation based on Date of Birth for Compulsory/Voluntary retirement will be checked against the proposed retirement date.
+                    Note: Proposed retirement date must be at least 6 months from today. Age validation is based on the proposed retirement date.
                   </p>
                 </div>
               </div>
@@ -591,6 +627,12 @@ export default function RetirementPage() {
                         <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
                             <Label className="text-right font-semibold pt-1">Type of Illness:</Label>
                             <p className="col-span-2">{selectedRequest.illnessDescription}</p>
+                        </div>
+                    )}
+                    {selectedRequest.delayReason && (
+                        <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
+                            <Label className="text-right font-semibold text-yellow-700 pt-1">Reason for Delay:</Label>
+                            <p className="col-span-2">{selectedRequest.delayReason}</p>
                         </div>
                     )}
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
