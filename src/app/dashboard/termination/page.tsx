@@ -26,7 +26,6 @@ interface MockPendingSeparationRequest {
   dateOfBirth: string;
   institution: string;
   reasonSummary: string;
-  proposedDate: string;
   submissionDate: string;
   submittedBy: string;
   status: string;
@@ -48,7 +47,6 @@ const initialMockPendingRequests: MockPendingSeparationRequest[] = [
     dateOfBirth: '1980-05-15',
     institution: 'Central Government Office',
     reasonSummary: 'Repeated unauthorized absence and failure to perform duties.',
-    proposedDate: '2024-09-01',
     submissionDate: '2024-07-25',
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending DO Review',
@@ -66,7 +64,6 @@ const initialMockPendingRequests: MockPendingSeparationRequest[] = [
     dateOfBirth: '1990-11-22',
     institution: 'Civil Service Commission',
     reasonSummary: 'Gross misconduct: Violation of code of conduct (details in report).',
-    proposedDate: '2024-08-20',
     submissionDate: '2024-07-22',
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending HHRMD Review',
@@ -84,7 +81,6 @@ const initialMockPendingRequests: MockPendingSeparationRequest[] = [
     dateOfBirth: '1995-04-11',
     institution: 'Ministry of Education',
     reasonSummary: 'Failure to meet performance standards during probation period.',
-    proposedDate: '2024-08-15',
     submissionDate: '2024-07-29',
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending DO Review',
@@ -103,8 +99,6 @@ export default function TerminationAndDismissalPage() {
   const [employeeStatus, setEmployeeStatus] = useState<'probation' | 'confirmed' | null>(null);
 
   const [reason, setReason] = useState('');
-  const [proposedDate, setProposedDate] = useState('');
-  const [minProposedDate, setMinProposedDate] = useState('');
 
   // Common compulsory document
   const [letterOfRequestFile, setLetterOfRequestFile] = useState<FileList | null>(null);
@@ -128,13 +122,8 @@ export default function TerminationAndDismissalPage() {
   const [rejectionReasonInput, setRejectionReasonInput] = useState('');
   const [currentRequestToAction, setCurrentRequestToAction] = useState<MockPendingSeparationRequest | null>(null);
 
-  useEffect(() => {
-    setMinProposedDate(format(new Date(), 'yyyy-MM-dd'));
-  }, []);
-
   const resetFormFields = () => {
     setReason('');
-    setProposedDate('');
     setEmployeeStatus(null);
     setLetterOfRequestFile(null);
     setDismissalSupportingDocFile(null);
@@ -175,8 +164,8 @@ export default function TerminationAndDismissalPage() {
       toast({ title: "Submission Error", description: "Employee details are missing.", variant: "destructive" });
       return;
     }
-    if (!reason || !proposedDate) {
-      toast({ title: "Submission Error", description: "Reason and Proposed Date are required.", variant: "destructive" });
+    if (!reason) {
+      toast({ title: "Submission Error", description: "Reason is required.", variant: "destructive" });
       return;
     }
     if (!letterOfRequestFile) {
@@ -231,7 +220,6 @@ export default function TerminationAndDismissalPage() {
         dateOfBirth: employeeDetails.dateOfBirth || 'N/A',
         institution: employeeDetails.institution || 'N/A',
         reasonSummary: reason,
-        proposedDate: proposedDate,
         submissionDate: format(new Date(), 'yyyy-MM-dd'),
         submittedBy: `${user?.name} (${user?.role})`,
         status: role === ROLES.DO ? 'Pending DO Review' : (role === ROLES.HHRMD ? 'Pending HHRMD Review' : 'Pending Review'),
@@ -305,7 +293,7 @@ export default function TerminationAndDismissalPage() {
   };
   
   const isSubmitButtonDisabled = () => {
-    if (!employeeDetails || !employeeStatus || !reason || !proposedDate || !letterOfRequestFile || isSubmitting) {
+    if (!employeeDetails || !employeeStatus || !reason || !letterOfRequestFile || isSubmitting) {
         return true;
     }
     if (employeeStatus === 'probation') {
@@ -356,10 +344,6 @@ export default function TerminationAndDismissalPage() {
                   <div>
                     <Label htmlFor="reason">Reason for {employeeStatus === 'probation' ? 'Dismissal' : 'Termination'}</Label>
                     <Textarea id="reason" placeholder={`Clearly state the grounds for ${employeeStatus}...`} value={reason} onChange={(e) => setReason(e.target.value)} disabled={isSubmitting} />
-                  </div>
-                  <div>
-                    <Label htmlFor="proposedDate" className="flex items-center"><CalendarDays className="mr-2 h-4 w-4 text-primary" />Proposed Date of {employeeStatus === 'probation' ? 'Dismissal' : 'Termination'}</Label>
-                    <Input id="proposedDate" type="date" value={proposedDate} onChange={(e) => setProposedDate(e.target.value)} disabled={isSubmitting} min={minProposedDate} />
                   </div>
                   
                   {/* Common Document */}
@@ -438,7 +422,6 @@ export default function TerminationAndDismissalPage() {
                 <div key={request.id} className="mb-4 border p-4 rounded-md space-y-2 shadow-sm bg-background hover:shadow-md transition-shadow">
                   <h3 className="font-semibold text-base">{request.type} for: {request.employeeName} (ZanID: {request.zanId})</h3>
                   <p className="text-sm text-muted-foreground">Reason: {request.reasonSummary}</p>
-                  <p className="text-sm text-muted-foreground">Proposed Date: {request.proposedDate ? format(parseISO(request.proposedDate), 'PPP') : 'N/A'}</p>
                   <p className="text-sm"><span className="font-medium">Status:</span> <span className="text-primary">{request.status}</span></p>
                   {request.rejectionReason && <p className="text-sm text-destructive"><span className="font-medium">Rejection Reason:</span> {request.rejectionReason}</p>}
                   <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
@@ -486,7 +469,6 @@ export default function TerminationAndDismissalPage() {
                      <h4 className="font-semibold text-base text-foreground mb-2">Request Information</h4>
                      <div className="space-y-2">
                         <div><Label className="font-semibold">Reason Summary:</Label><p className="pl-2">{selectedRequest.reasonSummary}</p></div>
-                        <p><Label className="font-semibold">Proposed Date:</Label> {selectedRequest.proposedDate ? format(parseISO(selectedRequest.proposedDate), 'PPP') : 'N/A'}</p>
                         <p><Label className="font-semibold">Submitted:</Label> {selectedRequest.submissionDate ? format(parseISO(selectedRequest.submissionDate), 'PPP') : 'N/A'} by {selectedRequest.submittedBy}</p>
                         <p><Label className="font-semibold">Status:</Label> <span className="text-primary">{selectedRequest.status}</span></p>
                         {selectedRequest.rejectionReason && (
