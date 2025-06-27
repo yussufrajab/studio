@@ -3,6 +3,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Users,
   UserCheck,
@@ -38,6 +39,13 @@ const getStatusVariant = (status: string) => {
 
 export default function DashboardPage() {
   const { isLoading, user, role } = useAuth();
+  const router = useRouter();
+
+  React.useEffect(() => {
+    if (!isLoading && role === ROLES.EMPLOYEE) {
+      router.replace('/dashboard/profile');
+    }
+  }, [isLoading, role, router]);
 
   const urgentCount = React.useMemo(() => {
     if (role !== ROLES.HRO && role !== ROLES.HRRP) return 0;
@@ -68,7 +76,7 @@ export default function DashboardPage() {
   }, [role, user]);
 
 
-  if (isLoading) {
+  if (isLoading || role === ROLES.EMPLOYEE) {
     return (
       <div>
         <PageHeader title="Dashboard" description="Manage all your HR processes in one place." />

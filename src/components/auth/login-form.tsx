@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -17,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { useAuthStore } from '@/store/auth-store';
 import { useRouter } from 'next/navigation';
 import { toast } from '@/hooks/use-toast';
-import { USERS } from '@/lib/constants';
+import { USERS, ROLES } from '@/lib/constants';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { User } from '@/lib/types';
 
@@ -51,7 +52,11 @@ export function LoginForm() {
         title: 'Login Successful',
         description: `Welcome back, ${selectedUser.name}!`,
       });
-      router.push('/dashboard');
+      if (selectedUser.role === ROLES.EMPLOYEE) {
+        router.push('/dashboard/profile');
+      } else {
+        router.push('/dashboard');
+      }
     } else {
       toast({
         title: 'Login Failed',
