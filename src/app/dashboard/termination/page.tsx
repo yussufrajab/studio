@@ -342,8 +342,8 @@ export default function TerminationAndDismissalPage() {
                 <div className="space-y-4">
                   <h3 className="text-lg font-medium text-foreground">{employeeStatus === 'probation' ? 'Dismissal' : 'Termination'} Details &amp; Documents</h3>
                   <div>
-                    <Label htmlFor="reason">Reason for {employeeStatus === 'probation' ? 'Dismissal' : 'Termination'}</Label>
-                    <Textarea id="reason" placeholder={`Clearly state the grounds for ${employeeStatus}...`} value={reason} onChange={(e) => setReason(e.target.value)} disabled={isSubmitting} />
+                    <Label htmlFor="reason">Reason for Firing</Label>
+                    <Textarea id="reason" placeholder="Clearly state the grounds for firing..." value={reason} onChange={(e) => setReason(e.target.value)} disabled={isSubmitting} />
                   </div>
                   
                   {/* Common Document */}
@@ -412,7 +412,7 @@ export default function TerminationAndDismissalPage() {
             <CardDescription>Review, approve, or reject pending requests.</CardDescription>
           </CardHeader>
           <CardContent>
-            {pendingRequests.filter(req => 
+            {pendingRequests.filter(req =>
                 (role === ROLES.DO && req.status === 'Pending DO Review') ||
                 (role === ROLES.HHRMD && req.status === 'Pending HHRMD Review') ||
                 req.status === 'Request Received – Awaiting Commission Decision' ||
