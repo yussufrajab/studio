@@ -30,7 +30,7 @@ export const NAV_ITEMS: NavItem[] = [
     title: 'Dashboard',
     href: '/dashboard',
     icon: LayoutDashboard, // Could use LineChart for PO if specific dashboard exists
-    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO, ROLES.DO, ROLES.CSCS, ROLES.HRRP, ROLES.PO],
+    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO, ROLES.DO, ROLES.CSCS, ROLES.HRRP],
     description: 'Overview of your activities and quick access to modules.',
   },
   {
@@ -114,7 +114,7 @@ export const NAV_ITEMS: NavItem[] = [
     title: 'Track Status',
     href: '/dashboard/track-status',
     icon: ListChecks,
-    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO, ROLES.DO, ROLES.CSCS, ROLES.HRRP, ROLES.PO],
+    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO, ROLES.DO, ROLES.CSCS, ROLES.HRRP],
     description: 'Track the status of submitted requests.',
   },
   {

@@ -152,7 +152,7 @@ export default function TrackStatusPage() {
   const [selectedRequestDetails, setSelectedRequestDetails] = useState<MockTrackedRequest | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
-  const isTableView = role === ROLES.HRO || role === ROLES.CSCS || role === ROLES.PO || role === ROLES.HRRP;
+  const isTableView = role === ROLES.HRO || role === ROLES.CSCS || role === ROLES.HRRP;
   const canAccessModule = role === ROLES.HHRMD || role === ROLES.HRMO || role === ROLES.DO || isTableView;
 
   useEffect(() => {
