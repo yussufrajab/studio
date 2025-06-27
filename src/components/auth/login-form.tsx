@@ -52,7 +52,7 @@ export function LoginForm() {
         title: 'Login Successful',
         description: `Welcome back, ${selectedUser.name}!`,
       });
-      if (selectedUser.role === ROLES.EMPLOYEE) {
+      if (selectedUser.role === ROLES.EMPLOYEE || selectedUser.role === ROLES.PO) {
         router.push('/dashboard/profile');
       } else {
         router.push('/dashboard');

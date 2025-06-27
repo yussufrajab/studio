@@ -42,7 +42,7 @@ export default function DashboardPage() {
   const router = useRouter();
 
   React.useEffect(() => {
-    if (!isLoading && role === ROLES.EMPLOYEE) {
+    if (!isLoading && (role === ROLES.EMPLOYEE || role === ROLES.PO)) {
       router.replace('/dashboard/profile');
     }
   }, [isLoading, role, router]);
@@ -76,7 +76,7 @@ export default function DashboardPage() {
   }, [role, user]);
 
 
-  if (isLoading || role === ROLES.EMPLOYEE) {
+  if (isLoading || role === ROLES.EMPLOYEE || role === ROLES.PO) {
     return (
       <div>
         <PageHeader title="Dashboard" description="Manage all your HR processes in one place." />
