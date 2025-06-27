@@ -44,6 +44,7 @@ interface MockTrackedRequest {
   currentStage: string;
   employeeInstitution?: string;
   actions?: RequestAction[];
+  gender?: 'Male' | 'Female' | 'N/A'; // Add gender
 }
 
 const ALL_MOCK_REQUESTS: MockTrackedRequest[] = [
@@ -133,15 +134,15 @@ const REQUEST_STATUSES_FILTER_OPTIONS = Array.from(new Set(ALL_MOCK_REQUESTS.map
 
 
 export default function TrackStatusPage() {
-  const { role } = useAuth();
+  const { user, role } = useAuth();
   const [zanIdInput, setZanIdInput] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [searchAttempted, setSearchAttempted] = useState(false);
   const [foundRequests, setFoundRequests] = useState<MockTrackedRequest[]>([]);
 
 
-  const [allRequestsForPrivilegedUsers, setAllRequestsForPrivilegedUsers] = useState<MockTrackedRequest[]>([]);
-  const [filteredRequestsPrivileged, setFilteredRequestsPrivileged] = useState<MockTrackedRequest[]>([]);
+  const [allRequests, setAllRequests] = useState<MockTrackedRequest[]>([]);
+  const [filteredRequests, setFilteredRequests] = useState<MockTrackedRequest[]>([]);
   const [fromDateFilter, setFromDateFilter] = useState('');
   const [toDateFilter, setToDateFilter] = useState('');
   const [zanIdFilter, setZanIdFilter] = useState('');
@@ -151,20 +152,34 @@ export default function TrackStatusPage() {
   const [selectedRequestDetails, setSelectedRequestDetails] = useState<MockTrackedRequest | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
-  const isPrivilegedViewer = role === ROLES.CSCS || role === ROLES.PO || role === ROLES.HRRP; // HRRP will have institution-filtered view later
-  const canAccessModule = role === ROLES.HRO || role === ROLES.HHRMD || role === ROLES.HRMO || role === ROLES.DO || isPrivilegedViewer;
+  const isTableView = role === ROLES.HRO || role === ROLES.CSCS || role === ROLES.PO || role === ROLES.HRRP;
+  const canAccessModule = role === ROLES.HHRMD || role === ROLES.HRMO || role === ROLES.DO || isTableView;
 
   useEffect(() => {
-    if (isPrivilegedViewer) {
-      const sortedRequests = [...ALL_MOCK_REQUESTS].sort((a, b) => new Date(b.lastUpdatedDate).getTime() - new Date(a.lastUpdatedDate).getTime());
-      setAllRequestsForPrivilegedUsers(sortedRequests);
-      setFilteredRequestsPrivileged(sortedRequests.slice(0, 100));
+    if (isTableView) {
+      const enrichedData = ALL_MOCK_REQUESTS.map(req => {
+          const employee = EMPLOYEES.find(emp => emp.zanId === req.zanId);
+          return {
+              ...req,
+              gender: employee?.gender || 'N/A'
+          };
+      });
+
+      let initialRequests = [...enrichedData].sort((a, b) => new Date(b.lastUpdatedDate).getTime() - new Date(a.lastUpdatedDate).getTime());
+
+      if (role === ROLES.HRO && user?.institutionId) {
+        initialRequests = initialRequests.filter(req => req.employeeInstitution === user.institutionId);
+        setInstitutionFilter(user.institutionId);
+      }
+
+      setAllRequests(initialRequests);
+      setFilteredRequests(initialRequests.slice(0, 100));
       setSearchAttempted(true);
 
-      const institutions = Array.from(new Set(sortedRequests.map(req => req.employeeInstitution).filter(Boolean) as string[]));
+      const institutions = Array.from(new Set(ALL_MOCK_REQUESTS.map(req => req.employeeInstitution).filter(Boolean) as string[]));
       setAvailableInstitutions(institutions.sort());
     }
-  }, [role, isPrivilegedViewer]);
+  }, [role, user, isTableView]);
 
   const handleSearchRequests = () => {
     if (!zanIdInput.trim()) {
@@ -176,7 +191,11 @@ export default function TrackStatusPage() {
     setFoundRequests([]);
 
     setTimeout(() => {
-      const requests = ALL_MOCK_REQUESTS.filter(req => req.zanId === zanIdInput.trim());
+      const requests = ALL_MOCK_REQUESTS.map(req => {
+        const employee = EMPLOYEES.find(emp => emp.zanId === req.zanId);
+        return { ...req, gender: employee?.gender || 'N/A' };
+      }).filter(req => req.zanId === zanIdInput.trim());
+      
       setFoundRequests(requests);
       setSearchAttempted(true);
       setIsSearching(false);
@@ -188,9 +207,9 @@ export default function TrackStatusPage() {
     }, 1000);
   };
 
-  const handleFilterPrivilegedRequests = () => {
+  const handleFilterRequests = () => {
     setIsSearching(true);
-    let filtered = [...allRequestsForPrivilegedUsers];
+    let filtered = [...allRequests];
 
     if (fromDateFilter && toDateFilter) {
       const startDate = startOfDay(parseISO(fromDateFilter));
@@ -211,7 +230,7 @@ export default function TrackStatusPage() {
       filtered = filtered.filter(req => req.zanId === zanIdFilter.trim());
     }
 
-    if (institutionFilter && institutionFilter !== ALL_INSTITUTIONS_FILTER_VALUE) {
+    if (institutionFilter && institutionFilter !== ALL_INSTITUTIONS_FILTER_VALUE && role !== ROLES.HRO) {
       filtered = filtered.filter(req => req.employeeInstitution === institutionFilter);
     }
 
@@ -219,7 +238,7 @@ export default function TrackStatusPage() {
       filtered = filtered.filter(req => req.status === statusFilter);
     }
 
-    setFilteredRequestsPrivileged(filtered.slice(0,100));
+    setFilteredRequests(filtered.slice(0,100));
     setIsSearching(false);
     if (filtered.length === 0) {
       toast({ title: "No Results", description: "No requests match your filter criteria."});
@@ -233,7 +252,7 @@ export default function TrackStatusPage() {
     setIsDetailsModalOpen(true);
   };
 
-  const displayRequests = isPrivilegedViewer ? filteredRequestsPrivileged : foundRequests;
+  const displayRequests = isTableView ? filteredRequests : foundRequests;
 
 
   return (
@@ -248,15 +267,15 @@ export default function TrackStatusPage() {
         <>
           <Card className="shadow-lg mb-6">
             <CardHeader>
-              <CardTitle>{isPrivilegedViewer ? "All Submitted Requests" : "Search Employee Requests"}</CardTitle>
+              <CardTitle>{isTableView ? "All Submitted Requests" : "Search Employee Requests"}</CardTitle>
               <CardDescription>
-                {isPrivilegedViewer
-                  ? "View and filter all submitted requests. Click on a request to see details."
+                {isTableView
+                  ? (role === ROLES.HRO ? "View all requests submitted within your institution. Use filters to refine the list." : "View and filter all submitted requests. Click on a request to see details.")
                   : "Enter an employee's ZanID to view the status of their submitted requests."}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {isPrivilegedViewer ? (
+              {isTableView ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
                   <div className="space-y-1">
                     <Label htmlFor="fromDateFilter" className="flex items-center"><CalendarDays className="mr-2 h-4 w-4 text-primary"/>From Date</Label>
@@ -272,7 +291,7 @@ export default function TrackStatusPage() {
                   </div>
                   <div className="space-y-1">
                     <Label htmlFor="institutionFilter" className="flex items-center"><Building className="mr-2 h-4 w-4 text-primary"/>Institution</Label>
-                    <Select value={institutionFilter} onValueChange={setInstitutionFilter} disabled={isSearching}>
+                    <Select value={institutionFilter} onValueChange={setInstitutionFilter} disabled={isSearching || role === ROLES.HRO}>
                         <SelectTrigger id="institutionFilter">
                             <SelectValue placeholder="Filter by Institution" />
                         </SelectTrigger>
@@ -298,7 +317,7 @@ export default function TrackStatusPage() {
                         </SelectContent>
                     </Select>
                   </div>
-                  <Button onClick={handleFilterPrivilegedRequests} disabled={isSearching} className="md:self-end lg:mt-0 mt-4">
+                  <Button onClick={handleFilterRequests} disabled={isSearching} className="md:self-end lg:mt-0 mt-4">
                     {isSearching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Filter className="mr-2 h-4 w-4" />}
                     Filter Requests
                   </Button>
@@ -329,65 +348,61 @@ export default function TrackStatusPage() {
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle>
-                  {isPrivilegedViewer ? (zanIdFilter || (institutionFilter && institutionFilter !== ALL_INSTITUTIONS_FILTER_VALUE) || (fromDateFilter && toDateFilter) || (statusFilter && statusFilter !== ALL_STATUSES_FILTER_VALUE) ? "Filtered Requests" : "Request Overview") : `Request Status for ZanID: ${zanIdInput}`}
+                  {isTableView ? "Requests List" : `Request Status for ZanID: ${zanIdInput}`}
                 </CardTitle>
                  <CardDescription>
-                  {isPrivilegedViewer && !zanIdFilter && !(institutionFilter && institutionFilter !== ALL_INSTITUTIONS_FILTER_VALUE) && !(fromDateFilter && toDateFilter) && !(statusFilter && statusFilter !== ALL_STATUSES_FILTER_VALUE) && `Displaying latest ${displayRequests.length} requests. Use filters to refine.`}
+                  {isTableView && `Displaying ${displayRequests.length} matching requests.`}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {displayRequests.length > 0 ? (
                   <Table>
                     <TableCaption>
-                      {isPrivilegedViewer ? "Overview of submitted requests." : `A list of recent requests for ZanID: ${zanIdInput}.`}
+                      {isTableView ? "Overview of submitted requests." : `A list of recent requests for ZanID: ${zanIdInput}.`}
                     </TableCaption>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-[120px]">Request ID</TableHead>
+                        <TableHead>Request ID</TableHead>
                         <TableHead>Employee Name</TableHead>
                         <TableHead>ZanID</TableHead>
-                        {isPrivilegedViewer && <TableHead>Institution</TableHead>}
+                        {isTableView && <TableHead>Institution</TableHead>}
+                        <TableHead>Gender</TableHead>
                         <TableHead>Request Type</TableHead>
                         <TableHead>Submission Date</TableHead>
-                        <TableHead>Last Updated</TableHead>
-                        <TableHead>Current Stage</TableHead>
-                        <TableHead className="text-right">Status</TableHead>
-                        {isPrivilegedViewer && <TableHead className="text-right">Actions</TableHead>}
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {displayRequests.map((request) => (
-                        <TableRow key={request.id} onClick={() => isPrivilegedViewer && handleViewDetails(request)} className={isPrivilegedViewer ? "cursor-pointer hover:bg-muted/50" : ""}>
+                        <TableRow key={request.id} onClick={() => handleViewDetails(request)} className="cursor-pointer hover:bg-muted/50">
                           <TableCell className="font-medium">{request.id}</TableCell>
                           <TableCell>{request.employeeName}</TableCell>
                           <TableCell>{request.zanId}</TableCell>
-                          {isPrivilegedViewer && <TableCell>{request.employeeInstitution || 'N/A'}</TableCell>}
+                          {isTableView && <TableCell>{request.employeeInstitution || 'N/A'}</TableCell>}
+                          <TableCell>{request.gender}</TableCell>
                           <TableCell>{request.requestType}</TableCell>
                           <TableCell>{format(parseISO(request.submissionDate), 'PPP')}</TableCell>
-                          <TableCell>{format(parseISO(request.lastUpdatedDate), 'PPP')}</TableCell>
-                          <TableCell>{request.currentStage}</TableCell>
-                          <TableCell className="text-right">{request.status}</TableCell>
-                          {isPrivilegedViewer && (
-                            <TableCell className="text-right">
-                              <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleViewDetails(request); }}>
-                                <Eye className="mr-1 h-3 w-3" /> Details
-                              </Button>
-                            </TableCell>
-                          )}
+                          <TableCell>{request.status}</TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleViewDetails(request); }}>
+                              <Eye className="mr-1 h-3 w-3" /> Details
+                            </Button>
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
                 ) : (
                   <p className="text-muted-foreground text-center py-4">
-                    {isPrivilegedViewer ? "No requests match the current filter criteria." : `No requests found for ZanID: ${zanIdInput}.`}
+                    {isTableView ? "No requests match the current filter criteria." : `No requests found for ZanID: ${zanIdInput}.`}
                   </p>
                 )}
               </CardContent>
             </Card>
           )}
 
-          {!isPrivilegedViewer && !isSearching && !searchAttempted && (
+          {!isTableView && !isSearching && !searchAttempted && (
             <Card className="shadow-lg">
               <CardContent className="pt-6">
                 <p className="text-muted-foreground text-center">Please enter an employee's ZanID above and click "Search Requests" to view their request history.</p>
@@ -443,8 +458,6 @@ export default function TrackStatusPage() {
           </DialogContent>
         </Dialog>
       )}
-
     </div>
   );
 }
-
