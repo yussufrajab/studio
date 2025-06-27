@@ -16,10 +16,10 @@ export const USERS: User[] = [
   { id: "user_cscs", username: "zhaji", name: "Zaituni Haji", role: ROLES.CSCS as Role },
   { id: "user2", username: "skhamis", name: "Safia Khamis", role: ROLES.HHRMD as Role },
   { id: "user_hrmo", username: "fiddi", name: "Fauzia Iddi", role: ROLES.HRMO as Role },
-  { id: "user_hrrp", username: "khamadi", name: "Khamis Hamadi", role: ROLES.HRRP as Role, institutionId: "inst_pc" }, // HRRP for Planning Commission
+  { id: "user_hrrp", username: "khamadi", name: "Khamis Hamadi", role: ROLES.HRRP as Role, institutionId: "inst_pc", institution: "TUME YA MIPANGO" },
   { id: "user_po", username: "mishak", name: "Mwanakombo Is-hak", role: ROLES.PO as Role },
-  { id: "user_hro_cgo", username: "kmnyonge", name: "Khamis Mnyonge", role: ROLES.HRO as Role, institutionId: "inst_cgo" }, // HRO for Central Gov Office
-  { id: "user_hro_moe", username: "ahmedm", name: "Ahmed Mohammed", role: ROLES.HRO as Role, institutionId: "inst_moe" }, // HRO for Ministry of Education
+  { id: "user_hro_cgo", username: "kmnyonge", name: "Khamis Mnyonge", role: ROLES.HRO as Role, institutionId: "inst_cgo", institution: "AFISI YA RAIS FEDHA NA MIPANGO" },
+  { id: "user_hro_moe", username: "ahmedm", name: "Ahmed Mohammed", role: ROLES.HRO as Role, institutionId: "inst_moe", institution: "WIZARA YA ELIMU NA MAFUNZO YA AMALI" },
   { id: "user5", username: "mussi", name: "Maimuna Ussi", role: ROLES.DO as Role },
   { id: "emp1_user", username: "alijuma", name: "Ali Juma Ali", role: ROLES.EMPLOYEE as Role, employeeId: "emp1" },
   { id: "emp8_user", username: "khadijanassor", name: "Khadija Nassor", role: ROLES.EMPLOYEE as Role, employeeId: "emp8" },

@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { PageHeader } from '@/components/shared/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,10 @@ import { toast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import * as XLSX from 'xlsx';
+import { useAuth } from '@/hooks/use-auth';
+import { ROLES } from '@/lib/constants';
+import { isWithinInterval, isValid, parseISO, startOfDay, endOfDay } from 'date-fns';
+
 
 // Augment jsPDF with autoTable
 declare module 'jspdf' {
@@ -209,8 +213,10 @@ const MOCK_DATA_STORE: Record<string, () => ReportOutput> = {
   }),
 };
 
+const ALL_INSTITUTIONS_FILTER_VALUE = "__ALL_INSTITUTIONS__";
 
 export default function ReportsPage() {
+  const { user, role } = useAuth();
   const [selectedReportType, setSelectedReportType] = useState<string>('');
   const [fromDate, setFromDate] = useState<string>('');
   const [toDate, setToDate] = useState<string>('');
@@ -220,6 +226,25 @@ export default function ReportsPage() {
   const [reportTotals, setReportTotals] = useState<any>(null);
   const [reportDataKeys, setReportDataKeys] = useState<string[]>([]);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
+
+  const [institutionFilter, setInstitutionFilter] = useState<string>('');
+  const [availableInstitutions, setAvailableInstitutions] = useState<string[]>([]);
+
+  const isHigherLevelUser = useMemo(() => 
+    [ROLES.HHRMD, ROLES.HRMO, ROLES.DO, ROLES.PO, ROLES.CSCS].includes(role as any),
+    [role]
+  );
+  
+  useEffect(() => {
+    const allInst = new Set<string>();
+    Object.values(MOCK_DATA_STORE).forEach(generator => {
+        const { data } = generator();
+        data.forEach(item => {
+            if (item.wizara) allInst.add(item.wizara);
+        });
+    });
+    setAvailableInstitutions(Array.from(allInst).sort());
+  }, []);
 
   const getObjectKeys = (obj: any): string[] => {
     if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
@@ -244,13 +269,55 @@ export default function ReportsPage() {
       const reportGenerator = MOCK_DATA_STORE[selectedReportType];
       if (reportGenerator) {
         const { data, headers, title, totals, dataKeys: keys } = reportGenerator();
-        setReportData(data);
+        let filteredData = [...data];
+
+        // Role-based and Institution filtering
+        if (isHigherLevelUser) {
+          if (institutionFilter && institutionFilter !== ALL_INSTITUTIONS_FILTER_VALUE) {
+            filteredData = filteredData.filter(item => item.wizara === institutionFilter);
+          }
+        } else if (role === ROLES.HRO) {
+          if (user?.institution) {
+            filteredData = filteredData.filter(item => item.wizara === user.institution);
+          } else {
+            filteredData = []; // HRO with no institution assigned sees no data
+          }
+        }
+        
+        // Date filtering
+        if (fromDate && toDate) {
+          try {
+            const startDate = startOfDay(parseISO(fromDate));
+            const endDate = endOfDay(parseISO(toDate));
+
+            if (isValid(startDate) && isValid(endDate) && !isWithinInterval(endDate, { start: new Date(0), end: startDate })) {
+                filteredData = filteredData.filter(item => {
+                    const itemDateKey = Object.keys(item).find(k => k.toLowerCase().includes('tarehe') || k.toLowerCase().includes('date'));
+                    if (itemDateKey && item[itemDateKey]) {
+                        try {
+                            const itemDate = parseISO(item[itemDateKey]);
+                            return isValid(itemDate) && isWithinInterval(itemDate, { start: startDate, end: endDate });
+                        } catch (e) {
+                            return false; 
+                        }
+                    }
+                    return false;
+                });
+            } else if (isValid(startDate) && isValid(endDate)) {
+              toast({ title: "Kosa la Tarehe", description: "Tarehe ya mwisho lazima iwe baada ya tarehe ya kuanza.", variant: "destructive"});
+            }
+          } catch(e) {
+             toast({ title: "Kosa la Tarehe", description: "Muundo wa tarehe si sahihi.", variant: "destructive"});
+          }
+        }
+
+        setReportData(filteredData);
         setReportHeaders(headers);
         setReportTitle(title);
         setReportTotals(totals);
         setReportDataKeys(keys || getObjectKeys(data[0] || {}));
-        if (data.length === 0) {
-            toast({ title: "Ripoti Imetolewa", description: `Hakuna taarifa kwa ${title} katika kipindi ulichochagua.` });
+        if (filteredData.length === 0) {
+            toast({ title: "Ripoti Imetolewa", description: `Hakuna taarifa kwa ${title} katika vigezo ulivyochagua.` });
         } else {
             toast({ title: "Ripoti Imetolewa", description: `${title} imetolewa kikamilifu.` });
         }
@@ -272,6 +339,11 @@ export default function ReportsPage() {
     doc.text(reportTitle, 14, 22);
     doc.setFontSize(10);
     doc.text(`Kipindi: ${fromDate || 'N/A'} hadi ${toDate || 'N/A'}`, 14, 30);
+    if(isHigherLevelUser && institutionFilter && institutionFilter !== ALL_INSTITUTIONS_FILTER_VALUE) {
+        doc.text(`Taasisi: ${institutionFilter}`, 14, 36);
+    } else if(role === ROLES.HRO && user?.institution) {
+        doc.text(`Taasisi: ${user.institution}`, 14, 36);
+    }
 
     const tableColumn = reportHeaders;
     const tableRows: any[][] = [];
@@ -303,7 +375,7 @@ export default function ReportsPage() {
       head: [tableColumn],
       body: tableRows,
       foot: footRows.length > 0 ? footRows : undefined,
-      startY: 35,
+      startY: 40,
       theme: 'grid',
       headStyles: { fillColor: [22, 160, 133] },
       footStyles: { fillColor: [211, 211, 211], textColor: [0,0,0], fontStyle: 'bold' },
@@ -420,11 +492,11 @@ export default function ReportsPage() {
       <Card className="mb-6 shadow-lg">
         <CardHeader>
           <CardTitle>Chagua Ripoti</CardTitle>
-          <CardDescription>Chagua aina ya ripoti na kipindi cha tarehe.</CardDescription>
+          <CardDescription>Chagua aina ya ripoti na vigezo vingine.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-1 md:col-span-1">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+            <div className="space-y-1 lg:col-span-2">
               <Label htmlFor="reportType">Aina ya Ripoti</Label>
               <Select value={selectedReportType} onValueChange={setSelectedReportType}>
                 <SelectTrigger id="reportType">
@@ -437,19 +509,39 @@ export default function ReportsPage() {
                 </SelectContent>
               </Select>
             </div>
+            
+            {isHigherLevelUser && (
+                 <div className="space-y-1 lg:col-span-2">
+                 <Label htmlFor="institutionFilter">Taasisi / Wizara</Label>
+                 <Select value={institutionFilter} onValueChange={setInstitutionFilter} disabled={isGenerating}>
+                     <SelectTrigger id="institutionFilter">
+                         <SelectValue placeholder="Chagua taasisi (si lazima)" />
+                     </SelectTrigger>
+                     <SelectContent>
+                         <SelectItem value={ALL_INSTITUTIONS_FILTER_VALUE}>Taasisi Zote</SelectItem>
+                         {availableInstitutions.map(inst => (
+                             <SelectItem key={inst} value={inst}>{inst}</SelectItem>
+                         ))}
+                     </SelectContent>
+                 </Select>
+               </div>
+            )}
+
             <div className="space-y-1">
               <Label htmlFor="fromDate">Kuanzia Tarehe</Label>
-              <Input id="fromDate" type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+              <Input id="fromDate" type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} disabled={isGenerating}/>
             </div>
             <div className="space-y-1">
               <Label htmlFor="toDate">Hadi Tarehe</Label>
-              <Input id="toDate" type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+              <Input id="toDate" type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} disabled={isGenerating}/>
             </div>
           </div>
-          <Button onClick={handleGenerateReport} disabled={isGenerating}>
-            {isGenerating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Toa Ripoti
-          </Button>
+          <div className="pt-4">
+            <Button onClick={handleGenerateReport} disabled={isGenerating}>
+              {isGenerating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Toa Ripoti
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -503,7 +595,7 @@ export default function ReportsPage() {
                 </TableBody>
               </Table>
             ) : (
-               <p className="text-muted-foreground text-center py-4">Hakuna taarifa zilizopatikana kwa ripoti hii katika kipindi ulichochagua.</p>
+               <p className="text-muted-foreground text-center py-4">Hakuna taarifa zilizopatikana kwa ripoti hii katika vigezo ulivyochagua.</p>
             )}
           </CardContent>
         </Card>

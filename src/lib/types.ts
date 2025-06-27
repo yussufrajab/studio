@@ -8,6 +8,7 @@ export interface User {
   role: Role;
   employeeId?: string; 
   institutionId?: string; // For HRRP/HRO to identify their institution
+  institution?: string; // For HRO to identify their institution by name
 }
 
 export interface EmployeeCertificate {
