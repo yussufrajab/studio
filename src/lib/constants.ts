@@ -18,9 +18,12 @@ export const USERS: User[] = [
   { id: "user_hrmo", username: "fiddi", name: "Fauzia Iddi", role: ROLES.HRMO as Role },
   { id: "user_hrrp", username: "khamadi", name: "Khamis Hamadi", role: ROLES.HRRP as Role, institutionId: "inst_pc" }, // HRRP for Planning Commission
   { id: "user_po", username: "mishak", name: "Mwanakombo Is-hak", role: ROLES.PO as Role },
-  { id: "user3", username: "kmnyonge", name: "Khamis Mnyonge", role: ROLES.HRO as Role, institutionId: "inst_cgo" }, // HRO for Central Gov Office
+  { id: "user_hro_cgo", username: "kmnyonge", name: "Khamis Mnyonge", role: ROLES.HRO as Role, institutionId: "inst_cgo" }, // HRO for Central Gov Office
+  { id: "user_hro_moe", username: "ahmedm", name: "Ahmed Mohammed", role: ROLES.HRO as Role, institutionId: "inst_moe" }, // HRO for Ministry of Education
   { id: "user5", username: "mussi", name: "Maimuna Ussi", role: ROLES.DO as Role },
   { id: "emp1_user", username: "alijuma", name: "Ali Juma Ali", role: ROLES.EMPLOYEE as Role, employeeId: "emp1" },
+  { id: "emp8_user", username: "khadijanassor", name: "Khadija Nassor", role: ROLES.EMPLOYEE as Role, employeeId: "emp8" },
+  { id: "emp9_user", username: "yussufmakame", name: "Yussuf Makame", role: ROLES.EMPLOYEE as Role, employeeId: "emp9" },
 ];
 
 export const EMPLOYEES: Employee[] = [
@@ -116,7 +119,7 @@ export const EMPLOYEES: Employee[] = [
     placeOfBirth: "Chake Chake, Pemba",
     region: "Kusini Pemba",
     countryOfBirth: "Tanzania",
-    status: "Confirmed", 
+    status: "On LWOP", 
     cadre: "Accountant", 
     salaryScale: "ZPS 5.3",
     department: "Finance",
@@ -165,8 +168,8 @@ export const EMPLOYEES: Employee[] = [
     recentTitleDate: "2017-07-20",
     currentReportingOffice: "Head of ICT",
     currentWorkplace: "Tech Park",
-    employmentDate: "2017-01-20",
-    confirmationDate: "2017-07-20",
+    employmentDate: "2011-11-11", // Hired before May 2014
+    confirmationDate: "2012-05-11",
     retirementDate: "2035-09-01",
     jobContractUrl: "https://placehold.co/job-contract-hassan.pdf",
     birthCertificateUrl: "https://placehold.co/birth-cert-hassan.pdf",
@@ -270,6 +273,66 @@ export const EMPLOYEES: Employee[] = [
     jobContractUrl: "https://placehold.co/job-contract-hamid.pdf",
     birthCertificateUrl: "https://placehold.co/birth-cert-hamid.pdf",
   },
+  { 
+    id: "emp8", 
+    employeeEntityId: "emp8_id", 
+    name: "Khadija Nassor", 
+    gender: 'Female',
+    zanId: "890123456", 
+    zssfNumber: "ZSSF008",
+    payrollNumber: "PAY008",
+    phoneNumber: "0777-890-123",
+    contactAddress: "P.O. Box 515, Michenzani, Zanzibar",
+    dateOfBirth: "1970-01-20",
+    placeOfBirth: "Zanzibar City",
+    region: "Mjini Magharibi",
+    countryOfBirth: "Tanzania",
+    status: "Confirmed", 
+    cadre: "Head Teacher",
+    salaryScale: "ZPS 7.1", 
+    department: "Secondary Education",
+    ministry: "Education and Vocational Training",
+    institutionId: "inst_moe",
+    institution: "Ministry of Education",
+    appointmentType: "Permanent",
+    contractType: "Full-time",
+    recentTitleDate: "2005-06-10",
+    currentReportingOffice: "District Education Officer",
+    currentWorkplace: "Ben Bella Secondary School",
+    employmentDate: "1990-07-15", // Hired before May 2014
+    confirmationDate: "1991-01-15",
+    retirementDate: "2030-01-20",
+  },
+  { 
+    id: "emp9", 
+    employeeEntityId: "emp9_id", 
+    name: "Yussuf Makame", 
+    gender: 'Male',
+    zanId: "901234567", 
+    zssfNumber: "ZSSF009",
+    payrollNumber: "PAY009",
+    phoneNumber: "0777-901-234",
+    contactAddress: "P.O. Box 616, Wawi, Pemba",
+    dateOfBirth: "1995-04-11",
+    placeOfBirth: "Wawi",
+    region: "Kusini Pemba",
+    countryOfBirth: "Tanzania",
+    status: "On Probation", 
+    cadre: "Teacher",
+    salaryScale: "ZPS 4.1", 
+    department: "Primary Education",
+    ministry: "Education and Vocational Training",
+    institutionId: "inst_moe",
+    institution: "Ministry of Education",
+    appointmentType: "Permanent",
+    contractType: "Full-time",
+    recentTitleDate: "2018-08-20",
+    currentReportingOffice: "Head Teacher",
+    currentWorkplace: "Wawi Primary School",
+    employmentDate: "2018-08-20", // Hired after May 2014
+    confirmationDate: undefined,
+    retirementDate: "2055-04-11",
+  },
 ];
 
-export const APP_NAME = "Civil Service Management System";
+export const APP_NAME = "Civil Service Navigator";
