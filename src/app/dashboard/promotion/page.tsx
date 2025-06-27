@@ -180,7 +180,7 @@ export default function PromotionPage() {
       toast({ title: "Submission Error", description: "Please select a Promotion Type.", variant: "destructive" });
       return;
     }
-    if (!proposedCadre) {
+    if (promotionRequestType === 'experience' && !proposedCadre) {
       toast({ title: "Submission Error", description: "Proposed New Grade is required.", variant: "destructive" });
       return;
     }
@@ -306,15 +306,19 @@ export default function PromotionPage() {
   };
   
   const isSubmitDisabled = () => {
-    if (!!eligibilityError) return true;
-    if (!employeeDetails || !promotionRequestType || !proposedCadre || !letterOfRequestFile) return true;
+    if (!!eligibilityError || isSubmitting || !employeeDetails || !promotionRequestType || !letterOfRequestFile) {
+      return true;
+    }
+    
     if (promotionRequestType === 'experience') {
-      return !performanceAppraisalFileY1 || !performanceAppraisalFileY2 || !performanceAppraisalFileY3 || !cscPromotionFormFile || isSubmitting;
+      return !proposedCadre || !performanceAppraisalFileY1 || !performanceAppraisalFileY2 || !performanceAppraisalFileY3 || !cscPromotionFormFile;
     }
+    
     if (promotionRequestType === 'education') {
-      return !certificateFile || (studiedOutsideCountry && !tcuFormFile) || isSubmitting;
+      return !certificateFile || (studiedOutsideCountry && !tcuFormFile);
     }
-    return true; 
+    
+    return true; // Should not happen if a promotion type is selected
   };
 
   const handleInitialAction = (requestId: string, action: 'forward' | 'reject') => {
@@ -455,13 +459,13 @@ export default function PromotionPage() {
                 {promotionRequestType && (
                     <div className={`space-y-4 ${!!eligibilityError ? 'opacity-50 cursor-not-allowed' : ''}`}>
                         <h3 className="text-lg font-medium text-foreground">Promotion Details &amp; Documents (PDF Only)</h3>
-                        <div>
-                            <Label htmlFor="proposedCadre">Proposed New Grade</Label>
-                            <Input id="proposedCadre" placeholder="e.g., Senior Officer Grade I" value={proposedCadre} onChange={(e) => setProposedCadre(e.target.value)} disabled={isSubmitting || !!eligibilityError} />
-                        </div>
 
                         {promotionRequestType === 'experience' && (
                             <>
+                                <div>
+                                    <Label htmlFor="proposedCadre">Proposed New Grade</Label>
+                                    <Input id="proposedCadre" placeholder="e.g., Senior Officer Grade I" value={proposedCadre} onChange={(e) => setProposedCadre(e.target.value)} disabled={isSubmitting || !!eligibilityError} />
+                                </div>
                                 <div>
                                 <Label htmlFor="performanceAppraisalFileY1" className="flex items-center"><Star className="mr-2 h-4 w-4 text-primary" />Upload Performance Appraisal Form (Year 1)</Label>
                                 <Input id="performanceAppraisalFileY1" type="file" onChange={(e) => setPerformanceAppraisalFileY1(e.target.files)} accept=".pdf" disabled={isSubmitting || !!eligibilityError}/>
