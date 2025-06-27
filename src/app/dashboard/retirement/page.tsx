@@ -27,6 +27,7 @@ interface MockPendingRetirementRequest {
   dateOfBirth: string;
   institution: string;
   retirementType: string;
+  illnessDescription?: string;
   proposedDate: string;
   submissionDate: string;
   submittedBy: string;
@@ -82,6 +83,7 @@ const initialMockPendingRetirementRequests: MockPendingRetirementRequest[] = [
     dateOfBirth: '1970-12-12',
     institution: 'Ministry of Education',
     retirementType: 'Illness',
+    illnessDescription: 'Severe arthritis affecting mobility and ability to perform duties.',
     proposedDate: '2025-01-15',
     submissionDate: '2024-07-22',
     submittedBy: 'K. Mnyonge (HRO)',
@@ -103,6 +105,7 @@ export default function RetirementPage() {
 
   const [retirementType, setRetirementType] = useState('');
   const [retirementDate, setRetirementDate] = useState('');
+  const [illnessDescription, setIllnessDescription] = useState('');
   const [medicalFormFile, setMedicalFormFile] = useState<FileList | null>(null);
   const [illnessLeaveLetterFile, setIllnessLeaveLetterFile] = useState<FileList | null>(null);
   const [letterOfRequestFile, setLetterOfRequestFile] = useState<FileList | null>(null);
@@ -140,6 +143,7 @@ export default function RetirementPage() {
   const resetFormFields = () => {
     setRetirementType('');
     setRetirementDate('');
+    setIllnessDescription('');
     setMedicalFormFile(null);
     setIllnessLeaveLetterFile(null);
     setLetterOfRequestFile(null);
@@ -219,6 +223,10 @@ export default function RetirementPage() {
       return;
     }
     if (retirementType === 'illness') {
+      if (!illnessDescription) {
+        toast({ title: "Submission Error", description: "Type of Illness is required for illness retirement.", variant: "destructive" });
+        return;
+      }
       if (!medicalFormFile) {
         toast({ title: "Submission Error", description: "Medical Form is missing for illness retirement. Please upload the PDF document.", variant: "destructive" });
         return;
@@ -267,6 +275,7 @@ export default function RetirementPage() {
         dateOfBirth: employeeDetails.dateOfBirth || 'N/A',
         institution: employeeDetails.institution || 'N/A',
         retirementType: retirementType,
+        illnessDescription: retirementType === 'illness' ? illnessDescription : undefined,
         proposedDate: retirementDate,
         submissionDate: format(new Date(), 'yyyy-MM-dd'),
         submittedBy: `${user?.name} (${user?.role})`,
@@ -275,14 +284,7 @@ export default function RetirementPage() {
         reviewStage: 'initial',
     };
 
-    console.log("Submitting Retirement Request:", {
-      employee: employeeDetails,
-      retirementType,
-      retirementDate,
-      medicalFormFile: medicalFormFile ? medicalFormFile[0]?.name : null,
-      illnessLeaveLetterFile: illnessLeaveLetterFile ? illnessLeaveLetterFile[0]?.name : null,
-      letterOfRequestFile: letterOfRequestFile[0]?.name,
-    });
+    console.log("Submitting Retirement Request:", newRequest);
 
     setTimeout(() => {
       setPendingRequests(prev => [newRequest, ...prev]);
@@ -299,7 +301,7 @@ export default function RetirementPage() {
     !retirementType || 
     !retirementDate || 
     !letterOfRequestFile || 
-    (retirementType === 'illness' && (!medicalFormFile || !illnessLeaveLetterFile)) || 
+    (retirementType === 'illness' && (!medicalFormFile || !illnessLeaveLetterFile || !illnessDescription)) || 
     isSubmitting ||
     !!ageEligibilityError;
 
@@ -446,6 +448,16 @@ export default function RetirementPage() {
                   {retirementType === 'illness' && (
                     <>
                       <div>
+                        <Label htmlFor="illnessDescription">Type of Illness</Label>
+                        <Textarea 
+                          id="illnessDescription" 
+                          placeholder="Describe the illness as per the medical report" 
+                          value={illnessDescription} 
+                          onChange={(e) => setIllnessDescription(e.target.value)} 
+                          disabled={isSubmitting || !!ageEligibilityError}
+                        />
+                      </div>
+                      <div>
                         <Label htmlFor="medicalFormFile" className="flex items-center"><Stethoscope className="mr-2 h-4 w-4 text-primary" />Upload Medical Form</Label>
                         <Input id="medicalFormFile" type="file" onChange={(e) => setMedicalFormFile(e.target.files)} accept=".pdf" disabled={isSubmitting || !!ageEligibilityError}/>
                       </div>
@@ -575,6 +587,12 @@ export default function RetirementPage() {
                         <Label className="text-right font-semibold">Retirement Type:</Label>
                         <p className="col-span-2">{selectedRequest.retirementType}</p>
                     </div>
+                    {selectedRequest.retirementType === 'Illness' && selectedRequest.illnessDescription && (
+                        <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
+                            <Label className="text-right font-semibold pt-1">Type of Illness:</Label>
+                            <p className="col-span-2">{selectedRequest.illnessDescription}</p>
+                        </div>
+                    )}
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
                         <Label className="text-right font-semibold">Proposed Date:</Label>
                         <p className="col-span-2">{selectedRequest.proposedDate ? format(parseISO(selectedRequest.proposedDate), 'PPP') : 'N/A'}</p>
@@ -643,4 +661,3 @@ export default function RetirementPage() {
     </div>
   );
 }
-
