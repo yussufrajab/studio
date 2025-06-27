@@ -11,12 +11,13 @@ import { ROLES, EMPLOYEES } from '@/lib/constants';
 import React, { useState, useEffect } from 'react';
 import type { Employee } from '@/lib/types';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, Search, FileText, CalendarDays, Paperclip, ShieldAlert, FileWarning, PauseOctagon, Files } from 'lucide-react';
+import { Loader2, Search, FileText, CalendarDays, Paperclip, ShieldAlert, FileWarning, PauseOctagon, Files, Ban } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 
-interface MockPendingTerminationRequest {
+interface MockPendingSeparationRequest {
   id: string;
+  type: 'Termination' | 'Dismissal';
   employeeName: string;
   zanId: string;
   department: string;
@@ -35,9 +36,10 @@ interface MockPendingTerminationRequest {
   reviewedBy?: string;
 }
 
-const initialMockPendingTerminationRequests: MockPendingTerminationRequest[] = [
+const initialMockPendingRequests: MockPendingSeparationRequest[] = [
   {
     id: 'TERM001',
+    type: 'Termination',
     employeeName: 'Ali Juma Ali', 
     zanId: '221458232',
     department: 'Administration',
@@ -55,6 +57,7 @@ const initialMockPendingTerminationRequests: MockPendingTerminationRequest[] = [
   },
   {
     id: 'TERM002',
+    type: 'Termination',
     employeeName: 'Safia Juma Ali', 
     zanId: '125468957',
     department: 'Human Resources',
@@ -70,56 +73,77 @@ const initialMockPendingTerminationRequests: MockPendingTerminationRequest[] = [
     documents: ['Letter of Request', 'Misconduct Investigation Report', 'Employee Explanation Letter', 'Investigation Committee Report'],
     reviewStage: 'initial',
   },
+  {
+    id: 'DISMISS001',
+    type: 'Dismissal',
+    employeeName: 'Yussuf Makame',
+    zanId: '901234567',
+    department: 'Primary Education',
+    cadre: 'Teacher',
+    employmentDate: '2018-08-20',
+    dateOfBirth: '1995-04-11',
+    institution: 'Ministry of Education',
+    reasonSummary: 'Failure to meet performance standards during probation period.',
+    proposedDate: '2024-08-15',
+    submissionDate: '2024-07-29',
+    submittedBy: 'K. Mnyonge (HRO)',
+    status: 'Pending DO Review',
+    documents: ['Letter of Request', 'Supporting Document for Dismissal'],
+    reviewStage: 'initial',
+  },
 ];
 
-export default function TerminationPage() {
+export default function TerminationAndDismissalPage() {
   const { role, user } = useAuth();
   const [zanId, setZanId] = useState('');
   const [employeeDetails, setEmployeeDetails] = useState<Employee | null>(null);
   const [isFetchingEmployee, setIsFetchingEmployee] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const [reasonTermination, setReasonTermination] = useState('');
-  const [proposedDateTermination, setProposedDateTermination] = useState('');
   
-  const [letterOfRequestFile, setLetterOfRequestFile] = useState<FileList | null>(null);
-  const [misconductEvidenceFile, setMisconductEvidenceFile] = useState<FileList | null>(null); 
+  const [employeeStatus, setEmployeeStatus] = useState<'probation' | 'confirmed' | null>(null);
 
+  const [reason, setReason] = useState('');
+  const [proposedDate, setProposedDate] = useState('');
+  const [minProposedDate, setMinProposedDate] = useState('');
+
+  // Common compulsory document
+  const [letterOfRequestFile, setLetterOfRequestFile] = useState<FileList | null>(null);
+
+  // Dismissal (probation) documents
+  const [dismissalSupportingDocFile, setDismissalSupportingDocFile] = useState<FileList | null>(null);
+
+  // Termination (confirmed) documents
+  const [misconductEvidenceFile, setMisconductEvidenceFile] = useState<FileList | null>(null);
+  const [summonNoticeFile, setSummonNoticeFile] = useState<FileList | null>(null);
+  const [suspensionLetterFile, setSuspensionLetterFile] = useState<FileList | null>(null);
   const [warningLettersFile, setWarningLettersFile] = useState<FileList | null>(null);
   const [employeeExplanationLetterFile, setEmployeeExplanationLetterFile] = useState<FileList | null>(null);
-  const [suspensionLetterFile, setSuspensionLetterFile] = useState<FileList | null>(null);
-  const [summonNoticeFile, setSummonNoticeFile] = useState<FileList | null>(null);
-  const [investigationCommitteeReportFile, setInvestigationCommitteeReportFile] = useState<FileList | null>(null); 
   const [otherAdditionalDocumentsFile, setOtherAdditionalDocumentsFile] = useState<FileList | null>(null);
 
-  const [minProposedDate, setMinProposedDate] = useState('');
-  const [isTerminationNotAllowed, setIsTerminationNotAllowed] = useState(false);
-
-
-  const [pendingRequests, setPendingRequests] = useState<MockPendingTerminationRequest[]>(initialMockPendingTerminationRequests);
-  const [selectedRequest, setSelectedRequest] = useState<MockPendingTerminationRequest | null>(null);
+  const [pendingRequests, setPendingRequests] = useState<MockPendingSeparationRequest[]>(initialMockPendingRequests);
+  const [selectedRequest, setSelectedRequest] = useState<MockPendingSeparationRequest | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
   const [isRejectionModalOpen, setIsRejectionModalOpen] = useState(false);
   const [rejectionReasonInput, setRejectionReasonInput] = useState('');
-  const [currentRequestToAction, setCurrentRequestToAction] = useState<MockPendingTerminationRequest | null>(null);
+  const [currentRequestToAction, setCurrentRequestToAction] = useState<MockPendingSeparationRequest | null>(null);
 
   useEffect(() => {
     setMinProposedDate(format(new Date(), 'yyyy-MM-dd'));
   }, []);
 
   const resetFormFields = () => {
-    setReasonTermination('');
-    setProposedDateTermination('');
+    setReason('');
+    setProposedDate('');
+    setEmployeeStatus(null);
     setLetterOfRequestFile(null);
+    setDismissalSupportingDocFile(null);
     setMisconductEvidenceFile(null);
+    setSummonNoticeFile(null);
+    setSuspensionLetterFile(null);
     setWarningLettersFile(null);
     setEmployeeExplanationLetterFile(null);
-    setSuspensionLetterFile(null);
-    setSummonNoticeFile(null);
-    setInvestigationCommitteeReportFile(null);
     setOtherAdditionalDocumentsFile(null);
-    setIsTerminationNotAllowed(false);
     const fileInputs = document.querySelectorAll('input[type="file"]');
     fileInputs.forEach(input => (input as HTMLInputElement).value = '');
   };
@@ -137,87 +161,68 @@ export default function TerminationPage() {
       const foundEmployee = EMPLOYEES.find(emp => emp.zanId === zanId);
       if (foundEmployee) {
         setEmployeeDetails(foundEmployee);
-        if (foundEmployee.status === 'On Probation') {
-          setIsTerminationNotAllowed(true);
-          toast({
-            title: "Termination Not Applicable",
-            description: `Termination is only for 'Confirmed' employees. This employee is 'On Probation'.`,
-            variant: "destructive",
-            duration: 7000,
-          });
-        } else {
-          setIsTerminationNotAllowed(false);
-          toast({ title: "Employee Found", description: `Details for ${foundEmployee.name} loaded.` });
-        }
+        setEmployeeStatus(foundEmployee.status === 'On Probation' ? 'probation' : 'confirmed');
+        toast({ title: "Employee Found", description: `Details for ${foundEmployee.name} loaded.` });
       } else {
         toast({ title: "Employee Not Found", description: `No employee found with ZanID: ${zanId}.`, variant: "destructive" });
-        setIsTerminationNotAllowed(false);
       }
       setIsFetchingEmployee(false);
     }, 1000);
   };
 
-  const handleSubmitTerminationRequest = () => {
-    if (!employeeDetails) {
+  const handleSubmitRequest = () => {
+    if (!employeeDetails || !employeeStatus) {
       toast({ title: "Submission Error", description: "Employee details are missing.", variant: "destructive" });
       return;
     }
-    if (isTerminationNotAllowed) {
-       toast({ title: "Submission Error", description: "Termination is not applicable for this employee's status.", variant: "destructive", duration: 7000 });
-       return;
-    }
-    if (!reasonTermination || !proposedDateTermination) {
-      toast({ title: "Submission Error", description: "Reason for Termination and Proposed Date are required.", variant: "destructive" });
+    if (!reason || !proposedDate) {
+      toast({ title: "Submission Error", description: "Reason and Proposed Date are required.", variant: "destructive" });
       return;
     }
     if (!letterOfRequestFile) {
       toast({ title: "Submission Error", description: "Letter of Request is missing. Please upload the PDF document.", variant: "destructive" });
       return;
     }
-    if (!misconductEvidenceFile) {
-      toast({ title: "Submission Error", description: "Misconduct Evidence & Investigation Report is missing. Please upload the PDF document.", variant: "destructive" });
-      return;
-    }
 
     const checkPdf = (fileList: FileList | null) => !fileList || (fileList[0] && fileList[0].type === "application/pdf");
 
-    if (letterOfRequestFile && letterOfRequestFile[0].type !== "application/pdf") {
-      toast({ title: "Submission Error", description: "Letter of Request must be a PDF file.", variant: "destructive" }); return;
-    }
-    if (misconductEvidenceFile && misconductEvidenceFile[0].type !== "application/pdf") {
-      toast({ title: "Submission Error", description: "Misconduct Evidence & Investigation Report must be a PDF file.", variant: "destructive" }); return;
-    }
-    if (!checkPdf(warningLettersFile)) {
-      toast({ title: "Submission Error", description: "Warning Letter(s) must be a PDF file.", variant: "destructive" }); return;
-    }
-    if (!checkPdf(employeeExplanationLetterFile)) {
-      toast({ title: "Submission Error", description: "Employee Explanation Letter must be a PDF file.", variant: "destructive" }); return;
-    }
-    if (!checkPdf(suspensionLetterFile)) {
-      toast({ title: "Submission Error", description: "Suspension Letter must be a PDF file.", variant: "destructive" }); return;
-    }
-    if (!checkPdf(summonNoticeFile)) {
-      toast({ title: "Submission Error", description: "Summon Notice must be a PDF file.", variant: "destructive" }); return;
-    }
-    if (!checkPdf(investigationCommitteeReportFile)) {
-      toast({ title: "Submission Error", description: "Investigation Committee Report (optional) must be a PDF file.", variant: "destructive" }); return;
-    }
-    if (!checkPdf(otherAdditionalDocumentsFile)) {
-      toast({ title: "Submission Error", description: "Other Additional Documents must be a PDF file.", variant: "destructive" }); return;
+    // Common validation
+    if (!checkPdf(letterOfRequestFile)) { toast({ title: "File Error", description: "Letter of Request must be a PDF.", variant: "destructive" }); return; }
+    
+    let documentsList: string[] = ['Letter of Request'];
+    let type: 'Termination' | 'Dismissal';
+    
+    // Conditional validation
+    if (employeeStatus === 'probation') {
+      type = 'Dismissal';
+      if (!dismissalSupportingDocFile) { toast({ title: "Submission Error", description: "Supporting Document for Dismissal is required.", variant: "destructive" }); return; }
+      if (!checkPdf(dismissalSupportingDocFile)) { toast({ title: "File Error", description: "Supporting Document must be a PDF.", variant: "destructive" }); return; }
+      documentsList.push('Supporting Document for Dismissal');
+    } else { // confirmed status
+      type = 'Termination';
+      if (!misconductEvidenceFile) { toast({ title: "Submission Error", description: "Misconduct Evidence & Investigation Report is required.", variant: "destructive" }); return; }
+      if (!summonNoticeFile) { toast({ title: "Submission Error", description: "Summon Notice / Invitation Letter is required.", variant: "destructive" }); return; }
+      if (!suspensionLetterFile) { toast({ title: "Submission Error", description: "Suspension Letter is required.", variant: "destructive" }); return; }
+      
+      if (!checkPdf(misconductEvidenceFile)) { toast({ title: "File Error", description: "Misconduct Evidence must be a PDF.", variant: "destructive" }); return; }
+      if (!checkPdf(summonNoticeFile)) { toast({ title: "File Error", description: "Summon Notice must be a PDF.", variant: "destructive" }); return; }
+      if (!checkPdf(suspensionLetterFile)) { toast({ title: "File Error", description: "Suspension Letter must be a PDF.", variant: "destructive" }); return; }
+      if (!checkPdf(warningLettersFile)) { toast({ title: "File Error", description: "Warning Letter(s) must be a PDF.", variant: "destructive" }); return; }
+      if (!checkPdf(employeeExplanationLetterFile)) { toast({ title: "File Error", description: "Employee Explanation Letter must be a PDF.", variant: "destructive" }); return; }
+      if (!checkPdf(otherAdditionalDocumentsFile)) { toast({ title: "File Error", description: "Other Additional Documents must be a PDF.", variant: "destructive" }); return; }
+
+      documentsList.push('Misconduct Evidence & Investigation Report', 'Summon Notice/Invitation Letter', 'Suspension Letter');
+      if (warningLettersFile) documentsList.push('Warning Letter(s)');
+      if (employeeExplanationLetterFile) documentsList.push('Employee Explanation Letter');
+      if (otherAdditionalDocumentsFile) documentsList.push('Other Additional Document(s)');
     }
 
     setIsSubmitting(true);
-    const newRequestId = `TERM${Date.now().toString().slice(-3)}`;
-    let documentsList = ['Letter of Request', 'Misconduct Evidence & Investigation Report'];
-    if (warningLettersFile) documentsList.push('Warning Letter(s)');
-    if (employeeExplanationLetterFile) documentsList.push('Employee Explanation Letter');
-    if (suspensionLetterFile) documentsList.push('Suspension Letter');
-    if (summonNoticeFile) documentsList.push('Summon Notice/Invitation Letter');
-    if (investigationCommitteeReportFile) documentsList.push('Investigation Committee Report (Additional)');
-    if (otherAdditionalDocumentsFile) documentsList.push('Other Additional Document(s)');
-
-    const newRequest: MockPendingTerminationRequest = {
+    const newRequestId = `SEP${Date.now().toString().slice(-3)}`;
+    
+    const newRequest: MockPendingSeparationRequest = {
         id: newRequestId,
+        type: type,
         employeeName: employeeDetails.name,
         zanId: employeeDetails.zanId,
         department: employeeDetails.department || 'N/A',
@@ -225,20 +230,20 @@ export default function TerminationPage() {
         employmentDate: employeeDetails.employmentDate || 'N/A',
         dateOfBirth: employeeDetails.dateOfBirth || 'N/A',
         institution: employeeDetails.institution || 'N/A',
-        reasonSummary: reasonTermination,
-        proposedDate: proposedDateTermination,
+        reasonSummary: reason,
+        proposedDate: proposedDate,
         submissionDate: format(new Date(), 'yyyy-MM-dd'),
         submittedBy: `${user?.name} (${user?.role})`,
-        status: role === ROLES.DO ? 'Pending DO Review' : (role === ROLES.HHRMD ? 'Pending HHRMD Review' : 'Pending Review'), 
+        status: role === ROLES.DO ? 'Pending DO Review' : (role === ROLES.HHRMD ? 'Pending HHRMD Review' : 'Pending Review'),
         documents: documentsList,
         reviewStage: 'initial',
     };
 
-    console.log("Submitting Termination Request:", newRequest);
+    console.log(`Submitting ${type} Request:`, newRequest);
 
     setTimeout(() => {
       setPendingRequests(prev => [newRequest, ...prev]);
-      toast({ title: "Termination Request Submitted", description: `Request for ${employeeDetails.name} submitted successfully.` });
+      toast({ title: `${type} Request Submitted`, description: `Request for ${employeeDetails.name} submitted successfully.` });
       setZanId('');
       setEmployeeDetails(null);
       resetFormFields();
@@ -255,19 +260,14 @@ export default function TerminationPage() {
       setRejectionReasonInput('');
       setIsRejectionModalOpen(true);
     } else if (action === 'forward') {
-      let toastMessage = "";
       setPendingRequests(prevRequests =>
-        prevRequests.map(req => {
-          if (req.id === requestId) {
-            toastMessage = `Request ${requestId} for ${req.employeeName} forwarded to Commission.`;
-            return { ...req, status: "Request Received – Awaiting Commission Decision", reviewStage: 'commission_review', reviewedBy: role || undefined };
-          }
-          return req;
-        })
+        prevRequests.map(req =>
+          req.id === requestId
+            ? { ...req, status: "Request Received – Awaiting Commission Decision", reviewStage: 'commission_review', reviewedBy: role || undefined }
+            : req
+        )
       );
-      if(toastMessage) {
-        toast({ title: "Request Forwarded", description: toastMessage });
-      }
+      toast({ title: "Request Forwarded", description: `Request ${requestId} for ${request.employeeName} forwarded to Commission.` });
     }
   };
 
@@ -276,25 +276,17 @@ export default function TerminationPage() {
       toast({ title: "Rejection Error", description: "Reason for rejection is required.", variant: "destructive" });
       return;
     }
-    const requestId = currentRequestToAction.id;
-    const employeeName = currentRequestToAction.employeeName;
-    let toastMessage = "";
-
+    const { id, employeeName } = currentRequestToAction;
     setPendingRequests(prevRequests =>
-      prevRequests.map(req => {
-        if (req.id === requestId) {
-          toastMessage = `Request ${requestId} for ${employeeName} rejected and returned to HRO.`;
-          return { ...req, status: `Rejected by ${role} - Awaiting HRO Correction`, rejectionReason: rejectionReasonInput, reviewStage: 'initial' };
-        }
-        return req;
-      })
+      prevRequests.map(req =>
+        req.id === id
+          ? { ...req, status: `Rejected by ${role} - Awaiting HRO Correction`, rejectionReason: rejectionReasonInput, reviewStage: 'initial' }
+          : req
+      )
     );
-    if (toastMessage) {
-      toast({ title: "Request Rejected", description: toastMessage, variant: 'destructive' });
-    }
+    toast({ title: "Request Rejected", description: `Request ${id} for ${employeeName} rejected and returned to HRO.`, variant: 'destructive' });
     setIsRejectionModalOpen(false);
     setCurrentRequestToAction(null);
-    setRejectionReasonInput('');
   };
 
   const handleCommissionDecision = (requestId: string, decision: 'approved' | 'rejected') => {
@@ -302,43 +294,43 @@ export default function TerminationPage() {
     if (!request) return;
 
     const finalStatus = decision === 'approved' ? "Approved by Commission" : "Rejected by Commission";
-    let toastMessage = "";
     setPendingRequests(prevRequests =>
-      prevRequests.map(req => {
-        if (req.id === requestId) {
-          toastMessage = `Request ${requestId} for ${req.employeeName} has been ${finalStatus.toLowerCase()}.`;
-          return { ...req, status: finalStatus, reviewStage: 'completed' };
-        }
-        return req;
-      })
+      prevRequests.map(req =>
+        req.id === requestId
+          ? { ...req, status: finalStatus, reviewStage: 'completed' }
+          : req
+      )
     );
-    if (toastMessage) {
-      toast({ title: `Commission Decision: ${decision === 'approved' ? 'Approved' : 'Rejected'}`, description: toastMessage });
-    }
+    toast({ title: `Commission Decision: ${decision === 'approved' ? 'Approved' : 'Rejected'}`, description: `Request ${requestId} for ${request.employeeName} has been ${finalStatus.toLowerCase()}.` });
   };
   
-  const isSubmitButtonDisabled = !employeeDetails || 
-    isTerminationNotAllowed ||
-    !reasonTermination ||
-    !proposedDateTermination ||
-    !letterOfRequestFile || 
-    !misconductEvidenceFile ||
-    isSubmitting;
+  const isSubmitButtonDisabled = () => {
+    if (!employeeDetails || !employeeStatus || !reason || !proposedDate || !letterOfRequestFile || isSubmitting) {
+        return true;
+    }
+    if (employeeStatus === 'probation') {
+        return !dismissalSupportingDocFile;
+    }
+    if (employeeStatus === 'confirmed') {
+        return !misconductEvidenceFile || !summonNoticeFile || !suspensionLetterFile;
+    }
+    return true;
+  };
 
   return (
     <div>
-      <PageHeader title="Termination" description="Process employee terminations for confirmed employees." />
+      <PageHeader title="Termination and Dismissal" description="Process employee terminations for confirmed staff and dismissals for probationers." />
       {role === ROLES.HRO && (
         <Card className="mb-6 shadow-lg">
           <CardHeader>
-            <CardTitle>Submit Termination Request</CardTitle>
-            <CardDescription>Enter ZanID to fetch employee details, then complete the termination form. All documents must be PDF.</CardDescription>
+            <CardTitle>Submit Termination or Dismissal Request</CardTitle>
+            <CardDescription>Enter ZanID to fetch employee details. The required form will appear based on the employee's status.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="zanIdTermination">Employee ZanID</Label>
+              <Label htmlFor="zanIdInput">Employee ZanID</Label>
               <div className="flex space-x-2">
-                <Input id="zanIdTermination" placeholder="Enter ZanID" value={zanId} onChange={(e) => setZanId(e.target.value)} disabled={isFetchingEmployee || isSubmitting} />
+                <Input id="zanIdInput" placeholder="Enter ZanID" value={zanId} onChange={(e) => setZanId(e.target.value)} disabled={isFetchingEmployee || isSubmitting} />
                 <Button onClick={handleFetchEmployeeDetails} disabled={isFetchingEmployee || !zanId || isSubmitting}>
                   {isFetchingEmployee ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
                   Fetch Details
@@ -346,7 +338,7 @@ export default function TerminationPage() {
               </div>
             </div>
 
-            {employeeDetails && (
+            {employeeDetails && employeeStatus && (
               <div className="space-y-6 pt-2">
                 <div>
                   <h3 className="text-lg font-medium mb-2 text-foreground">Employee Details</h3>
@@ -354,82 +346,76 @@ export default function TerminationPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3 text-sm">
                       <div><Label className="text-muted-foreground">Name:</Label> <p className="font-semibold text-foreground">{employeeDetails.name}</p></div>
                       <div><Label className="text-muted-foreground">ZanID:</Label> <p className="font-semibold text-foreground">{employeeDetails.zanId}</p></div>
-                      <div><Label className="text-muted-foreground">Payroll Number:</Label> <p className="font-semibold text-foreground">{employeeDetails.payrollNumber || 'N/A'}</p></div>
-                      <div><Label className="text-muted-foreground">ZSSF Number:</Label> <p className="font-semibold text-foreground">{employeeDetails.zssfNumber || 'N/A'}</p></div>
-                      <div><Label className="text-muted-foreground">Department:</Label> <p className="font-semibold text-foreground">{employeeDetails.department || 'N/A'}</p></div>
-                      <div><Label className="text-muted-foreground">Cadre/Position:</Label> <p className="font-semibold text-foreground">{employeeDetails.cadre || 'N/A'}</p></div>
-                      <div><Label className="text-muted-foreground">Employment Date:</Label> <p className="font-semibold text-foreground">{employeeDetails.employmentDate ? format(parseISO(employeeDetails.employmentDate), 'PPP') : 'N/A'}</p></div>
-                      <div><Label className="text-muted-foreground">Date of Birth:</Label> <p className="font-semibold text-foreground">{employeeDetails.dateOfBirth ? format(parseISO(employeeDetails.dateOfBirth), 'PPP') : 'N/A'}</p></div>
-                      <div className="lg:col-span-1"><Label className="text-muted-foreground">Institution:</Label> <p className="font-semibold text-foreground">{employeeDetails.institution || 'N/A'}</p></div>
-                       <div className="md:col-span-2 lg:col-span-3"><Label className="text-muted-foreground">Current Status:</Label> <p className={`font-semibold ${employeeDetails.status === 'On Probation' ? 'text-red-600' : 'text-green-600'}`}>{employeeDetails.status || 'N/A'}</p></div>
+                      <div className="md:col-span-2 lg:col-span-3"><Label className="text-muted-foreground">Current Status:</Label> <p className={`font-semibold ${employeeDetails.status === 'On Probation' ? 'text-orange-600' : 'text-green-600'}`}>{employeeDetails.status || 'N/A'}</p></div>
                     </div>
                   </div>
                 </div>
 
-                {isTerminationNotAllowed && (
-                  <div className="flex items-center p-4 mt-4 text-sm text-destructive border border-destructive/50 rounded-md bg-destructive/10">
-                    <ShieldAlert className="h-5 w-5 mr-3" />
-                    <span>Termination is only applicable to 'Confirmed' employees. This employee is 'On Probation'. Form submission is disabled.</span>
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium text-foreground">{employeeStatus === 'probation' ? 'Dismissal' : 'Termination'} Details &amp; Documents</h3>
+                  <div>
+                    <Label htmlFor="reason">Reason for {employeeStatus === 'probation' ? 'Dismissal' : 'Termination'}</Label>
+                    <Textarea id="reason" placeholder={`Clearly state the grounds for ${employeeStatus}...`} value={reason} onChange={(e) => setReason(e.target.value)} disabled={isSubmitting} />
                   </div>
-                )}
+                  <div>
+                    <Label htmlFor="proposedDate" className="flex items-center"><CalendarDays className="mr-2 h-4 w-4 text-primary" />Proposed Date of {employeeStatus === 'probation' ? 'Dismissal' : 'Termination'}</Label>
+                    <Input id="proposedDate" type="date" value={proposedDate} onChange={(e) => setProposedDate(e.target.value)} disabled={isSubmitting} min={minProposedDate} />
+                  </div>
+                  
+                  {/* Common Document */}
+                  <div>
+                    <Label htmlFor="letterOfRequestFile" className="flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" />Upload Letter of Request (Required, PDF)</Label>
+                    <Input id="letterOfRequestFile" type="file" onChange={(e) => setLetterOfRequestFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
+                  </div>
+                  
+                  {/* Dismissal Documents */}
+                  {employeeStatus === 'probation' && (
+                    <div>
+                      <Label htmlFor="dismissalSupportingDocFile" className="flex items-center"><Paperclip className="mr-2 h-4 w-4 text-primary" />Upload Supporting Document for Dismissal (Required, PDF)</Label>
+                      <Input id="dismissalSupportingDocFile" type="file" onChange={(e) => setDismissalSupportingDocFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
+                    </div>
+                  )}
 
-                <div className={`space-y-4 ${isTerminationNotAllowed ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                  <h3 className="text-lg font-medium text-foreground">Termination Details &amp; Documents</h3>
-                  <div>
-                    <Label htmlFor="reasonTermination">Reason for Termination &amp; Summary of Misconduct</Label>
-                    <Textarea id="reasonTermination" placeholder="Clearly state the grounds for termination and summarize evidence" value={reasonTermination} onChange={(e) => setReasonTermination(e.target.value)} disabled={isTerminationNotAllowed || isSubmitting} />
-                  </div>
-                  <div>
-                    <Label htmlFor="proposedDateTermination" className="flex items-center"><CalendarDays className="mr-2 h-4 w-4 text-primary" />Proposed Date of Termination</Label>
-                    <Input id="proposedDateTermination" type="date" value={proposedDateTermination} onChange={(e) => setProposedDateTermination(e.target.value)} disabled={isTerminationNotAllowed || isSubmitting} min={minProposedDate} />
-                  </div>
-                  
-                  <h4 className="text-md font-medium text-foreground pt-2">Upload Required Documents (PDF Only)</h4>
-                  <div>
-                    <Label htmlFor="letterOfRequestFileTermination" className="flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" />Upload Letter of Request (Required)</Label>
-                    <Input id="letterOfRequestFileTermination" type="file" onChange={(e) => setLetterOfRequestFile(e.target.files)} accept=".pdf" disabled={isTerminationNotAllowed || isSubmitting}/>
-                  </div>
-                  <div>
-                    <Label htmlFor="misconductEvidenceFile" className="flex items-center"><ShieldAlert className="mr-2 h-4 w-4 text-destructive" />Upload Misconduct Evidence &amp; Primary Investigation Report (Required)</Label>
-                    <Input id="misconductEvidenceFile" type="file" onChange={(e) => setMisconductEvidenceFile(e.target.files)} accept=".pdf" disabled={isTerminationNotAllowed || isSubmitting}/>
-                  </div>
-                  
-                  <h4 className="text-md font-medium text-foreground pt-2">Upload Optional Supporting Documents (PDF Only)</h4>
-                  <div>
-                    <Label htmlFor="warningLettersFileTerm" className="flex items-center"><FileWarning className="mr-2 h-4 w-4 text-orange-500" />Upload Warning Letter(s)</Label>
-                    <Input id="warningLettersFileTerm" type="file" onChange={(e) => setWarningLettersFile(e.target.files)} accept=".pdf" disabled={isTerminationNotAllowed || isSubmitting}/>
-                  </div>
-                  <div>
-                    <Label htmlFor="employeeExplanationLetterFileTerm" className="flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" />Upload Employee Explanation Letter</Label>
-                    <Input id="employeeExplanationLetterFileTerm" type="file" onChange={(e) => setEmployeeExplanationLetterFile(e.target.files)} accept=".pdf" disabled={isTerminationNotAllowed || isSubmitting}/>
-                  </div>
-                   <div>
-                    <Label htmlFor="suspensionLetterFileTerm" className="flex items-center"><PauseOctagon className="mr-2 h-4 w-4 text-red-500" />Upload Suspension Letter</Label>
-                    <Input id="suspensionLetterFileTerm" type="file" onChange={(e) => setSuspensionLetterFile(e.target.files)} accept=".pdf" disabled={isTerminationNotAllowed || isSubmitting}/>
-                  </div>
-                  <div>
-                    <Label htmlFor="summonNoticeFileTerm" className="flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" />Upload Summon Notice / Invitation Letter</Label>
-                    <Input id="summonNoticeFileTerm" type="file" onChange={(e) => setSummonNoticeFile(e.target.files)} accept=".pdf" disabled={isTerminationNotAllowed || isSubmitting}/>
-                  </div>
-                  <div>
-                    <Label htmlFor="investigationCommitteeReportFileTerm" className="flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" />Upload Investigation Committee Report (Additional)</Label>
-                    <Input id="investigationCommitteeReportFileTerm" type="file" onChange={(e) => setInvestigationCommitteeReportFile(e.target.files)} accept=".pdf" disabled={isTerminationNotAllowed || isSubmitting}/>
-                  </div>
-                  <div>
-                    <Label htmlFor="otherAdditionalDocumentsFileTerm" className="flex items-center"><Files className="mr-2 h-4 w-4 text-primary" />Upload Other Additional Documents</Label>
-                    <Input id="otherAdditionalDocumentsFileTerm" type="file" onChange={(e) => setOtherAdditionalDocumentsFile(e.target.files)} accept=".pdf" disabled={isTerminationNotAllowed || isSubmitting}/>
-                  </div>
+                  {/* Termination Documents */}
+                  {employeeStatus === 'confirmed' && (
+                    <>
+                      <h4 className="text-md font-medium text-foreground pt-2">Required Termination Documents (PDF Only)</h4>
+                      <div>
+                        <Label htmlFor="misconductEvidenceFile" className="flex items-center"><ShieldAlert className="mr-2 h-4 w-4 text-destructive" />Upload Misconduct Evidence &amp; Primary Investigation Report</Label>
+                        <Input id="misconductEvidenceFile" type="file" onChange={(e) => setMisconductEvidenceFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
+                      </div>
+                      <div>
+                        <Label htmlFor="summonNoticeFile" className="flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" />Upload Summon Notice / Invitation Letter</Label>
+                        <Input id="summonNoticeFile" type="file" onChange={(e) => setSummonNoticeFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
+                      </div>
+                      <div>
+                        <Label htmlFor="suspensionLetterFile" className="flex items-center"><PauseOctagon className="mr-2 h-4 w-4 text-red-500" />Upload Suspension Letter</Label>
+                        <Input id="suspensionLetterFile" type="file" onChange={(e) => setSuspensionLetterFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
+                      </div>
+                      <h4 className="text-md font-medium text-foreground pt-2">Optional Supporting Documents (PDF Only)</h4>
+                      <div>
+                        <Label htmlFor="warningLettersFile" className="flex items-center"><FileWarning className="mr-2 h-4 w-4 text-orange-500" />Upload Warning Letter(s)</Label>
+                        <Input id="warningLettersFile" type="file" onChange={(e) => setWarningLettersFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
+                      </div>
+                      <div>
+                        <Label htmlFor="employeeExplanationLetterFile" className="flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" />Upload Employee Explanation Letter</Label>
+                        <Input id="employeeExplanationLetterFile" type="file" onChange={(e) => setEmployeeExplanationLetterFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
+                      </div>
+                      <div>
+                        <Label htmlFor="otherAdditionalDocumentsFile" className="flex items-center"><Files className="mr-2 h-4 w-4 text-primary" />Upload Other Additional Documents</Label>
+                        <Input id="otherAdditionalDocumentsFile" type="file" onChange={(e) => setOtherAdditionalDocumentsFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             )}
           </CardContent>
-          {employeeDetails && (
+          {employeeDetails && employeeStatus && (
             <CardFooter className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2 pt-4 border-t">
-              <Button 
-                onClick={handleSubmitTerminationRequest} 
-                disabled={isSubmitButtonDisabled}>
+              <Button onClick={handleSubmitRequest} disabled={isSubmitButtonDisabled()}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Submit Termination Request
+                Submit {employeeStatus === 'probation' ? 'Dismissal' : 'Termination'} Request
               </Button>
             </CardFooter>
           )}
@@ -438,8 +424,8 @@ export default function TerminationPage() {
       {(role === ROLES.DO || role === ROLES.HHRMD ) && (
         <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle>Review Termination Requests</CardTitle>
-            <CardDescription>Review, approve, or reject pending termination requests.</CardDescription>
+            <CardTitle>Review Termination &amp; Dismissal Requests</CardTitle>
+            <CardDescription>Review, approve, or reject pending requests.</CardDescription>
           </CardHeader>
           <CardContent>
             {pendingRequests.filter(req => 
@@ -448,17 +434,11 @@ export default function TerminationPage() {
                 req.status === 'Request Received – Awaiting Commission Decision' ||
                 req.status.startsWith('Rejected by') || req.status.startsWith('Approved by Commission') || req.status.startsWith('Rejected by Commission')
             ).length > 0 ? (
-              pendingRequests.filter(req => 
-                (role === ROLES.DO && req.status === 'Pending DO Review') ||
-                (role === ROLES.HHRMD && req.status === 'Pending HHRMD Review') ||
-                req.status === 'Request Received – Awaiting Commission Decision' ||
-                req.status.startsWith('Rejected by') || req.status.startsWith('Approved by Commission') || req.status.startsWith('Rejected by Commission')
-              ).map((request) => (
+              pendingRequests.map((request) => (
                 <div key={request.id} className="mb-4 border p-4 rounded-md space-y-2 shadow-sm bg-background hover:shadow-md transition-shadow">
-                  <h3 className="font-semibold text-base">Termination for: {request.employeeName} (ZanID: {request.zanId})</h3>
+                  <h3 className="font-semibold text-base">{request.type} for: {request.employeeName} (ZanID: {request.zanId})</h3>
                   <p className="text-sm text-muted-foreground">Reason: {request.reasonSummary}</p>
                   <p className="text-sm text-muted-foreground">Proposed Date: {request.proposedDate ? format(parseISO(request.proposedDate), 'PPP') : 'N/A'}</p>
-                  <p className="text-sm text-muted-foreground">Submitted: {request.submissionDate ? format(parseISO(request.submissionDate), 'PPP') : 'N/A'} by {request.submittedBy}</p>
                   <p className="text-sm"><span className="font-medium">Status:</span> <span className="text-primary">{request.status}</span></p>
                   {request.rejectionReason && <p className="text-sm text-destructive"><span className="font-medium">Rejection Reason:</span> {request.rejectionReason}</p>}
                   <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
@@ -479,7 +459,7 @@ export default function TerminationPage() {
                 </div>
               ))
             ) : (
-              <p className="text-muted-foreground">No termination requests pending your review.</p>
+              <p className="text-muted-foreground">No requests pending your review.</p>
             )}
           </CardContent>
         </Card>
@@ -489,76 +469,38 @@ export default function TerminationPage() {
         <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>
-              <DialogTitle>Request Details: {selectedRequest.id}</DialogTitle>
+              <DialogTitle>{selectedRequest.type} Request Details: {selectedRequest.id}</DialogTitle>
               <DialogDescription>
-                Termination request for <strong>{selectedRequest.employeeName}</strong> (ZanID: {selectedRequest.zanId}).
+                For <strong>{selectedRequest.employeeName}</strong> (ZanID: {selectedRequest.zanId}).
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4 text-sm">
+            <div className="space-y-4 py-4 text-sm max-h-[60vh] overflow-y-auto">
                 <div className="space-y-1 border-b pb-3 mb-3">
                     <h4 className="font-semibold text-base text-foreground mb-2">Employee Information</h4>
-                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
-                        <Label className="text-right text-muted-foreground">Full Name:</Label>
-                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employeeName}</p>
-                    </div>
-                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
-                        <Label className="text-right text-muted-foreground">ZanID:</Label>
-                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.zanId}</p>
-                    </div>
-                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
-                        <Label className="text-right text-muted-foreground">Department:</Label>
-                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.department}</p>
-                    </div>
-                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
-                        <Label className="text-right text-muted-foreground">Cadre/Position:</Label>
-                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.cadre}</p>
-                    </div>
-                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
-                        <Label className="text-right text-muted-foreground">Employment Date:</Label>
-                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employmentDate ? format(parseISO(selectedRequest.employmentDate), 'PPP') : 'N/A'}</p></div>
-                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
-                        <Label className="text-right text-muted-foreground">Date of Birth:</Label>
-                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.dateOfBirth ? format(parseISO(selectedRequest.dateOfBirth), 'PPP') : 'N/A'}</p>
-                    </div>
-                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
-                        <Label className="text-right text-muted-foreground">Institution:</Label>
-                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.institution || 'N/A'}</p>
-                    </div>
+                    <p><Label className="text-muted-foreground">Full Name:</Label> {selectedRequest.employeeName}</p>
+                    <p><Label className="text-muted-foreground">ZanID:</Label> {selectedRequest.zanId}</p>
+                    <p><Label className="text-muted-foreground">Department:</Label> {selectedRequest.department}</p>
+                    <p><Label className="text-muted-foreground">Institution:</Label> {selectedRequest.institution || 'N/A'}</p>
                 </div>
                  <div className="space-y-1">
                      <h4 className="font-semibold text-base text-foreground mb-2">Request Information</h4>
-                    <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
-                        <Label className="text-right font-semibold pt-1">Reason Summary:</Label>
-                        <p className="col-span-2">{selectedRequest.reasonSummary}</p>
-                    </div>
-                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
-                        <Label className="text-right font-semibold">Proposed Date:</Label>
-                        <p className="col-span-2">{selectedRequest.proposedDate ? format(parseISO(selectedRequest.proposedDate), 'PPP') : 'N/A'}</p>
-                    </div>
-                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
-                        <Label className="text-right font-semibold">Submitted:</Label>
-                        <p className="col-span-2">{selectedRequest.submissionDate ? format(parseISO(selectedRequest.submissionDate), 'PPP') : 'N/A'} by {selectedRequest.submittedBy}</p>
-                    </div>
-                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
-                        <Label className="text-right font-semibold">Status:</Label>
-                        <p className="col-span-2 text-primary">{selectedRequest.status}</p>
-                    </div>
-                     {selectedRequest.rejectionReason && (
-                        <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
-                            <Label className="text-right font-semibold text-destructive pt-1">Rejection Reason:</Label>
-                            <p className="col-span-2 text-destructive">{selectedRequest.rejectionReason}</p>
-                        </div>
-                    )}
-                    <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
-                        <Label className="text-right font-semibold pt-1">Documents:</Label>
-                        <div className="col-span-2">
-                        {selectedRequest.documents && selectedRequest.documents.length > 0 ? (
-                            <ul className="list-disc pl-5 text-muted-foreground">
-                            {selectedRequest.documents.map((doc, index) => <li key={index}>{doc}</li>)}
-                            </ul>
-                        ) : (
-                            <p className="text-muted-foreground">No documents listed.</p>
+                     <div className="space-y-2">
+                        <div><Label className="font-semibold">Reason Summary:</Label><p className="pl-2">{selectedRequest.reasonSummary}</p></div>
+                        <p><Label className="font-semibold">Proposed Date:</Label> {selectedRequest.proposedDate ? format(parseISO(selectedRequest.proposedDate), 'PPP') : 'N/A'}</p>
+                        <p><Label className="font-semibold">Submitted:</Label> {selectedRequest.submissionDate ? format(parseISO(selectedRequest.submissionDate), 'PPP') : 'N/A'} by {selectedRequest.submittedBy}</p>
+                        <p><Label className="font-semibold">Status:</Label> <span className="text-primary">{selectedRequest.status}</span></p>
+                        {selectedRequest.rejectionReason && (
+                           <div><Label className="font-semibold text-destructive">Rejection Reason:</Label><p className="pl-2 text-destructive">{selectedRequest.rejectionReason}</p></div>
                         )}
+                        <div>
+                           <Label className="font-semibold">Documents:</Label>
+                            {selectedRequest.documents && selectedRequest.documents.length > 0 ? (
+                                <ul className="list-disc pl-6 text-muted-foreground">
+                                {selectedRequest.documents.map((doc, index) => <li key={index}>{doc}</li>)}
+                                </ul>
+                            ) : (
+                                <p className="text-muted-foreground pl-2">No documents listed.</p>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -576,9 +518,9 @@ export default function TerminationPage() {
         <Dialog open={isRejectionModalOpen} onOpenChange={setIsRejectionModalOpen}>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                    <DialogTitle>Reject Termination Request: {currentRequestToAction.id}</DialogTitle>
+                    <DialogTitle>Reject Request: {currentRequestToAction.id}</DialogTitle>
                     <DialogDescription>
-                        Please provide the reason for rejecting the termination request for <strong>{currentRequestToAction.employeeName}</strong>. This reason will be visible to the HRO.
+                        Please provide the reason for rejecting the request for <strong>{currentRequestToAction.employeeName}</strong>. This reason will be visible to the HRO.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="py-4">
@@ -599,5 +541,3 @@ export default function TerminationPage() {
     </div>
   );
 }
-
-    

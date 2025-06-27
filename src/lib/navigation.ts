@@ -104,18 +104,11 @@ export const NAV_ITEMS: NavItem[] = [
     description: 'Manage requests for employee service extensions.',
   },
   {
-    title: 'Termination',
+    title: 'Termination and Dismissal',
     href: '/dashboard/termination',
     icon: ShieldAlert,
-    roles: [ROLES.HRO, ROLES.DO, ROLES.HHRMD], 
-    description: 'Process employee terminations due to misconduct or other reasons.',
-  },
-  {
-    title: 'Dismissal',
-    href: '/dashboard/dismissal',
-    icon: Ban,
-    roles: [ROLES.HRO, ROLES.DO, ROLES.HHRMD], 
-    description: 'Handle dismissal of unconfirmed employees.',
+    roles: [ROLES.HRO, ROLES.DO, ROLES.HHRMD],
+    description: 'Process terminations for confirmed staff and dismissals for probationers.',
   },
   {
     title: 'Track Status',
