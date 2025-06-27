@@ -31,12 +31,17 @@ const COMPLAINT_TYPES = [
   "Other",
 ];
 
+const phoneValidation = z.string({ required_error: "Phone number is required."})
+  .length(10, { message: "Phone number must be exactly 10 digits." })
+  .startsWith("0", { message: "Phone number must start with '0'." })
+  .regex(/^[0-9]+$/, { message: "Invalid characters. Only digits are allowed." });
+
 const complaintSchema = z.object({
   complaintType: z.string().min(1, "Complaint type is required."),
   subject: z.string().min(5, "Subject must be at least 5 characters.").max(100, "Subject must be 100 characters or less."),
   complaintText: z.string().min(20, "Complaint description must be at least 20 characters."),
-  complainantPhoneNumber: z.string().optional(),
-  nextOfKinPhoneNumber: z.string().optional(),
+  complainantPhoneNumber: phoneValidation,
+  nextOfKinPhoneNumber: phoneValidation,
   evidence: z.custom<FileList | null>().optional(),
 });
 
@@ -461,9 +466,9 @@ export default function ComplaintsPage() {
                   name="complainantPhoneNumber"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center"><Phone className="mr-2 h-4 w-4 text-primary"/>Your Current Phone Number (Optional)</FormLabel>
+                      <FormLabel className="flex items-center"><Phone className="mr-2 h-4 w-4 text-primary"/>Your Current Phone Number *</FormLabel>
                       <FormControl>
-                        <Input type="tel" placeholder="Enter your phone number" {...field} />
+                        <Input type="tel" placeholder="Enter your phone number, e.g., 0777123456" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -474,9 +479,9 @@ export default function ComplaintsPage() {
                   name="nextOfKinPhoneNumber"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center"><Users className="mr-2 h-4 w-4 text-primary"/>Next of Kin / Guarantor Phone Number (Optional)</FormLabel>
+                      <FormLabel className="flex items-center"><Users className="mr-2 h-4 w-4 text-primary"/>Next of Kin / Guarantor Phone Number *</FormLabel>
                       <FormControl>
-                        <Input type="tel" placeholder="Enter next of kin's phone number" {...field} />
+                        <Input type="tel" placeholder="Enter next of kin's phone number, e.g., 0777123456" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -818,4 +823,3 @@ export default function ComplaintsPage() {
     </div>
   );
 }
-
