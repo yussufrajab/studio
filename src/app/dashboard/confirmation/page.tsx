@@ -14,7 +14,7 @@ import { Loader2, Search, FileText, CheckCircle, Award, AlertTriangle } from 'lu
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Textarea } from '@/components/ui/textarea';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, isAfter } from 'date-fns';
 
 interface MockPendingConfirmationRequest {
   id: string;
@@ -76,16 +76,16 @@ const initialMockPendingConfirmationRequests: MockPendingConfirmationRequest[] =
     zanId: '445678912',
     department: 'ICT',
     cadre: 'IT Support',
-    employmentDate: "2021-11-11",
+    employmentDate: "2011-11-11", // Hired before May 2014
     dateOfBirth: "1975-09-01",
     institution: "e-Government Agency",
     submissionDate: '2024-07-15',
     decisionDate: '2024-07-18', // HRMO rejected
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Rejected by HRMO - Awaiting HRO Correction',
-    documents: ['Evaluation Form', 'IPA Certificate', 'Letter of Request'],
+    documents: ['Evaluation Form', 'Letter of Request'], // No IPA cert needed
     reviewStage: 'initial',
-    rejectionReason: 'Incomplete IPA certificate details.',
+    rejectionReason: 'Incomplete evaluation form.',
     reviewedBy: ROLES.HRMO,
   },
 ];
@@ -101,6 +101,7 @@ export default function ConfirmationPage() {
   const [letterOfRequestFile, setLetterOfRequestFile] = useState<FileList | null>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isIpaRequired, setIsIpaRequired] = useState(false);
 
   const [pendingRequests, setPendingRequests] = useState<MockPendingConfirmationRequest[]>(initialMockPendingConfirmationRequests);
   const [selectedRequest, setSelectedRequest] = useState<MockPendingConfirmationRequest | null>(null);
@@ -118,6 +119,7 @@ export default function ConfirmationPage() {
     setEvaluationFormFile(null);
     setIpaCertificateFile(null);
     setLetterOfRequestFile(null);
+    setIsIpaRequired(false);
     const fileInputs = document.querySelectorAll('input[type="file"]');
     fileInputs.forEach(input => (input as HTMLInputElement).value = '');
   }
@@ -134,6 +136,20 @@ export default function ConfirmationPage() {
       const foundEmployee = EMPLOYEES.find(emp => emp.zanId === zanId);
       if (foundEmployee) {
         setEmployeeToConfirm(foundEmployee);
+
+        if (foundEmployee.employmentDate) {
+            try {
+                const employmentDate = parseISO(foundEmployee.employmentDate);
+                const cutoffDate = new Date('2014-05-01');
+                if (isAfter(employmentDate, cutoffDate)) {
+                    setIsIpaRequired(true);
+                }
+            } catch (error) {
+                console.error("Error parsing employment date:", error);
+                toast({ title: "Date Error", description: "Could not parse employee's employment date.", variant: "destructive" });
+            }
+        }
+
         if (foundEmployee.status === 'Confirmed') {
             toast({ 
                 title: "Already Confirmed", 
@@ -171,8 +187,8 @@ export default function ConfirmationPage() {
       toast({ title: "Submission Error", description: "Evaluation Form is missing. Please upload the PDF document.", variant: "destructive" });
       return;
     }
-    if (!ipaCertificateFile) {
-      toast({ title: "Submission Error", description: "IPA Certificate is missing. Please upload the PDF document.", variant: "destructive" });
+    if (isIpaRequired && !ipaCertificateFile) {
+      toast({ title: "Submission Error", description: "IPA Certificate is missing for this employee. Please upload the PDF document.", variant: "destructive" });
       return;
     }
     if (!letterOfRequestFile) {
@@ -185,7 +201,7 @@ export default function ConfirmationPage() {
         toast({ title: "Submission Error", description: "Evaluation Form must be a PDF.", variant: "destructive" });
         return;
     }
-    if (!checkPdf(ipaCertificateFile)) {
+    if (isIpaRequired && !checkPdf(ipaCertificateFile)) {
         toast({ title: "Submission Error", description: "IPA Certificate must be a PDF.", variant: "destructive" });
         return;
     }
@@ -197,6 +213,12 @@ export default function ConfirmationPage() {
 
     setIsSubmitting(true);
     const newRequestId = `CONF${Date.now().toString().slice(-3)}`;
+    
+    const documentsList = ['Evaluation Form', 'Letter of Request'];
+    if (isIpaRequired) {
+      documentsList.push('IPA Certificate');
+    }
+
     const newRequest: MockPendingConfirmationRequest = {
         id: newRequestId,
         employeeName: employeeToConfirm.name,
@@ -209,16 +231,11 @@ export default function ConfirmationPage() {
         submissionDate: format(new Date(), 'yyyy-MM-dd'),
         submittedBy: `${user?.name} (${user?.role})`,
         status: role === ROLES.HHRMD ? 'Pending HHRMD Review' : 'Pending HRMO Review',
-        documents: ['Evaluation Form', 'IPA Certificate', 'Letter of Request'],
+        documents: documentsList,
         reviewStage: 'initial',
     };
     
-    console.log("Submitting Confirmation Request:", {
-      employee: employeeToConfirm,
-      evaluationForm: evaluationFormFile[0]?.name,
-      ipaCertificate: ipaCertificateFile[0]?.name,
-      letterOfRequest: letterOfRequestFile[0]?.name,
-    });
+    console.log("Submitting Confirmation Request:", newRequest);
 
     setTimeout(() => {
       setPendingRequests(prev => [newRequest, ...prev]);
@@ -289,6 +306,7 @@ export default function ConfirmationPage() {
     toast({ title: `Commission Decision: ${decision === 'approved' ? 'Approved' : 'Rejected'}`, description: `Request ${requestId} for ${request.employeeName} has been ${finalStatus.toLowerCase()}.` });
   };
 
+  const isSubmitDisabled = !employeeToConfirm || !evaluationFormFile || (isIpaRequired && !ipaCertificateFile) || !letterOfRequestFile || isSubmitting || isAlreadyConfirmed;
 
   return (
     <div>
@@ -297,7 +315,7 @@ export default function ConfirmationPage() {
         <Card className="mb-6 shadow-lg">
           <CardHeader>
             <CardTitle>Submit Confirmation Request</CardTitle>
-            <CardDescription>Enter employee's ZanID to fetch details and upload required PDF documents.</CardDescription>
+            <CardDescription>Enter employee's ZanID to fetch details. Required documents will be determined by hiring date.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
@@ -343,14 +361,21 @@ export default function ConfirmationPage() {
             
                 <div className={`space-y-4 ${isAlreadyConfirmed ? 'opacity-50 cursor-not-allowed' : ''}`}>
                   <h3 className="text-lg font-medium text-foreground">Required Documents (PDF Only)</h3>
+                  {isIpaRequired && (
+                    <p className="text-sm text-muted-foreground -mt-3 mb-2">
+                     IPA Certificate is required for this employee (hired from May 2014 onwards).
+                    </p>
+                  )}
                   <div>
                     <Label htmlFor="evaluationForm" className="flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" />Upload Evaluation Form</Label>
                     <Input id="evaluationForm" type="file" onChange={(e) => setEvaluationFormFile(e.target.files)} accept=".pdf" disabled={isSubmitting || isAlreadyConfirmed}/>
                   </div>
-                  <div>
-                    <Label htmlFor="ipaCertificate" className="flex items-center"><Award className="mr-2 h-4 w-4 text-primary" />Upload IPA Certificate</Label>
-                    <Input id="ipaCertificate" type="file" onChange={(e) => setIpaCertificateFile(e.target.files)} accept=".pdf" disabled={isSubmitting || isAlreadyConfirmed}/>
-                  </div>
+                  {isIpaRequired && (
+                    <div>
+                        <Label htmlFor="ipaCertificate" className="flex items-center"><Award className="mr-2 h-4 w-4 text-primary" />Upload IPA Certificate</Label>
+                        <Input id="ipaCertificate" type="file" onChange={(e) => setIpaCertificateFile(e.target.files)} accept=".pdf" disabled={isSubmitting || isAlreadyConfirmed}/>
+                    </div>
+                  )}
                   <div>
                     <Label htmlFor="letterOfRequest" className="flex items-center"><CheckCircle className="mr-2 h-4 w-4 text-primary" />Upload Letter of Request</Label>
                     <Input id="letterOfRequest" type="file" onChange={(e) => setLetterOfRequestFile(e.target.files)} accept=".pdf" disabled={isSubmitting || isAlreadyConfirmed}/>
@@ -363,7 +388,7 @@ export default function ConfirmationPage() {
             <CardFooter className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2 pt-4 border-t">
                 <Button 
                     onClick={handleSubmitRequest} 
-                    disabled={!employeeToConfirm || !evaluationFormFile || !ipaCertificateFile || !letterOfRequestFile || isSubmitting || isAlreadyConfirmed }>
+                    disabled={isSubmitDisabled}>
                   {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Submit Request
                 </Button>
