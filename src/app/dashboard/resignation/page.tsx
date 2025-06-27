@@ -47,7 +47,7 @@ const mockPendingResignationRequests: MockPendingResignationRequest[] = [
     submissionDate: '2024-07-20',
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending HHRMD Acknowledgement',
-    documents: ['Letter of Request', 'Supporting Document (Visa Copy)'],
+    documents: ['Letter of Request', '3 Month Notice/Receipt'],
   },
   {
     id: 'RESIGN002',
@@ -63,13 +63,13 @@ const mockPendingResignationRequests: MockPendingResignationRequest[] = [
     submissionDate: '2024-07-15',
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending HRMO Acknowledgement',
-    documents: ['Letter of Request'],
+    documents: ['Letter of Request', '3 Month Notice/Receipt'],
   },
 ];
 
 
 export default function ResignationPage() {
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const [zanId, setZanId] = useState('');
   const [employeeDetails, setEmployeeDetails] = useState<Employee | null>(null);
   const [isFetchingEmployee, setIsFetchingEmployee] = useState(false);
@@ -77,10 +77,11 @@ export default function ResignationPage() {
 
   const [effectiveDate, setEffectiveDate] = useState('');
   const [reason, setReason] = useState('');
-  const [supportingDocumentFile, setSupportingDocumentFile] = useState<FileList | null>(null);
+  const [noticeOrReceiptFile, setNoticeOrReceiptFile] = useState<FileList | null>(null);
   const [letterOfRequestFile, setLetterOfRequestFile] = useState<FileList | null>(null);
   const [minEffectiveDate, setMinEffectiveDate] = useState('');
 
+  const [pendingRequests, setPendingRequests] = useState<MockPendingResignationRequest[]>(mockPendingResignationRequests);
   const [selectedRequest, setSelectedRequest] = useState<MockPendingResignationRequest | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
@@ -91,7 +92,7 @@ export default function ResignationPage() {
   const resetFormFields = () => {
     setEffectiveDate('');
     setReason('');
-    setSupportingDocumentFile(null);
+    setNoticeOrReceiptFile(null);
     setLetterOfRequestFile(null);
     const fileInputs = document.querySelectorAll('input[type="file"]');
     fileInputs.forEach(input => (input as HTMLInputElement).value = '');
@@ -131,6 +132,10 @@ export default function ResignationPage() {
       toast({ title: "Submission Error", description: "Letter of Request is missing. Please upload the PDF document.", variant: "destructive" });
       return;
     }
+    if (!noticeOrReceiptFile) {
+      toast({ title: "Submission Error", description: "3 months resignation notice or receipt is required. Please upload the PDF document.", variant: "destructive" });
+      return;
+    }
 
     const checkPdf = (fileList: FileList | null) => fileList && fileList[0] && fileList[0].type === "application/pdf";
 
@@ -138,21 +143,37 @@ export default function ResignationPage() {
       toast({ title: "Submission Error", description: "Letter of Request must be a PDF file.", variant: "destructive" });
       return;
     }
-    if (supportingDocumentFile && !checkPdf(supportingDocumentFile)) {
-      toast({ title: "Submission Error", description: "Supporting Document, if provided, must be a PDF file.", variant: "destructive" });
+    if (!checkPdf(noticeOrReceiptFile)) {
+      toast({ title: "Submission Error", description: "The 3 months notice or receipt must be a PDF file.", variant: "destructive" });
       return;
     }
 
     setIsSubmitting(true);
-    console.log("Submitting Resignation Request:", {
-      employee: employeeDetails,
-      effectiveDate,
-      reason,
-      supportingDocumentFile: supportingDocumentFile ? supportingDocumentFile[0]?.name : null,
-      letterOfRequestFile: letterOfRequestFile[0]?.name,
-    });
+    
+    const newRequestId = `RESIGN${Date.now().toString().slice(-3)}`;
+    const documentsList = ['Letter of Request', '3 Month Notice/Receipt'];
+
+    const newRequest: MockPendingResignationRequest = {
+        id: newRequestId,
+        employeeName: employeeDetails.name,
+        zanId: employeeDetails.zanId,
+        department: employeeDetails.department || 'N/A',
+        cadre: employeeDetails.cadre || 'N/A',
+        employmentDate: employeeDetails.employmentDate || 'N/A',
+        dateOfBirth: employeeDetails.dateOfBirth || 'N/A',
+        institution: employeeDetails.institution || 'N/A',
+        effectiveDate: effectiveDate,
+        reason: reason,
+        submissionDate: format(new Date(), 'yyyy-MM-dd'),
+        submittedBy: `${user?.name} (${user?.role})`,
+        status: 'Pending HHRMD Acknowledgement',
+        documents: documentsList,
+    };
+
+    console.log("Submitting Resignation Request:", newRequest);
 
     setTimeout(() => {
+      setPendingRequests(prev => [newRequest, ...prev]);
       toast({ title: "Resignation Request Submitted", description: `Request for ${employeeDetails.name} submitted successfully.` });
       setZanId('');
       setEmployeeDetails(null);
@@ -212,12 +233,12 @@ export default function ResignationPage() {
                     <Textarea id="reasonResignation" placeholder="Optional: Enter reason stated by employee" value={reason} onChange={(e) => setReason(e.target.value)} disabled={isSubmitting} />
                   </div>
                   <div>
-                    <Label htmlFor="supportingDocumentFile" className="flex items-center"><Paperclip className="mr-2 h-4 w-4 text-primary" />Upload Supporting Document (Optional, PDF Only)</Label>
-                    <Input id="supportingDocumentFile" type="file" onChange={(e) => setSupportingDocumentFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
-                  </div>
-                  <div>
                     <Label htmlFor="letterOfRequestResignation" className="flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" />Upload Letter of Request (Required, PDF Only)</Label>
                     <Input id="letterOfRequestResignation" type="file" onChange={(e) => setLetterOfRequestFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
+                  </div>
+                  <div>
+                    <Label htmlFor="noticeOrReceiptFile" className="flex items-center"><Paperclip className="mr-2 h-4 w-4 text-primary" />Upload 3 months resignation notice or receipt of resignation equal to employee’s salary (Required, PDF Only)</Label>
+                    <Input id="noticeOrReceiptFile" type="file" onChange={(e) => setNoticeOrReceiptFile(e.target.files)} accept=".pdf" disabled={isSubmitting}/>
                   </div>
                 </div>
               </div>
@@ -231,6 +252,7 @@ export default function ResignationPage() {
                     !employeeDetails || 
                     !effectiveDate ||
                     !letterOfRequestFile || 
+                    !noticeOrReceiptFile ||
                     isSubmitting 
                 }>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -247,8 +269,8 @@ export default function ResignationPage() {
             <CardDescription>Acknowledge and process resignation requests.</CardDescription>
           </CardHeader>
           <CardContent>
-            {mockPendingResignationRequests.length > 0 ? (
-              mockPendingResignationRequests.map((request) => (
+            {pendingRequests.length > 0 ? (
+              pendingRequests.map((request) => (
                 <div key={request.id} className="mb-4 border p-4 rounded-md space-y-2 shadow-sm bg-background hover:shadow-md transition-shadow">
                   <h3 className="font-semibold text-base">Resignation for: {request.employeeName} (ZanID: {request.zanId})</h3>
                   <p className="text-sm text-muted-foreground">Effective Date: {request.effectiveDate ? format(parseISO(request.effectiveDate), 'PPP') : 'N/A'}</p>
