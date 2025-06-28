@@ -59,17 +59,26 @@ export const INSTITUTIONS = [
 
 const findInst = (id: string) => INSTITUTIONS.find(i => i.id === id);
 
+const commissionId = 'inst_36';
+const commissionName = INSTITUTIONS.find(i => i.id === commissionId)?.name;
+
 export const USERS: User[] = [
-  { id: "user_admin", username: "akassim", name: "Amina Kassim", role: ROLES.ADMIN as Role },
-  { id: "user_cscs", username: "zhaji", name: "Zaituni Haji", role: ROLES.CSCS as Role },
-  { id: "user2", username: "skhamis", name: "Safia Khamis", role: ROLES.HHRMD as Role },
-  { id: "user_hrmo", username: "fiddi", name: "Fauzia Iddi", role: ROLES.HRMO as Role },
-  { id: "user_hrrp", username: "khamadi", name: "Khamis Hamadi", role: ROLES.HRRP as Role, institutionId: findInst('inst_36')?.id, institution: findInst('inst_36')?.name },
-  { id: "user_po", username: "mishak", name: "Mwanakombo Is-hak", role: ROLES.PO as Role },
+  // Commission Users
+  { id: "user_admin", username: "akassim", name: "Amina Kassim", role: ROLES.ADMIN as Role, institutionId: commissionId, institution: commissionName },
+  { id: "user_cscs", username: "zhaji", name: "Zaituni Haji", role: ROLES.CSCS as Role, institutionId: commissionId, institution: commissionName },
+  { id: "user_hhrmd", username: "skhamis", name: "Safia Khamis", role: ROLES.HHRMD as Role, institutionId: commissionId, institution: commissionName },
+  { id: "user_hrmo", username: "fiddi", name: "Fauzia Iddi", role: ROLES.HRMO as Role, institutionId: commissionId, institution: commissionName },
+  { id: "user_do", username: "mussi", name: "Maimuna Ussi", role: ROLES.DO as Role, institutionId: commissionId, institution: commissionName },
+  { id: "user_po", username: "mishak", name: "Mwanakombo Is-hak", role: ROLES.PO as Role, institutionId: commissionId, institution: commissionName },
+  { id: "user_hrrp", username: "khamadi", name: "Khamis Hamadi", role: ROLES.HRRP as Role, institutionId: commissionId, institution: commissionName },
+  
+  // HROs (including one for the commission)
+  { id: "user_hro_commission", username: "hro_commission", name: "HRO (Tume)", role: ROLES.HRO as Role, institutionId: commissionId, institution: commissionName },
   { id: "user_hro_cgo", username: "kmnyonge", name: "Khamis Mnyonge", role: ROLES.HRO as Role, institutionId: findInst('inst_17')?.id, institution: findInst('inst_17')?.name },
   { id: "user_hro_moe", username: "ahmedm", name: "Ahmed Mohammed", role: ROLES.HRO as Role, institutionId: findInst('inst_40')?.id, institution: findInst('inst_40')?.name },
   { id: "user_hro_moh", username: "mariamj", name: "Mariam Juma", role: ROLES.HRO as Role, institutionId: findInst('inst_41')?.id, institution: findInst('inst_41')?.name },
-  { id: "user5", username: "mussi", name: "Maimuna Ussi", role: ROLES.DO as Role },
+  
+  // Employee users
   { id: "emp1_user", username: "alijuma", name: "Ali Juma Ali", role: ROLES.EMPLOYEE as Role, employeeId: "emp1" },
   { id: "emp8_user", username: "khadijanassor", name: "Khadija Nassor", role: ROLES.EMPLOYEE as Role, employeeId: "emp8" },
   { id: "emp9_user", username: "yussufmakame", name: "Yussuf Makame", role: ROLES.EMPLOYEE as Role, employeeId: "emp9" },
@@ -578,5 +587,3 @@ export const EMPLOYEES: Employee[] = [
 ];
 
 export const APP_NAME = "Civil Service Navigator";
-
-    

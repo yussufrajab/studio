@@ -27,12 +27,12 @@ const userSchema = z.object({
   // Add password validation for creation
   password: z.string().min(6, "Password must be at least 6 characters.").optional(),
 }).refine(data => {
-  if ([ROLES.HRO, ROLES.HRRP].includes(data.role) && !data.institutionId) {
+  if (data.role && data.role !== ROLES.EMPLOYEE && !data.institutionId) {
     return false;
   }
   return true;
 }, {
-  message: "Institution is required for HRO and HRRP roles.",
+  message: "Institution is required for this user role.",
   path: ["institutionId"],
 });
 
@@ -58,8 +58,8 @@ export default function UserManagementPage() {
             name: data.name, 
             username: data.username, 
             role: data.role,
-            institutionId: [ROLES.HRO, ROLES.HRRP].includes(data.role) ? data.institutionId : undefined,
-            institution: [ROLES.HRO, ROLES.HRRP].includes(data.role) ? INSTITUTIONS.find(i => i.id === data.institutionId)?.name : undefined,
+            institutionId: data.role !== ROLES.EMPLOYEE ? data.institutionId : undefined,
+            institution: data.role !== ROLES.EMPLOYEE ? INSTITUTIONS.find(i => i.id === data.institutionId)?.name : undefined,
         } : u
       ));
       toast({ title: "User Updated", description: "The user has been updated successfully." });
@@ -74,8 +74,8 @@ export default function UserManagementPage() {
         name: data.name,
         username: data.username,
         role: data.role,
-        institutionId: [ROLES.HRO, ROLES.HRRP].includes(data.role) ? data.institutionId : undefined,
-        institution: [ROLES.HRO, ROLES.HRRP].includes(data.role) ? INSTITUTIONS.find(i => i.id === data.institutionId)?.name : undefined,
+        institutionId: data.role !== ROLES.EMPLOYEE ? data.institutionId : undefined,
+        institution: data.role !== ROLES.EMPLOYEE ? INSTITUTIONS.find(i => i.id === data.institutionId)?.name : undefined,
         active: true,
       };
       setUsers([...users, newUser]);
@@ -202,7 +202,7 @@ export default function UserManagementPage() {
                   <FormMessage />
                 </FormItem>
               )}/>
-              { (watchRole === ROLES.HRO || watchRole === ROLES.HRRP) && (
+              { watchRole && watchRole !== ROLES.EMPLOYEE && (
                 <FormField name="institutionId" control={form.control} render={({ field }) => (
                   <FormItem>
                     <FormLabel>Institution</FormLabel>
