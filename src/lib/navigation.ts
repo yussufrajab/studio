@@ -20,7 +20,8 @@ import {
   ListChecks,
   ShieldAlert,
   AlertTriangle,
-  LineChart, // Added for PO - better representation for analytics/dashboard
+  LineChart,
+  Building,
 } from 'lucide-react';
 import type { NavItem, Role } from './types';
 import { ROLES } from './constants';
@@ -30,8 +31,29 @@ export const NAV_ITEMS: NavItem[] = [
     title: 'Dashboard',
     href: '/dashboard',
     icon: LayoutDashboard, // Could use LineChart for PO if specific dashboard exists
-    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO, ROLES.DO, ROLES.CSCS, ROLES.HRRP],
+    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO, ROLES.DO, ROLES.CSCS, ROLES.HRRP, ROLES.ADMIN as Role],
     description: 'Overview of your activities and quick access to modules.',
+  },
+  {
+    title: 'Admin Management',
+    icon: ShieldCheck,
+    roles: [ROLES.ADMIN as Role],
+    children: [
+        {
+            title: 'User Management',
+            href: '/dashboard/admin/users',
+            icon: Users,
+            roles: [ROLES.ADMIN as Role],
+            description: 'Create and manage user accounts and roles.'
+        },
+        {
+            title: 'Institution Management',
+            href: '/dashboard/admin/institutions',
+            icon: Building,
+            roles: [ROLES.ADMIN as Role],
+            description: 'Create and manage institutions.'
+        }
+    ]
   },
   {
     title: 'Urgent Actions',
@@ -128,7 +150,7 @@ export const NAV_ITEMS: NavItem[] = [
     title: 'Audit Trail',
     href: '/dashboard/audit-trail',
     icon: ClipboardList,
-    roles: [ROLES.HRO, ROLES.CSCS, ROLES.PO], // Added PO
+    roles: [ROLES.HRO, ROLES.CSCS, ROLES.PO, ROLES.ADMIN as Role],
     disabled: true, 
     description: 'View a log of system activities and changes (coming soon).',
   },

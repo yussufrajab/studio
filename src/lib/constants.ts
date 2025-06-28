@@ -10,6 +10,7 @@ export const ROLES: Record<string, Role> = {
   CSCS: "CSCS", // Civil Service Commission Secretary
   HRRP: "HRRP", // Human Resource Responsible Personnel
   PO: "PO", // Planning Officer
+  ADMIN: "Admin",
 };
 
 export const INSTITUTIONS = [
@@ -59,6 +60,7 @@ export const INSTITUTIONS = [
 const findInst = (id: string) => INSTITUTIONS.find(i => i.id === id);
 
 export const USERS: User[] = [
+  { id: "user_admin", username: "akassim", name: "Amina Kassim", role: ROLES.ADMIN as Role },
   { id: "user_cscs", username: "zhaji", name: "Zaituni Haji", role: ROLES.CSCS as Role },
   { id: "user2", username: "skhamis", name: "Safia Khamis", role: ROLES.HHRMD as Role },
   { id: "user_hrmo", username: "fiddi", name: "Fauzia Iddi", role: ROLES.HRMO as Role },
@@ -66,7 +68,7 @@ export const USERS: User[] = [
   { id: "user_po", username: "mishak", name: "Mwanakombo Is-hak", role: ROLES.PO as Role },
   { id: "user_hro_cgo", username: "kmnyonge", name: "Khamis Mnyonge", role: ROLES.HRO as Role, institutionId: findInst('inst_17')?.id, institution: findInst('inst_17')?.name },
   { id: "user_hro_moe", username: "ahmedm", name: "Ahmed Mohammed", role: ROLES.HRO as Role, institutionId: findInst('inst_40')?.id, institution: findInst('inst_40')?.name },
-  { id: "user_hro_mof", username: "salimk", name: "Salim Khamis", role: ROLES.HRO as Role, institutionId: findInst('inst_17')?.id, institution: findInst('inst_17')?.name },
+  { id: "user_hro_moh", username: "mariamj", name: "Mariam Juma", role: ROLES.HRO as Role, institutionId: findInst('inst_41')?.id, institution: findInst('inst_41')?.name },
   { id: "user5", username: "mussi", name: "Maimuna Ussi", role: ROLES.DO as Role },
   { id: "emp1_user", username: "alijuma", name: "Ali Juma Ali", role: ROLES.EMPLOYEE as Role, employeeId: "emp1" },
   { id: "emp8_user", username: "khadijanassor", name: "Khadija Nassor", role: ROLES.EMPLOYEE as Role, employeeId: "emp8" },
@@ -381,28 +383,28 @@ export const EMPLOYEES: Employee[] = [
     retirementDate: "2055-04-11",
   },
   {
-    id: "emp_mof_1",
-    employeeEntityId: "emp_mof_1_id",
+    id: "emp_moh_1",
+    employeeEntityId: "emp_moh_1_id",
     name: "Asha Hamad",
     gender: 'Female',
     zanId: "199012345",
     status: "Confirmed",
-    cadre: "Senior Accountant",
-    institutionId: findInst('inst_17')?.id,
-    institution: findInst('inst_17')?.name,
+    cadre: "Senior Nurse",
+    institutionId: findInst('inst_41')?.id,
+    institution: findInst('inst_41')?.name,
     employmentDate: "1990-01-15", // hired before May 2014
     dateOfBirth: "1968-05-20",
   },
   {
-    id: "emp_mof_2",
-    employeeEntityId: "emp_mof_2_id",
+    id: "emp_moh_2",
+    employeeEntityId: "emp_moh_2_id",
     name: "Juma Bakari",
     gender: 'Male',
     zanId: "201867890",
     status: "On Probation",
-    cadre: "Junior Economist",
-    institutionId: findInst('inst_17')?.id,
-    institution: findInst('inst_17')?.name,
+    cadre: "Medical Intern",
+    institutionId: findInst('inst_41')?.id,
+    institution: findInst('inst_41')?.name,
     employmentDate: "2018-07-20", // hired after May 2014
     dateOfBirth: "1992-09-10",
   },
