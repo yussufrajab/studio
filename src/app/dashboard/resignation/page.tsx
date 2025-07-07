@@ -20,6 +20,8 @@ interface MockPendingResignationRequest {
   id: string;
   employeeName: string;
   zanId: string;
+  payrollNumber?: string;
+  zssfNumber?: string;
   department: string;
   cadre: string;
   employmentDate: string;
@@ -357,6 +359,8 @@ export default function ResignationPage() {
         id: newRequestId,
         employeeName: employeeDetails.name,
         zanId: employeeDetails.zanId,
+        payrollNumber: employeeDetails.payrollNumber,
+        zssfNumber: employeeDetails.zssfNumber,
         department: employeeDetails.department || 'N/A',
         cadre: employeeDetails.cadre || 'N/A',
         employmentDate: employeeDetails.employmentDate || 'N/A',
@@ -512,7 +516,7 @@ export default function ResignationPage() {
                 Resignation request for <strong>{selectedRequest.employeeName}</strong> (ZanID: {selectedRequest.zanId}).
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4 text-sm">
+            <div className="space-y-4 py-4 text-sm max-h-[70vh] overflow-y-auto">
                 <div className="space-y-1 border-b pb-3 mb-3">
                     <h4 className="font-semibold text-base text-foreground mb-2">Employee Information</h4>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
@@ -522,6 +526,14 @@ export default function ResignationPage() {
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
                         <Label className="text-right text-muted-foreground">ZanID:</Label>
                         <p className="col-span-2 font-medium text-foreground">{selectedRequest.zanId}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">Payroll #:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.payrollNumber || 'N/A'}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">ZSSF #:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.zssfNumber || 'N/A'}</p>
                     </div>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
                         <Label className="text-right text-muted-foreground">Department:</Label>
@@ -562,17 +574,25 @@ export default function ResignationPage() {
                         <Label className="text-right font-semibold">Status:</Label>
                         <p className="col-span-2 text-primary">{selectedRequest.status}</p>
                     </div>
-                    <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
-                        <Label className="text-right font-semibold pt-1">Documents:</Label>
-                        <div className="col-span-2">
-                        {selectedRequest.documents && selectedRequest.documents.length > 0 ? (
-                            <ul className="list-disc pl-5 text-muted-foreground">
-                            {selectedRequest.documents.map((doc, index) => <li key={index}>{doc}</li>)}
-                            </ul>
-                        ) : (
-                            <p className="text-muted-foreground">No documents listed.</p>
-                        )}
-                        </div>
+                </div>
+                <div className="pt-3 mt-3 border-t">
+                    <Label className="font-semibold">Attached Documents</Label>
+                    <div className="mt-2 space-y-2">
+                    {selectedRequest.documents && selectedRequest.documents.length > 0 ? (
+                        selectedRequest.documents.map((doc, index) => (
+                            <div key={index} className="flex items-center justify-between p-2 rounded-md border bg-secondary/50 text-sm">
+                                <div className="flex items-center gap-2">
+                                    <FileText className="h-4 w-4 text-muted-foreground" />
+                                    <span className="font-medium text-foreground truncate" title={doc}>{doc}</span>
+                                </div>
+                                <Button asChild variant="link" size="sm" className="h-auto p-0 flex-shrink-0">
+                                    <a href="#" onClick={(e) => e.preventDefault()} target="_blank" rel="noopener noreferrer">View Document</a>
+                                </Button>
+                            </div>
+                        ))
+                    ) : (
+                        <p className="text-muted-foreground text-sm">No documents were attached to this request.</p>
+                    )}
                     </div>
                 </div>
             </div>

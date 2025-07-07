@@ -16,7 +16,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, Eye, Edit3, Send, CheckCircle, XCircle, Info, MessageSquarePlus, Edit, Filter, Phone, Users } from 'lucide-react';
+import { Loader2, Eye, Edit3, Send, CheckCircle, XCircle, Info, MessageSquarePlus, Edit, Filter, Phone, Users, FileText } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format, parseISO } from 'date-fns';
@@ -696,14 +696,27 @@ export default function ComplaintsPage() {
                 </Card>
               )}
 
-              {selectedComplaint.attachments && selectedComplaint.attachments.length > 0 && (
-                <div>
-                  <strong className="text-muted-foreground">Attachments:</strong>
-                  <ul className="list-disc pl-5 mt-1 text-muted-foreground">
-                    {selectedComplaint.attachments.map((doc, index) => <li key={index}>{doc} (mock link)</li>)}
-                  </ul>
+               <div className="pt-3 mt-3 border-t">
+                    <Label className="font-semibold">Attached Documents</Label>
+                    <div className="mt-2 space-y-2">
+                    {selectedComplaint.attachments && selectedComplaint.attachments.length > 0 ? (
+                        selectedComplaint.attachments.map((doc, index) => (
+                            <div key={index} className="flex items-center justify-between p-2 rounded-md border bg-secondary/50 text-sm">
+                                <div className="flex items-center gap-2">
+                                    <FileText className="h-4 w-4 text-muted-foreground" />
+                                    <span className="font-medium text-foreground truncate" title={doc}>{doc}</span>
+                                </div>
+                                <Button asChild variant="link" size="sm" className="h-auto p-0 flex-shrink-0">
+                                    <a href="#" onClick={(e) => e.preventDefault()} target="_blank" rel="noopener noreferrer">View Document</a>
+                                </Button>
+                            </div>
+                        ))
+                    ) : (
+                        <p className="text-muted-foreground text-sm">No documents were attached to this request.</p>
+                    )}
+                    </div>
                 </div>
-              )}
+
                {selectedComplaint.officerComments && (
                 <div className="mt-2 pt-2 border-t">
                   <strong className="text-muted-foreground">Officer's Comments/Feedback:</strong>
