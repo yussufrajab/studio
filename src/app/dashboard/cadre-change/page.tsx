@@ -16,6 +16,8 @@ import { Loader2, Search, FileText, Award, ChevronsUpDown, AlertTriangle } from 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { format, parseISO, differenceInYears } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Pagination } from '@/components/shared/pagination';
+
 
 interface MockPendingCadreChangeRequest {
   id: string;
@@ -47,7 +49,7 @@ const initialMockPendingCadreChangeRequests: MockPendingCadreChangeRequest[] = [
     currentCadre: 'Administrative Officer',
     employmentDate: "2023-01-10",
     dateOfBirth: "1980-05-15",
-    institution: "Central Government Office",
+    institution: "OFISI YA RAIS, FEDHA NA MIPANGO",
     newCadre: 'Senior Administrative Officer',
     submissionDate: '2024-07-29',
     submittedBy: 'K. Mnyonge (HRO)',
@@ -65,7 +67,7 @@ const initialMockPendingCadreChangeRequests: MockPendingCadreChangeRequest[] = [
     currentCadre: 'HR Officer',
     employmentDate: "2020-12-01",
     dateOfBirth: "1990-11-22",
-    institution: "Civil Service Commission",
+    institution: "KAMISHENI YA UTUMISHI WA UMMA",
     newCadre: 'HR Specialist (Training)',
     submissionDate: '2024-07-27',
     submittedBy: 'K. Mnyonge (HRO)',
@@ -74,6 +76,242 @@ const initialMockPendingCadreChangeRequests: MockPendingCadreChangeRequest[] = [
     documents: ['Professional Certificate', 'TCU Form', 'Letter of Request'],
     studiedOutsideCountry: true,
     reviewStage: 'initial',
+  },
+  {
+    id: 'CADRE003',
+    employeeName: 'Hassan Mzee Juma',
+    zanId: '445678912',
+    department: 'ICT',
+    currentCadre: 'IT Support',
+    employmentDate: "2011-11-11",
+    dateOfBirth: "1975-09-01",
+    institution: "WAKALA WA SERIKALI MTANDAO (eGAZ)",
+    newCadre: 'IT Officer',
+    submissionDate: '2024-07-25',
+    submittedBy: 'K. Mnyonge (HRO)',
+    status: 'Request Received – Awaiting Commission Decision',
+    reason: "Upgraded skills and has taken on more responsibilities.",
+    documents: ['Letter of Request'],
+    studiedOutsideCountry: false,
+    reviewStage: 'commission_review',
+  },
+  {
+    id: 'CADRE004',
+    employeeName: 'Fatma Said Omar',
+    zanId: '334589123',
+    department: 'Finance',
+    currentCadre: 'Accountant',
+    employmentDate: "2018-09-15",
+    dateOfBirth: "1988-02-10",
+    institution: "Ofisi ya Mhasibu Mkuu wa Serikali",
+    newCadre: 'Senior Accountant',
+    submissionDate: '2024-07-22',
+    submittedBy: 'K. Mnyonge (HRO)',
+    status: 'Approved by Commission',
+    reason: "Successfully passed CPA exams.",
+    documents: ['CPA Certificate', 'Letter of Request'],
+    studiedOutsideCountry: false,
+    reviewStage: 'completed',
+  },
+  {
+    id: 'CADRE005',
+    employeeName: 'Zainab Ali Khamis',
+    zanId: '556789345',
+    department: 'Planning',
+    currentCadre: 'Planning Officer',
+    employmentDate: "2022-02-01",
+    dateOfBirth: "1992-12-30",
+    institution: "TUME YA UTUMISHI SERIKALINI",
+    newCadre: 'Senior Planning Officer',
+    submissionDate: '2024-07-20',
+    submittedBy: 'K. Mnyonge (HRO)',
+    status: 'Rejected by HHRMD - Awaiting HRO Correction',
+    reason: "New qualifications obtained.",
+    rejectionReason: 'Submitted certificate is not from a recognized institution.',
+    documents: ['Academic Certificate', 'Letter of Request'],
+    studiedOutsideCountry: false,
+    reviewStage: 'initial',
+  },
+  {
+    id: 'CADRE006',
+    employeeName: 'Juma Omar Ali',
+    zanId: '667890456',
+    department: 'Procurement',
+    currentCadre: 'Procurement Officer',
+    employmentDate: "2015-10-11",
+    dateOfBirth: "1983-06-18",
+    institution: "WIZARA YA BIASHARA NA MAENDELEO YA VIWANDA",
+    newCadre: 'Senior Procurement Officer',
+    submissionDate: '2024-07-18',
+    submittedBy: 'K. Mnyonge (HRO)',
+    status: 'Pending HRMO Review',
+    reason: 'Education advancement.',
+    documents: ['Certificate', 'Letter of Request'],
+    studiedOutsideCountry: false,
+    reviewStage: 'initial',
+  },
+  {
+    id: 'CADRE007',
+    employeeName: 'Hamid Khalfan Abdalla',
+    zanId: '778901234',
+    department: 'Transport',
+    currentCadre: 'Senior Driver',
+    employmentDate: "2010-01-01",
+    dateOfBirth: "1978-03-25",
+    institution: "WIZARA YA UJENZI MAWASILIANO NA UCHUKUZI",
+    newCadre: 'Transport Supervisor',
+    submissionDate: '2024-07-15',
+    submittedBy: 'K. Mnyonge (HRO)',
+    status: 'Pending HHRMD Review',
+    reason: 'Long service and new responsibilities.',
+    documents: ['Letter of Request'],
+    studiedOutsideCountry: false,
+    reviewStage: 'initial',
+  },
+  {
+    id: 'CADRE008',
+    employeeName: 'Khadija Nassor',
+    zanId: '890123456',
+    department: 'Secondary Education',
+    currentCadre: 'Head Teacher',
+    employmentDate: "1990-07-15",
+    dateOfBirth: "1970-01-20",
+    institution: "WIZARA YA ELIMU NA MAFUNZO YA AMALI",
+    newCadre: 'District Education Officer',
+    submissionDate: '2024-07-12',
+    submittedBy: 'K. Mnyonge (HRO)',
+    status: 'Pending HRMO Review',
+    reason: 'Masters Degree completion.',
+    documents: ['Certificate', 'Letter of Request'],
+    studiedOutsideCountry: false,
+    reviewStage: 'initial',
+  },
+  {
+    id: 'CADRE009',
+    employeeName: 'Yussuf Makame',
+    zanId: '901234567',
+    department: 'Primary Education',
+    currentCadre: 'Teacher',
+    employmentDate: "2018-08-20",
+    dateOfBirth: "1995-04-11",
+    institution: "WIZARA YA ELIMU NA MAFUNZO YA AMALI",
+    newCadre: 'Senior Teacher',
+    submissionDate: '2024-07-10',
+    submittedBy: 'K. Mnyonge (HRO)',
+    status: 'Pending HHRMD Review',
+    reason: 'Passed teaching proficiency exams.',
+    documents: ['Certificate', 'Letter of Request'],
+    studiedOutsideCountry: false,
+    reviewStage: 'initial',
+  },
+  {
+    id: 'CADRE010',
+    employeeName: 'Asha Hamad Faki',
+    zanId: '101010101',
+    department: 'Secretarial',
+    currentCadre: 'Secretary',
+    employmentDate: "2019-07-22",
+    dateOfBirth: "1990-01-01",
+    institution: "OFISI YA RAIS, FEDHA NA MIPANGO",
+    newCadre: 'Personal Assistant',
+    submissionDate: '2024-07-08',
+    submittedBy: 'K. Mnyonge (HRO)',
+    status: 'Rejected by Commission',
+    reason: 'New diploma in administration.',
+    rejectionReason: 'Proposed cadre requires a degree.',
+    documents: ['Diploma Certificate', 'Letter of Request'],
+    studiedOutsideCountry: false,
+    reviewStage: 'completed',
+  },
+  {
+    id: 'CADRE011',
+    employeeName: 'Salim Omar Bakar',
+    zanId: '111111111',
+    department: 'Finance',
+    currentCadre: 'Accountant Assistant',
+    employmentDate: "2021-02-15",
+    dateOfBirth: "1994-05-20",
+    institution: "OFISI YA RAIS, FEDHA NA MIPANGO",
+    newCadre: 'Accountant',
+    submissionDate: '2024-07-05',
+    submittedBy: 'K. Mnyonge (HRO)',
+    status: 'Pending HRMO Review',
+    reason: 'Obtained ATEC II qualification.',
+    documents: ['ATEC II Certificate', 'Letter of Request'],
+    studiedOutsideCountry: false,
+    reviewStage: 'initial',
+  },
+  {
+    id: 'CADRE012',
+    employeeName: 'Ismail Mohamed Kassim',
+    zanId: '131313131',
+    department: 'Administration',
+    currentCadre: 'Senior Administrative Officer',
+    employmentDate: "2015-03-10",
+    dateOfBirth: "1985-08-15",
+    institution: "OFISI YA RAIS, FEDHA NA MIPANGO",
+    newCadre: 'Principal Administrative Officer',
+    submissionDate: '2024-07-01',
+    submittedBy: 'K. Mnyonge (HRO)',
+    status: 'Request Received – Awaiting Commission Decision',
+    reason: 'Long service and proven leadership.',
+    documents: ['Letter of Request'],
+    studiedOutsideCountry: false,
+    reviewStage: 'commission_review',
+  },
+  {
+    id: 'CADRE013',
+    employeeName: 'Riziki Mussa Haji',
+    zanId: '141414141',
+    department: 'Human Resources',
+    currentCadre: 'HR Officer',
+    employmentDate: "2017-11-01",
+    dateOfBirth: "1989-02-28",
+    institution: "OFISI YA RAIS, FEDHA NA MIPANGO",
+    newCadre: 'Senior HR Officer',
+    submissionDate: '2024-06-28',
+    submittedBy: 'K. Mnyonge (HRO)',
+    status: 'Pending HHRMD Review',
+    reason: 'Education advancement (Masters).',
+    documents: ['Certificate', 'Letter of Request', 'TCU Form'],
+    studiedOutsideCountry: true,
+    reviewStage: 'initial',
+  },
+  {
+    id: 'CADRE014',
+    employeeName: 'Abdalla Foum Abdalla',
+    zanId: '171717171',
+    department: 'ICT',
+    currentCadre: 'IT Officer',
+    employmentDate: "2020-05-30",
+    dateOfBirth: "1993-10-05",
+    institution: "OFISI YA RAIS, FEDHA NA MIPANGO",
+    newCadre: 'Systems Analyst',
+    submissionDate: '2024-06-25',
+    submittedBy: 'K. Mnyonge (HRO)',
+    status: 'Pending HRMO Review',
+    reason: 'Gained new certification in systems analysis.',
+    documents: ['Certificate', 'Letter of Request'],
+    studiedOutsideCountry: false,
+    reviewStage: 'initial',
+  },
+  {
+    id: 'CADRE015',
+    employeeName: 'Zuhura Juma Makame',
+    zanId: '181818181',
+    department: 'Legal',
+    currentCadre: 'Legal Officer',
+    employmentDate: "2018-09-12",
+    dateOfBirth: "1992-12-12",
+    institution: "OFISI YA RAIS, FEDHA NA MIPANGO",
+    newCadre: 'Senior Legal Officer',
+    submissionDate: '2024-06-20',
+    submittedBy: 'K. Mnyonge (HRO)',
+    status: 'Approved by Commission',
+    reason: 'Admitted to the bar.',
+    documents: ['Bar Admission Certificate', 'Letter of Request'],
+    studiedOutsideCountry: false,
+    reviewStage: 'completed',
   },
 ];
 
@@ -101,6 +339,10 @@ export default function CadreChangePage() {
   const [currentRequestToAction, setCurrentRequestToAction] = useState<MockPendingCadreChangeRequest | null>(null);
 
   const [eligibilityError, setEligibilityError] = useState<string | null>(null);
+  
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
 
   const resetFormFields = () => {
     setNewCadre('');
@@ -310,6 +552,23 @@ export default function CadreChangePage() {
     }
   };
 
+  const applicableRequests = pendingRequests.filter(req => 
+    (role === ROLES.HHRMD && req.status === 'Pending HHRMD Review') ||
+    (role === ROLES.HRMO && req.status === 'Pending HRMO Review') ||
+    (role === ROLES.HHRMD && req.status.startsWith('Rejected by') && req.rejectionReason) ||
+    (role === ROLES.HHRMD && (req.status.startsWith('Approved by Commission') || req.status.startsWith('Rejected by Commission'))) ||
+    (role === ROLES.HRMO && req.status.startsWith('Rejected by') && req.rejectionReason) ||
+    (role === ROLES.HRMO && (req.status.startsWith('Approved by Commission') || req.status.startsWith('Rejected by Commission'))) ||
+    (req.status === 'Request Received – Awaiting Commission Decision' && req.reviewedBy === role)
+  );
+
+  const totalPages = Math.ceil(applicableRequests.length / itemsPerPage);
+  const paginatedRequests = applicableRequests.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+
   return (
     <div>
       <PageHeader title="Change of Cadre" description="Process employee cadre changes." />
@@ -421,18 +680,8 @@ export default function CadreChangePage() {
             <CardDescription>Review, approve, or reject pending cadre change requests.</CardDescription>
           </CardHeader>
           <CardContent>
-            {pendingRequests.filter(req => 
-                (role === ROLES.HHRMD && req.status === 'Pending HHRMD Review') ||
-                (role === ROLES.HRMO && req.status === 'Pending HRMO Review') ||
-                req.status === 'Request Received – Awaiting Commission Decision' ||
-                req.status.startsWith('Rejected by') || req.status.startsWith('Approved by Commission') || req.status.startsWith('Rejected by Commission')
-            ).length > 0 ? (
-              pendingRequests.filter(req => 
-                (role === ROLES.HHRMD && req.status === 'Pending HHRMD Review') ||
-                (role === ROLES.HRMO && req.status === 'Pending HRMO Review') ||
-                req.status === 'Request Received – Awaiting Commission Decision' ||
-                req.status.startsWith('Rejected by') || req.status.startsWith('Approved by Commission') || req.status.startsWith('Rejected by Commission')
-              ).map((request) => (
+            {paginatedRequests.length > 0 ? (
+              paginatedRequests.map((request) => (
                 <div key={request.id} className="mb-4 border p-4 rounded-md space-y-2 shadow-sm bg-background hover:shadow-md transition-shadow">
                   <h3 className="font-semibold text-base">Cadre Change for: {request.employeeName} (ZanID: {request.zanId})</h3>
                   <p className="text-sm text-muted-foreground">From Cadre: {request.currentCadre}</p>
@@ -460,6 +709,13 @@ export default function CadreChangePage() {
             ) : (
               <p className="text-muted-foreground">No cadre change requests pending your review.</p>
             )}
+             <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              totalItems={applicableRequests.length}
+              itemsPerPage={itemsPerPage}
+            />
           </CardContent>
         </Card>
       )}

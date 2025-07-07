@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/use-auth';
-import { ROLES, EMPLOYEES } from '@/lib/constants';
+import { ROLES, EMPLOYEES, INSTITUTIONS } from '@/lib/constants';
 import React, { useState, useEffect } from 'react';
 import { Loader2, Search, Eye, CalendarDays, Filter, Building, ListFilter as StatusFilterIcon } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
@@ -52,31 +52,31 @@ const ALL_MOCK_REQUESTS: MockTrackedRequest[] = [
   {
     id: 'CONF001', employeeName: 'Ali Juma Ali', zanId: "221458232", requestType: 'Confirmation',
     submissionDate: '2024-07-28', status: 'Pending HHRMD Review', lastUpdatedDate: '2024-07-28', currentStage: 'Awaiting HHRMD Verification',
-    employeeInstitution: 'Central Government Office',
+    employeeInstitution: 'OFISI YA RAIS, FEDHA NA MIPANGO',
     actions: [{ role: ROLES.HRO, actorName: 'K. Mnyonge', action: 'Submitted', date: '2024-07-28', comments: 'Initial submission for confirmation.' }]
   },
   {
     id: 'LWOP001', employeeName: 'Fatma Said Omar', zanId: "334589123", requestType: 'LWOP',
     submissionDate: '2024-07-25', status: 'Pending HHRMD Review', lastUpdatedDate: '2024-07-25', currentStage: 'Awaiting HHRMD Review',
-    employeeInstitution: 'Treasury Office',
+    employeeInstitution: 'Ofisi ya Mhasibu Mkuu wa Serikali',
     actions: [{ role: ROLES.HRO, actorName: 'K. Mnyonge', action: 'Submitted', date: '2024-07-25', comments: 'LWOP for further studies.' }]
   },
   {
     id: 'PROM002', employeeName: 'Juma Omar Ali', zanId: "667890456", requestType: 'Promotion',
     submissionDate: '2024-07-26', status: 'Pending HRMO Review', lastUpdatedDate: '2024-07-26', currentStage: 'Awaiting HRMO Verification',
-    employeeInstitution: 'Government Procurement Services Agency',
+    employeeInstitution: 'WIZARA YA BIASHARA NA MAENDELEO YA VIWANDA',
     actions: [{ role: ROLES.HRO, actorName: 'K. Mnyonge', action: 'Submitted', date: '2024-07-26', comments: 'Promotion based on Education Advancement.' }]
   },
   {
     id: 'CADRE001', employeeName: 'Ali Juma Ali', zanId: "221458232", requestType: 'Change of Cadre',
     submissionDate: '2024-07-29', status: 'Pending HHRMD Review', lastUpdatedDate: '2024-07-29', currentStage: 'Awaiting HHRMD Review',
-    employeeInstitution: 'Central Government Office',
+    employeeInstitution: 'OFISI YA RAIS, FEDHA NA MIPANGO',
     actions: [{ role: ROLES.HRO, actorName: 'K. Mnyonge', action: 'Submitted', date: '2024-07-29', comments: 'Request for cadre change to Senior Officer.' }]
   },
   {
     id: 'RETIRE002', employeeName: 'Juma Omar Ali', zanId: "667890456", requestType: 'Retirement',
     submissionDate: '2024-07-28', status: 'Approved by Commission', lastUpdatedDate: '2024-08-05', currentStage: 'Completed - Approved',
-    employeeInstitution: 'Government Procurement Services Agency',
+    employeeInstitution: 'WIZARA YA BIASHARA NA MAENDELEO YA VIWANDA',
     actions: [
       { role: ROLES.HRO, actorName: 'K. Mnyonge', action: 'Submitted', date: '2024-07-28', comments: 'Voluntary retirement application.' },
       { role: ROLES.HRMO, actorName: 'F. Iddi', action: 'Verified & Forwarded to Commission', date: '2024-07-30', comments: 'All documents in order.' },
@@ -86,7 +86,7 @@ const ALL_MOCK_REQUESTS: MockTrackedRequest[] = [
   {
     id: 'SEXT001', employeeName: 'Hamid Khalfan Abdalla', zanId: "778901234", requestType: 'Service Extension',
     submissionDate: '2024-07-20', status: 'Rejected by Commission', lastUpdatedDate: '2024-08-02', currentStage: 'Completed - Rejected',
-    employeeInstitution: 'Government Garage',
+    employeeInstitution: 'WIZARA YA UJENZI MAWASILIANO NA UCHUKUZI',
     actions: [
       { role: ROLES.HRO, actorName: 'K. Mnyonge', action: 'Submitted', date: '2024-07-20', comments: 'Service extension for critical project.' },
       { role: ROLES.HHRMD, actorName: 'S. Khamis', action: 'Verified & Forwarded to Commission', date: '2024-07-25', comments: 'Justification seems valid.' },
@@ -96,13 +96,13 @@ const ALL_MOCK_REQUESTS: MockTrackedRequest[] = [
   {
     id: 'TERM001', employeeName: 'Ali Juma Ali', zanId: "221458232", requestType: 'Termination',
     submissionDate: '2024-07-25', status: 'Pending DO Review', lastUpdatedDate: '2024-07-25', currentStage: 'Awaiting DO Initial Review',
-    employeeInstitution: 'Central Government Office',
+    employeeInstitution: 'OFISI YA RAIS, FEDHA NA MIPANGO',
     actions: [{ role: ROLES.HRO, actorName: 'K. Mnyonge', action: 'Submitted', date: '2024-07-25', comments: 'Termination due to unauthorized absence.' }]
   },
   {
     id: 'COMP001', employeeName: 'Fatma Said Omar', zanId: "334589123", requestType: 'Complaints',
     submissionDate: '2024-07-20', status: 'Resolved - Pending Employee Confirmation', lastUpdatedDate: '2024-07-28', currentStage: 'DO Resolved, Awaiting Confirmation',
-    employeeInstitution: 'Treasury Office',
+    employeeInstitution: 'Ofisi ya Mhasibu Mkuu wa Serikali',
     actions: [
       { role: ROLES.EMPLOYEE, actorName: 'Fatma Said Omar', action: 'Submitted', date: '2024-07-20', comments: 'Complaint about unfair treatment.' },
       { role: ROLES.DO, actorName: 'M. Ussi', action: 'Reviewed & Resolved', date: '2024-07-28', comments: 'Issue addressed with department head.' }
@@ -111,7 +111,7 @@ const ALL_MOCK_REQUESTS: MockTrackedRequest[] = [
    {
     id: 'CONF002', employeeName: 'Safia Juma Ali', zanId: "125468957", requestType: 'Confirmation',
     submissionDate: '2024-06-15', status: 'Request Received – Awaiting Commission Decision', lastUpdatedDate: '2024-06-20', currentStage: 'HRMO Forwarded to Commission',
-    employeeInstitution: 'Civil Service Commission',
+    employeeInstitution: 'KAMISHENI YA UTUMISHI WA UMMA',
     actions: [
       { role: ROLES.HRO, actorName: 'K. Mnyonge', action: 'Submitted', date: '2024-06-15' },
       { role: ROLES.HRMO, actorName: 'F. Iddi', action: 'Verified & Forwarded', date: '2024-06-20', comments: 'Ready for commission review.' }
@@ -120,10 +120,48 @@ const ALL_MOCK_REQUESTS: MockTrackedRequest[] = [
   {
     id: 'PROM001', employeeName: 'Zainab Ali Khamis', zanId: "556789345", requestType: 'Promotion',
     submissionDate: '2024-05-10', status: 'Rejected by HHRMD - Awaiting HRO Correction', lastUpdatedDate: '2024-05-15', currentStage: 'HHRMD Rejected, HRO to Correct',
-    employeeInstitution: 'Planning Commission',
+    employeeInstitution: 'TUME YA UTUMISHI SERIKALINI',
     actions: [
       { role: ROLES.HRO, actorName: 'K. Mnyonge', action: 'Submitted', date: '2024-05-10' },
       { role: ROLES.HHRMD, actorName: 'S. Khamis', action: 'Rejected', date: '2024-05-15', comments: 'Incomplete performance appraisals submitted.' }
+    ]
+  },
+  {
+    id: 'CADRE015', employeeName: 'Zuhura Juma Makame', zanId: '181818181', requestType: 'Change of Cadre',
+    submissionDate: '2024-06-20', status: 'Approved by Commission', lastUpdatedDate: '2024-07-05', currentStage: 'Completed - Approved',
+    employeeInstitution: 'OFISI YA RAIS, FEDHA NA MIPANGO',
+    actions: [
+      { role: ROLES.HRO, actorName: 'K. Mnyonge', action: 'Submitted', date: '2024-06-20' },
+      { role: ROLES.HHRMD, actorName: 'S. Khamis', action: 'Verified & Forwarded', date: '2024-06-25' },
+      { role: ROLES.HHRMD, actorName: 'S. Khamis', action: 'Approved by Commission', date: '2024-07-05', comments: 'Approved.' }
+    ]
+  },
+  {
+    id: 'LWOP005', employeeName: 'Ismail Mohamed Kassim', zanId: '131313131', requestType: 'LWOP',
+    submissionDate: '2024-06-10', status: 'Pending HRMO Review', lastUpdatedDate: '2024-06-10', currentStage: 'Awaiting HRMO Review',
+    employeeInstitution: 'OFISI YA RAIS, FEDHA NA MIPANGO',
+    actions: [{ role: ROLES.HRO, actorName: 'K. Mnyonge', action: 'Submitted', date: '2024-06-10', comments: 'Requesting 1 year for personal development.' }]
+  },
+  {
+    id: 'TERM002', employeeName: 'Safia Juma Ali', zanId: '125468957', requestType: 'Termination',
+    submissionDate: '2024-07-22', status: 'Pending HHRMD Review', lastUpdatedDate: '2024-07-22', currentStage: 'Awaiting HHRMD Review',
+    employeeInstitution: 'KAMISHENI YA UTUMISHI WA UMMA',
+    actions: [{ role: ROLES.HRO, actorName: 'K. Mnyonge', action: 'Submitted', date: '2024-07-22', comments: 'Gross misconduct.' }]
+  },
+  {
+    id: 'RESIGN001', employeeName: 'Zainab Ali Khamis', zanId: '556789345', requestType: 'Resignation',
+    submissionDate: '2024-07-20', status: 'Pending HHRMD Acknowledgement', lastUpdatedDate: '2024-07-20', currentStage: 'Awaiting Acknowledgement',
+    employeeInstitution: 'TUME YA UTUMISHI SERIKALINI',
+    actions: [{ role: ROLES.HRO, actorName: 'K. Mnyonge', action: 'Submitted', date: '2024-07-20', comments: 'Relocating to another country.' }]
+  },
+  {
+    id: 'COMP003', employeeName: 'Hamid Mohamed', zanId: '778901234', requestType: 'Complaints',
+    submissionDate: '2024-07-25', status: 'Closed - Satisfied', lastUpdatedDate: '2024-08-01', currentStage: 'Completed',
+    employeeInstitution: 'WIZARA YA UJENZI MAWASILIANO NA UCHUKUZI',
+    actions: [
+        { role: ROLES.EMPLOYEE, actorName: 'Hamid Mohamed', action: 'Submitted', date: '2024-07-25' },
+        { role: ROLES.HHRMD, actorName: 'S. Khamis', action: 'Resolved', date: '2024-07-28' },
+        { role: ROLES.EMPLOYEE, actorName: 'Hamid Mohamed', action: 'Confirmed & Closed', date: '2024-08-01' }
     ]
   }
 ];
@@ -171,8 +209,11 @@ export default function TrackStatusPage() {
       let initialRequests = [...enrichedData].sort((a, b) => new Date(b.lastUpdatedDate).getTime() - new Date(a.lastUpdatedDate).getTime());
 
       if (role === ROLES.HRO && user?.institutionId) {
-        initialRequests = initialRequests.filter(req => req.employeeInstitution === user.institutionId);
-        setInstitutionFilter(user.institutionId);
+        const hroInstitution = INSTITUTIONS.find(i => i.id === user.institutionId)?.name;
+        initialRequests = initialRequests.filter(req => req.employeeInstitution === hroInstitution);
+        if (hroInstitution) {
+          setInstitutionFilter(hroInstitution);
+        }
       }
 
       setAllRequests(initialRequests);

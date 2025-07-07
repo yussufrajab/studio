@@ -14,6 +14,7 @@ import { toast } from '@/hooks/use-toast';
 import { Loader2, Search, FileText, CalendarDays, Paperclip } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Pagination } from '@/components/shared/pagination';
 
 interface MockPendingResignationRequest {
   id: string;
@@ -41,7 +42,7 @@ const mockPendingResignationRequests: MockPendingResignationRequest[] = [
     cadre: 'Planning Officer',
     employmentDate: "2022-02-01",
     dateOfBirth: "1992-12-30",
-    institution: "Planning Commission",
+    institution: "TUME YA UTUMISHI SERIKALINI",
     effectiveDate: '2024-09-30',
     reason: 'Relocating to another country.',
     submissionDate: '2024-07-20',
@@ -57,11 +58,207 @@ const mockPendingResignationRequests: MockPendingResignationRequest[] = [
     cadre: 'IT Support',
     employmentDate: "2017-01-20",
     dateOfBirth: "1975-09-01",
-    institution: "e-Government Agency",
+    institution: "WAKALA WA SERIKALI MTANDAO (eGAZ)",
     effectiveDate: '2024-08-15',
     reason: 'Pursuing further studies.',
     submissionDate: '2024-07-15',
     submittedBy: 'K. Mnyonge (HRO)',
+    status: 'Pending HRMO Acknowledgement',
+    documents: ['Letter of Request', '3 Month Notice/Receipt'],
+  },
+  {
+    id: 'RESIGN003',
+    employeeName: 'Ali Juma Ali',
+    zanId: '221458232',
+    department: 'Administration',
+    cadre: 'Administrative Officer',
+    employmentDate: "2023-01-10",
+    dateOfBirth: "1980-05-15",
+    institution: "OFISI YA RAIS, FEDHA NA MIPANGO",
+    effectiveDate: '2024-10-01',
+    reason: 'Found a better opportunity elsewhere.',
+    submissionDate: '2024-07-01',
+    submittedBy: 'K. Mnyonge (HRO)',
+    status: 'Pending HHRMD Acknowledgement',
+    documents: ['Letter of Request', '3 Month Notice/Receipt'],
+  },
+  {
+    id: 'RESIGN004',
+    employeeName: 'Fatma Said Omar',
+    zanId: '334589123',
+    department: 'Finance',
+    cadre: 'Accountant',
+    employmentDate: "2018-09-15",
+    dateOfBirth: "1988-02-10",
+    institution: "Ofisi ya Mhasibu Mkuu wa Serikali",
+    effectiveDate: '2024-11-20',
+    reason: 'Personal reasons.',
+    submissionDate: '2024-08-20',
+    submittedBy: 'K. Mnyonge (HRO)',
+    status: 'Acknowledged',
+    documents: ['Letter of Request', '3 Month Notice/Receipt'],
+  },
+  {
+    id: 'RESIGN005',
+    employeeName: 'Juma Omar Ali',
+    zanId: '667890456',
+    department: 'Procurement',
+    cadre: 'Procurement Officer',
+    employmentDate: "2015-10-11",
+    dateOfBirth: "1983-06-18",
+    institution: "WIZARA YA BIASHARA NA MAENDELEO YA VIWANDA",
+    effectiveDate: '2024-12-31',
+    reason: 'Starting a personal business.',
+    submissionDate: '2024-09-25',
+    submittedBy: 'K. Mnyonge (HRO)',
+    status: 'Pending HRMO Acknowledgement',
+    documents: ['Letter of Request', '3 Month Notice/Receipt'],
+  },
+  // Add 10 more
+  {
+    id: 'RESIGN006',
+    employeeName: 'Khadija Nassor',
+    zanId: '890123456',
+    department: 'Secondary Education',
+    cadre: 'Head Teacher',
+    employmentDate: "1990-07-15",
+    dateOfBirth: "1970-01-20",
+    institution: "WIZARA YA ELIMU NA MAFUNZO YA AMALI",
+    effectiveDate: '2025-01-10',
+    reason: 'Early retirement.',
+    submissionDate: '2024-10-10',
+    submittedBy: 'K. Mnyonge (HRO)',
+    status: 'Pending HHRMD Acknowledgement',
+    documents: ['Letter of Request', '3 Month Notice/Receipt'],
+  },
+  {
+    id: 'RESIGN007',
+    employeeName: 'Yussuf Makame',
+    zanId: '901234567',
+    department: 'Primary Education',
+    cadre: 'Teacher',
+    employmentDate: "2018-08-20",
+    dateOfBirth: "1995-04-11",
+    institution: "WIZARA YA ELIMU NA MAFUNZO YA AMALI",
+    effectiveDate: '2024-11-30',
+    reason: 'Health reasons.',
+    submissionDate: '2024-08-28',
+    submittedBy: 'K. Mnyonge (HRO)',
+    status: 'Pending HRMO Acknowledgement',
+    documents: ['Letter of Request', '3 Month Notice/Receipt'],
+  },
+  {
+    id: 'RESIGN008',
+    employeeName: 'Asha Hamad Faki',
+    zanId: '101010101',
+    department: 'Secretarial',
+    cadre: 'Secretary',
+    employmentDate: "2019-07-22",
+    dateOfBirth: "1990-01-01",
+    institution: "OFISI YA RAIS, FEDHA NA MIPANGO",
+    effectiveDate: '2025-02-15',
+    reason: 'Family relocation.',
+    submissionDate: '2024-11-15',
+    submittedBy: 'K. Mnyonge (HRO)',
+    status: 'Pending HHRMD Acknowledgement',
+    documents: ['Letter of Request', '3 Month Notice/Receipt'],
+  },
+  {
+    id: 'RESIGN009',
+    employeeName: 'Salim Omar Bakar',
+    zanId: '111111111',
+    department: 'Finance',
+    cadre: 'Accountant Assistant',
+    employmentDate: "2021-02-15",
+    dateOfBirth: "1994-05-20",
+    institution: "OFISI YA RAIS, FEDHA NA MIPANGO",
+    effectiveDate: '2025-03-01',
+    submissionDate: '2024-12-01',
+    submittedBy: 'K. Mnyonge (HRO)',
+    status: 'Pending HRMO Acknowledgement',
+    documents: ['Letter of Request', '3 Month Notice/Receipt'],
+  },
+  {
+    id: 'RESIGN010',
+    employeeName: 'Ismail Mohamed Kassim',
+    zanId: '131313131',
+    department: 'Administration',
+    cadre: 'Senior Administrative Officer',
+    employmentDate: "2015-03-10",
+    dateOfBirth: "1985-08-15",
+    institution: "OFISI YA RAIS, FEDHA NA MIPANGO",
+    effectiveDate: '2025-04-20',
+    submissionDate: '2025-01-20',
+    status: 'Acknowledged',
+    documents: ['Letter of Request', '3 Month Notice/Receipt'],
+  },
+  {
+    id: 'RESIGN011',
+    employeeName: 'Riziki Mussa Haji',
+    zanId: '141414141',
+    department: 'Human Resources',
+    cadre: 'HR Officer',
+    employmentDate: "2017-11-01",
+    dateOfBirth: "1989-02-28",
+    institution: "OFISI YA RAIS, FEDHA NA MIPANGO",
+    effectiveDate: '2025-05-18',
+    submissionDate: '2025-02-18',
+    status: 'Pending HHRMD Acknowledgement',
+    documents: ['Letter of Request', '3 Month Notice/Receipt'],
+  },
+  {
+    id: 'RESIGN012',
+    employeeName: 'Kassim Ali Khamis',
+    zanId: '151515151',
+    department: 'Support Staff',
+    cadre: 'Office Assistant',
+    employmentDate: "2024-01-05",
+    dateOfBirth: "2000-03-14",
+    institution: "OFISI YA RAIS, FEDHA NA MIPANGO",
+    effectiveDate: '2025-01-01',
+    submissionDate: '2024-10-01',
+    status: 'Pending HRMO Acknowledgement',
+    documents: ['Letter of Request', '3 Month Notice/Receipt'],
+  },
+  {
+    id: 'RESIGN013',
+    employeeName: 'Naila Said Suleiman',
+    zanId: '161616161',
+    department: 'Economics',
+    cadre: 'Economist',
+    employmentDate: "2016-08-20",
+    dateOfBirth: "1991-07-25",
+    institution: "OFISI YA RAIS, FEDHA NA MIPANGO",
+    effectiveDate: '2024-12-01',
+    submissionDate: '2024-09-01',
+    status: 'Acknowledged',
+    documents: ['Letter of Request', '3 Month Notice/Receipt'],
+  },
+  {
+    id: 'RESIGN014',
+    employeeName: 'Abdalla Foum Abdalla',
+    zanId: '171717171',
+    department: 'ICT',
+    cadre: 'IT Officer',
+    employmentDate: "2020-05-30",
+    dateOfBirth: "1993-10-05",
+    institution: "OFISI YA RAIS, FEDHA NA MIPANGO",
+    effectiveDate: '2025-02-28',
+    submissionDate: '2024-11-28',
+    status: 'Pending HHRMD Acknowledgement',
+    documents: ['Letter of Request', '3 Month Notice/Receipt'],
+  },
+  {
+    id: 'RESIGN015',
+    employeeName: 'Zuhura Juma Makame',
+    zanId: '181818181',
+    department: 'Legal',
+    cadre: 'Legal Officer',
+    employmentDate: "2018-09-12",
+    dateOfBirth: "1992-12-12",
+    institution: "OFISI YA RAIS, FEDHA NA MIPANGO",
+    effectiveDate: '2025-03-15',
+    submissionDate: '2024-12-15',
     status: 'Pending HRMO Acknowledgement',
     documents: ['Letter of Request', '3 Month Notice/Receipt'],
   },
@@ -84,6 +281,9 @@ export default function ResignationPage() {
   const [pendingRequests, setPendingRequests] = useState<MockPendingResignationRequest[]>(mockPendingResignationRequests);
   const [selectedRequest, setSelectedRequest] = useState<MockPendingResignationRequest | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     setMinEffectiveDate(format(new Date(), 'yyyy-MM-dd'));
@@ -181,6 +381,11 @@ export default function ResignationPage() {
       setIsSubmitting(false);
     }, 1500);
   };
+  
+  const paginatedRequests = pendingRequests.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   return (
     <div>
@@ -269,8 +474,8 @@ export default function ResignationPage() {
             <CardDescription>Acknowledge and process resignation requests.</CardDescription>
           </CardHeader>
           <CardContent>
-            {pendingRequests.length > 0 ? (
-              pendingRequests.map((request) => (
+            {paginatedRequests.length > 0 ? (
+              paginatedRequests.map((request) => (
                 <div key={request.id} className="mb-4 border p-4 rounded-md space-y-2 shadow-sm bg-background hover:shadow-md transition-shadow">
                   <h3 className="font-semibold text-base">Resignation for: {request.employeeName} (ZanID: {request.zanId})</h3>
                   <p className="text-sm text-muted-foreground">Effective Date: {request.effectiveDate ? format(parseISO(request.effectiveDate), 'PPP') : 'N/A'}</p>
@@ -287,6 +492,13 @@ export default function ResignationPage() {
             ) : (
               <p className="text-muted-foreground">No resignation requests pending review.</p>
             )}
+            <Pagination
+                currentPage={currentPage}
+                totalPages={Math.ceil(pendingRequests.length / itemsPerPage)}
+                onPageChange={setCurrentPage}
+                totalItems={pendingRequests.length}
+                itemsPerPage={itemsPerPage}
+            />
           </CardContent>
         </Card>
       )}
