@@ -20,6 +20,8 @@ interface MockPendingConfirmationRequest {
   id: string;
   employeeName: string;
   zanId: string;
+  payrollNumber?: string;
+  zssfNumber?: string;
   department: string;
   cadre: string;
   employmentDate: string;
@@ -41,11 +43,13 @@ const initialMockPendingConfirmationRequests: MockPendingConfirmationRequest[] =
     id: 'CONF001',
     employeeName: 'Ali Juma Ali',
     zanId: '221458232',
+    payrollNumber: "PAY001",
+    zssfNumber: "ZSSF001",
     department: 'Administration',
     cadre: 'Administrative Officer',
     employmentDate: "2023-01-10",
     dateOfBirth: "1980-05-15",
-    institution: "Central Government Office",
+    institution: "OFISI YA RAIS, FEDHA NA MIPANGO",
     submissionDate: '2024-07-28',
     submittedBy: 'K. Mnyonge (HRO)',
     status: 'Pending HHRMD Review',
@@ -56,11 +60,13 @@ const initialMockPendingConfirmationRequests: MockPendingConfirmationRequest[] =
     id: 'CONF002',
     employeeName: 'Fatma Said Omar',
     zanId: '334589123',
+    payrollNumber: "PAY003",
+    zssfNumber: "ZSSF003",
     department: 'Finance',
     cadre: 'Accountant',
     employmentDate: "2022-05-20",
     dateOfBirth: "1988-02-10",
-    institution: "Treasury Office",
+    institution: "Ofisi ya Mhasibu Mkuu wa Serikali",
     submissionDate: '2024-07-20',
     decisionDate: '2024-07-22', // HHRMD forwarded
     commissionDecisionDate: '2024-07-25', // Commission approved
@@ -74,11 +80,13 @@ const initialMockPendingConfirmationRequests: MockPendingConfirmationRequest[] =
     id: 'CONF003',
     employeeName: 'Hassan Mzee Juma',
     zanId: '445678912',
+    payrollNumber: "PAY004",
+    zssfNumber: "ZSSF004",
     department: 'ICT',
     cadre: 'IT Support',
     employmentDate: "2011-11-11", // Hired before May 2014
     dateOfBirth: "1975-09-01",
-    institution: "e-Government Agency",
+    institution: "WAKALA WA SERIKALI MTANDAO (eGAZ)",
     submissionDate: '2024-07-15',
     decisionDate: '2024-07-18', // HRMO rejected
     submittedBy: 'K. Mnyonge (HRO)',
@@ -223,6 +231,8 @@ export default function ConfirmationPage() {
         id: newRequestId,
         employeeName: employeeToConfirm.name,
         zanId: employeeToConfirm.zanId,
+        payrollNumber: employeeToConfirm.payrollNumber,
+        zssfNumber: employeeToConfirm.zssfNumber,
         department: employeeToConfirm.department || 'N/A',
         cadre: employeeToConfirm.cadre || 'N/A',
         employmentDate: employeeToConfirm.employmentDate || 'N/A',
@@ -467,6 +477,14 @@ export default function ConfirmationPage() {
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
                         <Label className="text-right text-muted-foreground">ZanID:</Label>
                         <p className="col-span-2 font-medium text-foreground">{selectedRequest.zanId}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">Payroll #:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.payrollNumber || 'N/A'}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">ZSSF #:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.zssfNumber || 'N/A'}</p>
                     </div>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
                         <Label className="text-right text-muted-foreground">Department:</Label>

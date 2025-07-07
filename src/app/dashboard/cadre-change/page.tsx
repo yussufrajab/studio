@@ -23,6 +23,8 @@ interface MockPendingCadreChangeRequest {
   id: string;
   employeeName: string;
   zanId: string;
+  payrollNumber?: string;
+  zssfNumber?: string;
   department: string;
   currentCadre: string;
   employmentDate: string;
@@ -45,6 +47,8 @@ const initialMockPendingCadreChangeRequests: MockPendingCadreChangeRequest[] = [
     id: 'CADRE001',
     employeeName: 'Ali Juma Ali',
     zanId: '221458232',
+    payrollNumber: "PAY001",
+    zssfNumber: "ZSSF001",
     department: 'Administration',
     currentCadre: 'Administrative Officer',
     employmentDate: "2023-01-10",
@@ -63,6 +67,8 @@ const initialMockPendingCadreChangeRequests: MockPendingCadreChangeRequest[] = [
     id: 'CADRE002',
     employeeName: 'Safia Juma Ali',
     zanId: '125468957',
+    payrollNumber: "PAY002",
+    zssfNumber: "ZSSF002",
     department: 'Human Resources',
     currentCadre: 'HR Officer',
     employmentDate: "2020-12-01",
@@ -81,6 +87,8 @@ const initialMockPendingCadreChangeRequests: MockPendingCadreChangeRequest[] = [
     id: 'CADRE003',
     employeeName: 'Hassan Mzee Juma',
     zanId: '445678912',
+    payrollNumber: "PAY004",
+    zssfNumber: "ZSSF004",
     department: 'ICT',
     currentCadre: 'IT Support',
     employmentDate: "2011-11-11",
@@ -99,6 +107,8 @@ const initialMockPendingCadreChangeRequests: MockPendingCadreChangeRequest[] = [
     id: 'CADRE004',
     employeeName: 'Fatma Said Omar',
     zanId: '334589123',
+    payrollNumber: "PAY003",
+    zssfNumber: "ZSSF003",
     department: 'Finance',
     currentCadre: 'Accountant',
     employmentDate: "2018-09-15",
@@ -117,6 +127,8 @@ const initialMockPendingCadreChangeRequests: MockPendingCadreChangeRequest[] = [
     id: 'CADRE005',
     employeeName: 'Zainab Ali Khamis',
     zanId: '556789345',
+    payrollNumber: "PAY005",
+    zssfNumber: "ZSSF005",
     department: 'Planning',
     currentCadre: 'Planning Officer',
     employmentDate: "2022-02-01",
@@ -136,6 +148,8 @@ const initialMockPendingCadreChangeRequests: MockPendingCadreChangeRequest[] = [
     id: 'CADRE006',
     employeeName: 'Juma Omar Ali',
     zanId: '667890456',
+    payrollNumber: "PAY006",
+    zssfNumber: "ZSSF006",
     department: 'Procurement',
     currentCadre: 'Procurement Officer',
     employmentDate: "2015-10-11",
@@ -154,6 +168,8 @@ const initialMockPendingCadreChangeRequests: MockPendingCadreChangeRequest[] = [
     id: 'CADRE007',
     employeeName: 'Hamid Khalfan Abdalla',
     zanId: '778901234',
+    payrollNumber: "PAY007",
+    zssfNumber: "ZSSF007",
     department: 'Transport',
     currentCadre: 'Senior Driver',
     employmentDate: "2010-01-01",
@@ -172,6 +188,8 @@ const initialMockPendingCadreChangeRequests: MockPendingCadreChangeRequest[] = [
     id: 'CADRE008',
     employeeName: 'Khadija Nassor',
     zanId: '890123456',
+    payrollNumber: "PAY008",
+    zssfNumber: "ZSSF008",
     department: 'Secondary Education',
     currentCadre: 'Head Teacher',
     employmentDate: "1990-07-15",
@@ -190,6 +208,8 @@ const initialMockPendingCadreChangeRequests: MockPendingCadreChangeRequest[] = [
     id: 'CADRE009',
     employeeName: 'Yussuf Makame',
     zanId: '901234567',
+    payrollNumber: "PAY009",
+    zssfNumber: "ZSSF009",
     department: 'Primary Education',
     currentCadre: 'Teacher',
     employmentDate: "2018-08-20",
@@ -208,6 +228,8 @@ const initialMockPendingCadreChangeRequests: MockPendingCadreChangeRequest[] = [
     id: 'CADRE010',
     employeeName: 'Asha Hamad Faki',
     zanId: '101010101',
+    payrollNumber: "PAY010",
+    zssfNumber: "ZSSF010",
     department: 'Secretarial',
     currentCadre: 'Secretary',
     employmentDate: "2019-07-22",
@@ -227,6 +249,8 @@ const initialMockPendingCadreChangeRequests: MockPendingCadreChangeRequest[] = [
     id: 'CADRE011',
     employeeName: 'Salim Omar Bakar',
     zanId: '111111111',
+    payrollNumber: "PAY011",
+    zssfNumber: "ZSSF011",
     department: 'Finance',
     currentCadre: 'Accountant Assistant',
     employmentDate: "2021-02-15",
@@ -245,6 +269,8 @@ const initialMockPendingCadreChangeRequests: MockPendingCadreChangeRequest[] = [
     id: 'CADRE012',
     employeeName: 'Ismail Mohamed Kassim',
     zanId: '131313131',
+    payrollNumber: "PAY013",
+    zssfNumber: "ZSSF013",
     department: 'Administration',
     currentCadre: 'Senior Administrative Officer',
     employmentDate: "2015-03-10",
@@ -263,6 +289,8 @@ const initialMockPendingCadreChangeRequests: MockPendingCadreChangeRequest[] = [
     id: 'CADRE013',
     employeeName: 'Riziki Mussa Haji',
     zanId: '141414141',
+    payrollNumber: "PAY014",
+    zssfNumber: "ZSSF014",
     department: 'Human Resources',
     currentCadre: 'HR Officer',
     employmentDate: "2017-11-01",
@@ -281,6 +309,8 @@ const initialMockPendingCadreChangeRequests: MockPendingCadreChangeRequest[] = [
     id: 'CADRE014',
     employeeName: 'Abdalla Foum Abdalla',
     zanId: '171717171',
+    payrollNumber: "PAY017",
+    zssfNumber: "ZSSF017",
     department: 'ICT',
     currentCadre: 'IT Officer',
     employmentDate: "2020-05-30",
@@ -299,6 +329,8 @@ const initialMockPendingCadreChangeRequests: MockPendingCadreChangeRequest[] = [
     id: 'CADRE015',
     employeeName: 'Zuhura Juma Makame',
     zanId: '181818181',
+    payrollNumber: "PAY018",
+    zssfNumber: "ZSSF018",
     department: 'Legal',
     currentCadre: 'Legal Officer',
     employmentDate: "2018-09-12",
@@ -446,6 +478,8 @@ export default function CadreChangePage() {
         id: newRequestId,
         employeeName: employeeDetails.name,
         zanId: employeeDetails.zanId,
+        payrollNumber: employeeDetails.payrollNumber,
+        zssfNumber: employeeDetails.zssfNumber,
         department: employeeDetails.department || 'N/A',
         currentCadre: employeeDetails.cadre || 'N/A',
         employmentDate: employeeDetails.employmentDate || 'N/A',
@@ -739,6 +773,14 @@ export default function CadreChangePage() {
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
                         <Label className="text-right text-muted-foreground">ZanID:</Label>
                         <p className="col-span-2 font-medium text-foreground">{selectedRequest.zanId}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">Payroll #:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.payrollNumber || 'N/A'}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right text-muted-foreground">ZSSF #:</Label>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.zssfNumber || 'N/A'}</p>
                     </div>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
                         <Label className="text-right text-muted-foreground">Department:</Label>
