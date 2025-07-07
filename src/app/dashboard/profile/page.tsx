@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
 import { Loader2, Search, FileText, UserCircle, Building, Briefcase, Award, ArrowLeft } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
+import { Pagination } from '@/components/shared/pagination';
 
 // Helper function to get initials for avatar
 const getInitials = (name?: string) => {
@@ -156,6 +157,9 @@ export default function ProfilePage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [pageLoading, setPageLoading] = useState(true);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
   const isCommissionUser = useMemo(() => 
     role === ROLES.HHRMD || role === ROLES.HRMO || role === ROLES.DO || role === ROLES.CSCS || role === ROLES.PO,
     [role]
@@ -198,6 +202,7 @@ export default function ProfilePage() {
         (emp.institution && emp.institution.toLowerCase().includes(lowercasedTerm))
     );
     setFilteredEmployees(filtered);
+    setCurrentPage(1); // Reset to first page on search
   }, [searchTerm, allEmployeesForUser]);
 
 
@@ -212,6 +217,13 @@ export default function ProfilePage() {
     if (isInstitutionalViewer) return "A list of all employees within your institution.";
     return "Search and view profiles for all employees across all institutions.";
   }, [role, isInstitutionalViewer]);
+
+  const totalPages = Math.ceil(filteredEmployees.length / itemsPerPage);
+  const paginatedEmployees = filteredEmployees.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
 
   if (authLoading || pageLoading) {
     return (
@@ -272,8 +284,8 @@ export default function ProfilePage() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {filteredEmployees.length > 0 ? (
-                            filteredEmployees.map(emp => (
+                        {paginatedEmployees.length > 0 ? (
+                            paginatedEmployees.map(emp => (
                                 <TableRow key={emp.id} onClick={() => setSelectedEmployee(emp)} className="cursor-pointer">
                                     <TableCell className="font-medium">{emp.name}</TableCell>
                                     <TableCell>{emp.gender}</TableCell>
@@ -290,6 +302,13 @@ export default function ProfilePage() {
                         )}
                     </TableBody>
                 </Table>
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                  totalItems={filteredEmployees.length}
+                  itemsPerPage={itemsPerPage}
+                />
             </CardContent>
         </Card>
       )}

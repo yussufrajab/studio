@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { ROLES, EMPLOYEES } from '@/lib/constants';
 import { PageHeader } from '@/components/shared/page-header';
@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { differenceInMonths, parseISO, format } from 'date-fns';
 import type { Employee } from '@/lib/types';
+import { Pagination } from '@/components/shared/pagination';
 
 // Helper function to calculate precise age
 const calculateAge = (dob: string) => {
@@ -25,6 +26,10 @@ const calculateAge = (dob: string) => {
 export default function UrgentActionsPage() {
   const { user, role } = useAuth();
   
+  const [currentPageProbation, setCurrentPageProbation] = useState(1);
+  const [currentPageRetirement, setCurrentPageRetirement] = useState(1);
+  const itemsPerPage = 10;
+
   const isAuthorized = role === ROLES.HRO || role === ROLES.HRRP;
 
   const { probationOverdue, nearingRetirement } = useMemo(() => {
@@ -55,6 +60,18 @@ export default function UrgentActionsPage() {
 
     return { probationOverdue: overdue, nearingRetirement: retiring };
   }, [isAuthorized, user?.institutionId]);
+
+  const totalProbationPages = Math.ceil(probationOverdue.length / itemsPerPage);
+  const paginatedProbation = probationOverdue.slice(
+    (currentPageProbation - 1) * itemsPerPage,
+    currentPageProbation * itemsPerPage
+  );
+
+  const totalRetirementPages = Math.ceil(nearingRetirement.length / itemsPerPage);
+  const paginatedRetirement = nearingRetirement.slice(
+    (currentPageRetirement - 1) * itemsPerPage,
+    currentPageRetirement * itemsPerPage
+  );
 
   if (!isAuthorized) {
     return (
@@ -90,8 +107,8 @@ export default function UrgentActionsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {probationOverdue.length > 0 ? (
-                  probationOverdue.map(emp => (
+                {paginatedProbation.length > 0 ? (
+                  paginatedProbation.map(emp => (
                     <TableRow key={emp.id}>
                       <TableCell>{emp.name}</TableCell>
                       <TableCell>{emp.zanId}</TableCell>
@@ -106,6 +123,13 @@ export default function UrgentActionsPage() {
                 )}
               </TableBody>
             </Table>
+            <Pagination
+              currentPage={currentPageProbation}
+              totalPages={totalProbationPages}
+              onPageChange={setCurrentPageProbation}
+              totalItems={probationOverdue.length}
+              itemsPerPage={itemsPerPage}
+            />
           </CardContent>
         </Card>
 
@@ -125,8 +149,8 @@ export default function UrgentActionsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {nearingRetirement.length > 0 ? (
-                  nearingRetirement.map(emp => (
+                {paginatedRetirement.length > 0 ? (
+                  paginatedRetirement.map(emp => (
                     <TableRow key={emp.id}>
                       <TableCell>{emp.name}</TableCell>
                       <TableCell>{emp.zanId}</TableCell>
@@ -141,6 +165,13 @@ export default function UrgentActionsPage() {
                 )}
               </TableBody>
             </Table>
+            <Pagination
+              currentPage={currentPageRetirement}
+              totalPages={totalRetirementPages}
+              onPageChange={setCurrentPageRetirement}
+              totalItems={nearingRetirement.length}
+              itemsPerPage={itemsPerPage}
+            />
           </CardContent>
         </Card>
       </div>

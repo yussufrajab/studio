@@ -18,6 +18,7 @@ import { toast } from '@/hooks/use-toast';
 import type { User, Role } from '@/lib/types';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { Pagination } from '@/components/shared/pagination';
 
 const userSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
@@ -42,6 +43,9 @@ export default function UserManagementPage() {
   const [users, setUsers] = useState(USERS.map(u => ({...u, active: true})));
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User & { active: boolean } | null>(null);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userSchema),
@@ -111,6 +115,13 @@ export default function UserManagementPage() {
     toast({ title: "User Status Changed", description: "The user's status has been updated." });
   };
 
+  const totalPages = Math.ceil(users.length / itemsPerPage);
+  const paginatedUsers = users.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+
   return (
     <div>
       <PageHeader
@@ -141,7 +152,7 @@ export default function UserManagementPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map(user => (
+              {paginatedUsers.map(user => (
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">{user.name}</TableCell>
                   <TableCell>{user.username}</TableCell>
@@ -167,6 +178,13 @@ export default function UserManagementPage() {
               ))}
             </TableBody>
           </Table>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            totalItems={users.length}
+            itemsPerPage={itemsPerPage}
+          />
         </CardContent>
       </Card>
 

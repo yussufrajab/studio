@@ -14,6 +14,7 @@ import React, { useState } from 'react';
 import { INSTITUTIONS } from '@/lib/constants';
 import { Pencil, PlusCircle, Trash2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { Pagination } from '@/components/shared/pagination';
 
 export interface Institution {
   id: string;
@@ -30,6 +31,9 @@ export default function InstitutionManagementPage() {
   const [institutions, setInstitutions] = useState<Institution[]>(INSTITUTIONS);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingInstitution, setEditingInstitution] = useState<Institution | null>(null);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const form = useForm<InstitutionFormValues>({
     resolver: zodResolver(institutionSchema),
@@ -80,6 +84,13 @@ export default function InstitutionManagementPage() {
       toast({ title: "Institution Deleted", description: "The institution has been deleted.", variant: "destructive" });
   };
 
+  const totalPages = Math.ceil(institutions.length / itemsPerPage);
+  const paginatedInstitutions = institutions.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+
   return (
     <div>
       <PageHeader
@@ -106,7 +117,7 @@ export default function InstitutionManagementPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {institutions.map(inst => (
+              {paginatedInstitutions.map(inst => (
                 <TableRow key={inst.id}>
                   <TableCell className="font-medium">{inst.name}</TableCell>
                   <TableCell className="text-right space-x-2">
@@ -123,6 +134,13 @@ export default function InstitutionManagementPage() {
               ))}
             </TableBody>
           </Table>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            totalItems={institutions.length}
+            itemsPerPage={itemsPerPage}
+          />
         </CardContent>
       </Card>
 

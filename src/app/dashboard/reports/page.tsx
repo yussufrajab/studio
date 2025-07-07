@@ -17,6 +17,7 @@ import * as XLSX from 'xlsx';
 import { useAuth } from '@/hooks/use-auth';
 import { ROLES, INSTITUTIONS } from '@/lib/constants';
 import { isWithinInterval, isValid, parseISO, startOfDay, endOfDay } from 'date-fns';
+import { Pagination } from '@/components/shared/pagination';
 
 
 // Augment jsPDF with autoTable
@@ -227,6 +228,9 @@ export default function ReportsPage() {
   const [reportDataKeys, setReportDataKeys] = useState<string[]>([]);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
   const [institutionFilter, setInstitutionFilter] = useState<string>('');
   const [availableInstitutions, setAvailableInstitutions] = useState<string[]>([]);
 
@@ -258,6 +262,7 @@ export default function ReportsPage() {
     setReportTitle('');
     setReportTotals(null);
     setReportDataKeys([]);
+    setCurrentPage(1);
 
     setTimeout(() => {
       const reportGenerator = MOCK_DATA_STORE[selectedReportType];
@@ -418,6 +423,12 @@ export default function ReportsPage() {
     toast({ title: "Excel Imehamishwa", description: "Ripoti imehamishwa kwenda Excel." });
   };
   
+  const totalPages = Math.ceil(reportData.length / itemsPerPage);
+  const paginatedData = reportData.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
   const renderTableFooter = () => {
     if (!reportTotals || reportHeaders.length === 0) return null;
 
@@ -568,6 +579,7 @@ export default function ReportsPage() {
           </CardHeader>
           <CardContent>
             {reportData.length > 0 ? (
+              <>
               <Table>
                 {fromDate && toDate && <TableCaption>Ripoti ya {reportTitle.toLowerCase()} kuanzia {fromDate} hadi {toDate}.</TableCaption>}
                 <TableHeader>
@@ -578,16 +590,24 @@ export default function ReportsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {reportData.map((row, rowIndex) => (
+                  {paginatedData.map((row, rowIndex) => (
                     <TableRow key={rowIndex}>
                       {reportDataKeys.map(key => (
                         <TableCell key={key}>{row[key]}</TableCell>
                       ))}
                     </TableRow>
                   ))}
-                  {reportTotals && Object.keys(reportTotals).length > 0 && renderTableFooter()}
+                  {currentPage === totalPages && reportTotals && Object.keys(reportTotals).length > 0 && renderTableFooter()}
                 </TableBody>
               </Table>
+              <Pagination 
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                totalItems={reportData.length}
+                itemsPerPage={itemsPerPage}
+              />
+              </>
             ) : (
                <p className="text-muted-foreground text-center py-4">Hakuna taarifa zilizopatikana kwa ripoti hii katika vigezo ulivyochagua.</p>
             )}
@@ -597,5 +617,3 @@ export default function ReportsPage() {
     </div>
   );
 }
-
-    

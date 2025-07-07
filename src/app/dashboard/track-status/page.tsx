@@ -23,6 +23,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format, parseISO, isValid, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import type { Role as UserRoleType } from '@/lib/types';
+import { Pagination } from '@/components/shared/pagination';
 
 
 interface RequestAction {
@@ -140,6 +141,8 @@ export default function TrackStatusPage() {
   const [searchAttempted, setSearchAttempted] = useState(false);
   const [foundRequests, setFoundRequests] = useState<MockTrackedRequest[]>([]);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const [allRequests, setAllRequests] = useState<MockTrackedRequest[]>([]);
   const [filteredRequests, setFilteredRequests] = useState<MockTrackedRequest[]>([]);
@@ -173,7 +176,7 @@ export default function TrackStatusPage() {
       }
 
       setAllRequests(initialRequests);
-      setFilteredRequests(initialRequests.slice(0, 100));
+      setFilteredRequests(initialRequests);
       setSearchAttempted(true);
 
       const institutions = Array.from(new Set(ALL_MOCK_REQUESTS.map(req => req.employeeInstitution).filter(Boolean) as string[]));
@@ -189,6 +192,7 @@ export default function TrackStatusPage() {
     setIsSearching(true);
     setSearchAttempted(false);
     setFoundRequests([]);
+    setCurrentPage(1);
 
     setTimeout(() => {
       const requests = ALL_MOCK_REQUESTS.map(req => {
@@ -209,6 +213,7 @@ export default function TrackStatusPage() {
 
   const handleFilterRequests = () => {
     setIsSearching(true);
+    setCurrentPage(1);
     let filtered = [...allRequests];
 
     if (fromDateFilter && toDateFilter) {
@@ -238,12 +243,12 @@ export default function TrackStatusPage() {
       filtered = filtered.filter(req => req.status === statusFilter);
     }
 
-    setFilteredRequests(filtered.slice(0,100));
+    setFilteredRequests(filtered);
     setIsSearching(false);
     if (filtered.length === 0) {
       toast({ title: "No Results", description: "No requests match your filter criteria."});
     } else {
-      toast({ title: "Filter Applied", description: `Displaying ${filtered.length >= 100 ? 'first 100 matching ' : ''}requests.`});
+      toast({ title: "Filter Applied", description: `Displaying ${filtered.length} matching requests.`});
     }
   };
 
@@ -253,6 +258,12 @@ export default function TrackStatusPage() {
   };
 
   const displayRequests = isTableView ? filteredRequests : foundRequests;
+
+  const totalPages = Math.ceil(displayRequests.length / itemsPerPage);
+  const paginatedRequests = displayRequests.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
 
   return (
@@ -356,6 +367,7 @@ export default function TrackStatusPage() {
               </CardHeader>
               <CardContent>
                 {displayRequests.length > 0 ? (
+                  <>
                   <Table>
                     <TableCaption>
                       {isTableView ? "Overview of submitted requests." : `A list of recent requests for ZanID: ${zanIdInput}.`}
@@ -374,7 +386,7 @@ export default function TrackStatusPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {displayRequests.map((request) => (
+                      {paginatedRequests.map((request) => (
                         <TableRow key={request.id} onClick={() => handleViewDetails(request)} className="cursor-pointer hover:bg-muted/50">
                           <TableCell className="font-medium">{request.id}</TableCell>
                           <TableCell>{request.employeeName}</TableCell>
@@ -393,6 +405,14 @@ export default function TrackStatusPage() {
                       ))}
                     </TableBody>
                   </Table>
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                    totalItems={displayRequests.length}
+                    itemsPerPage={itemsPerPage}
+                  />
+                  </>
                 ) : (
                   <p className="text-muted-foreground text-center py-4">
                     {isTableView ? "No requests match the current filter criteria." : `No requests found for ZanID: ${zanIdInput}.`}
