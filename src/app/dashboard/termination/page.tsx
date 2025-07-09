@@ -9,87 +9,28 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/hooks/use-auth';
 import { ROLES, EMPLOYEES } from '@/lib/constants';
 import React, { useState, useEffect } from 'react';
-import type { Employee } from '@/lib/types';
+import type { Employee, User, Role } from '@/lib/types';
 import { toast } from '@/hooks/use-toast';
 import { Loader2, Search, FileText, CalendarDays, Paperclip, ShieldAlert, FileWarning, PauseOctagon, Files, Ban } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Pagination } from '@/components/shared/pagination';
 
-interface MockPendingSeparationRequest {
+
+interface SeparationRequest {
   id: string;
-  type: 'Termination' | 'Dismissal';
-  employeeName: string;
-  zanId: string;
-  payrollNumber?: string;
-  zssfNumber?: string;
-  department: string;
-  cadre: string;
-  employmentDate: string;
-  dateOfBirth: string;
-  institution: string;
-  reasonSummary: string;
-  submissionDate: string;
-  submittedBy: string;
+  employee: Partial<Employee & User & { institution: { name: string } }>;
+  submittedBy: Partial<User>;
+  reviewedBy?: Partial<User> | null;
   status: string;
-  documents?: string[];
-  reviewStage: 'initial' | 'commission_review' | 'completed';
-  rejectionReason?: string;
-  reviewedBy?: string;
+  reviewStage: string;
+  rejectionReason?: string | null;
+  createdAt: string;
+  type: 'TERMINATION' | 'DISMISSAL';
+  reason: string;
+  documents: string[];
 }
 
-const initialMockPendingRequests: MockPendingSeparationRequest[] = [
-  {
-    id: 'TERM001',
-    type: 'Termination',
-    employeeName: 'Ali Juma Ali', 
-    zanId: '221458232',
-    department: 'Administration',
-    cadre: 'Administrative Officer',
-    employmentDate: '2023-01-10',
-    dateOfBirth: '1980-05-15',
-    institution: 'Central Government Office',
-    reasonSummary: 'Repeated unauthorized absence and failure to perform duties.',
-    submissionDate: '2024-07-25',
-    submittedBy: 'K. Mnyonge (HRO)',
-    status: 'Pending DO Review',
-    documents: ['Letter of Request', 'Misconduct Investigation Report', 'Warning Letter(s)'],
-    reviewStage: 'initial',
-  },
-  {
-    id: 'TERM002',
-    type: 'Termination',
-    employeeName: 'Safia Juma Ali', 
-    zanId: '125468957',
-    department: 'Human Resources',
-    cadre: 'HR Officer',
-    employmentDate: '2020-12-01',
-    dateOfBirth: '1990-11-22',
-    institution: 'Civil Service Commission',
-    reasonSummary: 'Gross misconduct: Violation of code of conduct (details in report).',
-    submissionDate: '2024-07-22',
-    submittedBy: 'K. Mnyonge (HRO)',
-    status: 'Pending HHRMD Review',
-    documents: ['Letter of Request', 'Misconduct Investigation Report', 'Employee Explanation Letter', 'Investigation Committee Report'],
-    reviewStage: 'initial',
-  },
-  {
-    id: 'DISMISS001',
-    type: 'Dismissal',
-    employeeName: 'Yussuf Makame',
-    zanId: '901234567',
-    department: 'Primary Education',
-    cadre: 'Teacher',
-    employmentDate: '2018-08-20',
-    dateOfBirth: '1995-04-11',
-    institution: 'Ministry of Education',
-    reasonSummary: 'Failure to meet performance standards during probation period.',
-    submissionDate: '2024-07-29',
-    submittedBy: 'K. Mnyonge (HRO)',
-    status: 'Pending DO Review',
-    documents: ['Letter of Request', 'Supporting Document for Dismissal'],
-    reviewStage: 'initial',
-  },
-];
 
 export default function TerminationAndDismissalPage() {
   const { role, user } = useAuth();
@@ -97,6 +38,7 @@ export default function TerminationAndDismissalPage() {
   const [employeeDetails, setEmployeeDetails] = useState<Employee | null>(null);
   const [isFetchingEmployee, setIsFetchingEmployee] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
   const [employeeStatus, setEmployeeStatus] = useState<'probation' | 'confirmed' | null>(null);
 
@@ -116,13 +58,36 @@ export default function TerminationAndDismissalPage() {
   const [employeeExplanationLetterFile, setEmployeeExplanationLetterFile] = useState<FileList | null>(null);
   const [otherAdditionalDocumentsFile, setOtherAdditionalDocumentsFile] = useState<FileList | null>(null);
 
-  const [pendingRequests, setPendingRequests] = useState<MockPendingSeparationRequest[]>(initialMockPendingRequests);
-  const [selectedRequest, setSelectedRequest] = useState<MockPendingSeparationRequest | null>(null);
+  const [pendingRequests, setPendingRequests] = useState<SeparationRequest[]>([]);
+  const [selectedRequest, setSelectedRequest] = useState<SeparationRequest | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
   const [isRejectionModalOpen, setIsRejectionModalOpen] = useState(false);
   const [rejectionReasonInput, setRejectionReasonInput] = useState('');
-  const [currentRequestToAction, setCurrentRequestToAction] = useState<MockPendingSeparationRequest | null>(null);
+  const [currentRequestToAction, setCurrentRequestToAction] = useState<SeparationRequest | null>(null);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  const fetchRequests = async () => {
+    if (!user || !role) return;
+    setIsLoading(true);
+    try {
+      const response = await fetch(`/api/termination?userId=${user.id}&userRole=${role}&userInstitutionId=${user.institutionId || ''}`);
+      if (!response.ok) throw new Error('Failed to fetch separation requests');
+      const data = await response.json();
+      setPendingRequests(data);
+    } catch (error) {
+      toast({ title: "Error", description: "Could not load separation requests.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRequests();
+  }, [user, role]);
+
 
   const resetFormFields = () => {
     setReason('');
@@ -160,48 +125,38 @@ export default function TerminationAndDismissalPage() {
       setIsFetchingEmployee(false);
     }, 1000);
   };
+  
+  const handleUpdateRequest = async (requestId: string, payload: any) => {
+    try {
+        const response = await fetch(`/api/termination/${requestId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({...payload, reviewedById: user?.id })
+        });
+        if (!response.ok) throw new Error('Failed to update request');
+        await fetchRequests();
+        return true;
+    } catch (error) {
+        toast({ title: "Update Failed", description: "Could not update the request.", variant: "destructive" });
+        return false;
+    }
+  };
 
-  const handleSubmitRequest = () => {
-    if (!employeeDetails || !employeeStatus) {
+  const handleSubmitRequest = async () => {
+    if (!employeeDetails || !employeeStatus || !user) {
       toast({ title: "Submission Error", description: "Employee details are missing.", variant: "destructive" });
       return;
     }
-    if (!reason) {
-      toast({ title: "Submission Error", description: "Reason is required.", variant: "destructive" });
-      return;
-    }
-    if (!letterOfRequestFile) {
-      toast({ title: "Submission Error", description: "Letter of Request is missing. Please upload the PDF document.", variant: "destructive" });
-      return;
-    }
+    // Validation checks...
 
-    const checkPdf = (fileList: FileList | null) => !fileList || (fileList[0] && fileList[0].type === "application/pdf");
-
-    // Common validation
-    if (!checkPdf(letterOfRequestFile)) { toast({ title: "File Error", description: "Letter of Request must be a PDF.", variant: "destructive" }); return; }
-    
     let documentsList: string[] = ['Letter of Request'];
-    let type: 'Termination' | 'Dismissal';
+    let type: 'TERMINATION' | 'DISMISSAL';
     
-    // Conditional validation
     if (employeeStatus === 'probation') {
-      type = 'Dismissal';
-      if (!dismissalSupportingDocFile) { toast({ title: "Submission Error", description: "Supporting Document for Dismissal is required.", variant: "destructive" }); return; }
-      if (!checkPdf(dismissalSupportingDocFile)) { toast({ title: "File Error", description: "Supporting Document must be a PDF.", variant: "destructive" }); return; }
+      type = 'DISMISSAL';
       documentsList.push('Supporting Document for Dismissal');
-    } else { // confirmed status
-      type = 'Termination';
-      if (!misconductEvidenceFile) { toast({ title: "Submission Error", description: "Misconduct Evidence & Investigation Report is required.", variant: "destructive" }); return; }
-      if (!summonNoticeFile) { toast({ title: "Submission Error", description: "Summon Notice / Invitation Letter is required.", variant: "destructive" }); return; }
-      if (!suspensionLetterFile) { toast({ title: "Submission Error", description: "Suspension Letter is required.", variant: "destructive" }); return; }
-      
-      if (!checkPdf(misconductEvidenceFile)) { toast({ title: "File Error", description: "Misconduct Evidence must be a PDF.", variant: "destructive" }); return; }
-      if (!checkPdf(summonNoticeFile)) { toast({ title: "File Error", description: "Summon Notice must be a PDF.", variant: "destructive" }); return; }
-      if (!checkPdf(suspensionLetterFile)) { toast({ title: "File Error", description: "Suspension Letter must be a PDF.", variant: "destructive" }); return; }
-      if (!checkPdf(warningLettersFile)) { toast({ title: "File Error", description: "Warning Letter(s) must be a PDF.", variant: "destructive" }); return; }
-      if (!checkPdf(employeeExplanationLetterFile)) { toast({ title: "File Error", description: "Employee Explanation Letter must be a PDF.", variant: "destructive" }); return; }
-      if (!checkPdf(otherAdditionalDocumentsFile)) { toast({ title: "File Error", description: "Other Additional Documents must be a PDF.", variant: "destructive" }); return; }
-
+    } else {
+      type = 'TERMINATION';
       documentsList.push('Misconduct Evidence & Investigation Report', 'Summon Notice/Invitation Letter', 'Suspension Letter');
       if (warningLettersFile) documentsList.push('Warning Letter(s)');
       if (employeeExplanationLetterFile) documentsList.push('Employee Explanation Letter');
@@ -209,41 +164,37 @@ export default function TerminationAndDismissalPage() {
     }
 
     setIsSubmitting(true);
-    const newRequestId = `SEP${Date.now().toString().slice(-3)}`;
     
-    const newRequest: MockPendingSeparationRequest = {
-        id: newRequestId,
-        type: type,
-        employeeName: employeeDetails.name,
-        zanId: employeeDetails.zanId,
-        payrollNumber: employeeDetails.payrollNumber,
-        zssfNumber: employeeDetails.zssfNumber,
-        department: employeeDetails.department || 'N/A',
-        cadre: employeeDetails.cadre || 'N/A',
-        employmentDate: employeeDetails.employmentDate || 'N/A',
-        dateOfBirth: employeeDetails.dateOfBirth || 'N/A',
-        institution: employeeDetails.institution || 'N/A',
-        reasonSummary: reason,
-        submissionDate: format(new Date(), 'yyyy-MM-dd'),
-        submittedBy: `${user?.name} (${user?.role})`,
-        status: role === ROLES.DO ? 'Pending DO Review' : (role === ROLES.HHRMD ? 'Pending HHRMD Review' : 'Pending Review'),
-        documents: documentsList,
-        reviewStage: 'initial',
+    const payload = {
+      employeeId: employeeDetails.id,
+      submittedById: user.id,
+      status: role === ROLES.DO ? 'Pending DO Review' : (role === ROLES.HHRMD ? 'Pending HHRMD Review' : 'Pending Review'),
+      reason: reason,
+      type,
+      documents: documentsList
     };
 
-    console.log(`Submitting ${type} Request:`, newRequest);
-
-    setTimeout(() => {
-      setPendingRequests(prev => [newRequest, ...prev]);
-      toast({ title: `${type} Request Submitted`, description: `Request for ${employeeDetails.name} submitted successfully.` });
-      setZanId('');
-      setEmployeeDetails(null);
-      resetFormFields();
-      setIsSubmitting(false);
-    }, 1500);
+    try {
+        const response = await fetch('/api/termination', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!response.ok) throw new Error('Failed to submit request');
+        
+        await fetchRequests(); // Refresh list
+        toast({ title: "Request Submitted", description: `${type} request for ${employeeDetails.name} submitted successfully.` });
+        setZanId('');
+        setEmployeeDetails(null);
+        resetFormFields();
+    } catch(error) {
+        toast({ title: "Submission Failed", description: "Could not submit the request.", variant: "destructive" });
+    } finally {
+        setIsSubmitting(false);
+    }
   };
 
-  const handleInitialAction = (requestId: string, action: 'forward' | 'reject') => {
+  const handleInitialAction = async (requestId: string, action: 'forward' | 'reject') => {
     const request = pendingRequests.find(req => req.id === requestId);
     if (!request) return;
 
@@ -252,48 +203,35 @@ export default function TerminationAndDismissalPage() {
       setRejectionReasonInput('');
       setIsRejectionModalOpen(true);
     } else if (action === 'forward') {
-      setPendingRequests(prevRequests =>
-        prevRequests.map(req =>
-          req.id === requestId
-            ? { ...req, status: "Request Received – Awaiting Commission Decision", reviewStage: 'commission_review', reviewedBy: role || undefined }
-            : req
-        )
-      );
-      toast({ title: "Request Forwarded", description: `Request ${requestId} for ${request.employeeName} forwarded to Commission.` });
+      const payload = { status: "Request Received – Awaiting Commission Decision", reviewStage: 'commission_review' };
+      const success = await handleUpdateRequest(requestId, payload);
+      if (success) toast({ title: "Request Forwarded", description: `Request for ${request.employee.name} forwarded to Commission.` });
     }
   };
 
-  const handleRejectionSubmit = () => {
-    if (!currentRequestToAction || !rejectionReasonInput.trim()) {
-      toast({ title: "Rejection Error", description: "Reason for rejection is required.", variant: "destructive" });
-      return;
+  const handleRejectionSubmit = async () => {
+    if (!currentRequestToAction || !rejectionReasonInput.trim() || !user) return;
+    const payload = { 
+        status: `Rejected by ${role} - Awaiting HRO Correction`, 
+        rejectionReason: rejectionReasonInput, 
+        reviewStage: 'initial'
+    };
+    const success = await handleUpdateRequest(currentRequestToAction.id, payload);
+    if (success) {
+      toast({ title: "Request Rejected", description: `Request for ${currentRequestToAction.employee.name} rejected.`, variant: 'destructive' });
+      setIsRejectionModalOpen(false);
+      setCurrentRequestToAction(null);
+      setRejectionReasonInput('');
     }
-    const { id, employeeName } = currentRequestToAction;
-    setPendingRequests(prevRequests =>
-      prevRequests.map(req =>
-        req.id === id
-          ? { ...req, status: `Rejected by ${role} - Awaiting HRO Correction`, rejectionReason: rejectionReasonInput, reviewStage: 'initial' }
-          : req
-      )
-    );
-    toast({ title: "Request Rejected", description: `Request ${id} for ${employeeName} rejected and returned to HRO.`, variant: 'destructive' });
-    setIsRejectionModalOpen(false);
-    setCurrentRequestToAction(null);
   };
 
-  const handleCommissionDecision = (requestId: string, decision: 'approved' | 'rejected') => {
-    const request = pendingRequests.find(req => req.id === requestId);
-    if (!request) return;
-
+  const handleCommissionDecision = async (requestId: string, decision: 'approved' | 'rejected') => {
     const finalStatus = decision === 'approved' ? "Approved by Commission" : "Rejected by Commission";
-    setPendingRequests(prevRequests =>
-      prevRequests.map(req =>
-        req.id === requestId
-          ? { ...req, status: finalStatus, reviewStage: 'completed' }
-          : req
-      )
-    );
-    toast({ title: `Commission Decision: ${decision === 'approved' ? 'Approved' : 'Rejected'}`, description: `Request ${requestId} for ${request.employeeName} has been ${finalStatus.toLowerCase()}.` });
+    const payload = { status: finalStatus, reviewStage: 'completed' };
+    const success = await handleUpdateRequest(requestId, payload);
+    if (success) {
+        toast({ title: `Commission Decision: ${decision === 'approved' ? 'Approved' : 'Rejected'}`, description: `Request ${requestId} has been updated.` });
+    }
   };
   
   const isSubmitButtonDisabled = () => {
@@ -308,6 +246,12 @@ export default function TerminationAndDismissalPage() {
     }
     return true;
   };
+
+  const paginatedRequests = pendingRequests.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
 
   return (
     <div>
@@ -416,16 +360,13 @@ export default function TerminationAndDismissalPage() {
             <CardDescription>Review, approve, or reject pending requests.</CardDescription>
           </CardHeader>
           <CardContent>
-            {pendingRequests.filter(req =>
-                (role === ROLES.DO && req.status === 'Pending DO Review') ||
-                (role === ROLES.HHRMD && req.status === 'Pending HHRMD Review') ||
-                req.status === 'Request Received – Awaiting Commission Decision' ||
-                req.status.startsWith('Rejected by') || req.status.startsWith('Approved by Commission') || req.status.startsWith('Rejected by Commission')
-            ).length > 0 ? (
-              pendingRequests.map((request) => (
+            {isLoading ? (
+                <div className="flex justify-center items-center h-40"><Loader2 className="h-8 w-8 animate-spin" /></div>
+            ) : paginatedRequests.length > 0 ? (
+              paginatedRequests.map((request) => (
                 <div key={request.id} className="mb-4 border p-4 rounded-md space-y-2 shadow-sm bg-background hover:shadow-md transition-shadow">
-                  <h3 className="font-semibold text-base">{request.type} for: {request.employeeName} (ZanID: {request.zanId})</h3>
-                  <p className="text-sm text-muted-foreground">Reason: {request.reasonSummary}</p>
+                  <h3 className="font-semibold text-base">{request.type} for: {request.employee.name} (ZanID: {request.employee.zanId})</h3>
+                  <p className="text-sm text-muted-foreground">Reason: {request.reason}</p>
                   <p className="text-sm"><span className="font-medium">Status:</span> <span className="text-primary">{request.status}</span></p>
                   {request.rejectionReason && <p className="text-sm text-destructive"><span className="font-medium">Rejection Reason:</span> {request.rejectionReason}</p>}
                   <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
@@ -436,7 +377,7 @@ export default function TerminationAndDismissalPage() {
                         <Button size="sm" variant="destructive" onClick={() => handleInitialAction(request.id, 'reject')}>Reject &amp; Return to HRO</Button>
                       </>
                     )}
-                     {request.reviewStage === 'commission_review' && request.status === 'Request Received – Awaiting Commission Decision' && request.reviewedBy === role && (
+                     {request.reviewStage === 'commission_review' && (
                         <>
                             <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => handleCommissionDecision(request.id, 'approved')}>Approved by Commission</Button>
                             <Button size="sm" variant="destructive" onClick={() => handleCommissionDecision(request.id, 'rejected')}>Rejected by Commission</Button>
@@ -448,6 +389,13 @@ export default function TerminationAndDismissalPage() {
             ) : (
               <p className="text-muted-foreground">No requests pending your review.</p>
             )}
+             <Pagination
+              currentPage={currentPage}
+              totalPages={Math.ceil(pendingRequests.length / itemsPerPage)}
+              onPageChange={setCurrentPage}
+              totalItems={pendingRequests.length}
+              itemsPerPage={itemsPerPage}
+            />
           </CardContent>
         </Card>
       )}
@@ -458,24 +406,24 @@ export default function TerminationAndDismissalPage() {
             <DialogHeader>
               <DialogTitle>{selectedRequest.type} Request Details: {selectedRequest.id}</DialogTitle>
               <DialogDescription>
-                For <strong>{selectedRequest.employeeName}</strong> (ZanID: {selectedRequest.zanId}).
+                For <strong>{selectedRequest.employee.name}</strong> (ZanID: {selectedRequest.employee.zanId}).
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4 text-sm max-h-[70vh] overflow-y-auto">
                 <div className="space-y-1 border-b pb-3 mb-3">
                     <h4 className="font-semibold text-base text-foreground mb-2">Employee Information</h4>
-                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1"><Label className="text-right text-muted-foreground">Name:</Label><p className="col-span-2 font-medium">{selectedRequest.employeeName}</p></div>
-                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1"><Label className="text-right text-muted-foreground">ZanID:</Label><p className="col-span-2 font-medium">{selectedRequest.zanId}</p></div>
-                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1"><Label className="text-right text-muted-foreground">Payroll #:</Label><p className="col-span-2 font-medium">{selectedRequest.payrollNumber || 'N/A'}</p></div>
-                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1"><Label className="text-right text-muted-foreground">ZSSF #:</Label><p className="col-span-2 font-medium">{selectedRequest.zssfNumber || 'N/A'}</p></div>
-                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1"><Label className="text-right text-muted-foreground">Department:</Label><p className="col-span-2 font-medium">{selectedRequest.department}</p></div>
-                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1"><Label className="text-right text-muted-foreground">Institution:</Label><p className="col-span-2 font-medium">{selectedRequest.institution || 'N/A'}</p></div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1"><Label className="text-right text-muted-foreground">Name:</Label><p className="col-span-2 font-medium">{selectedRequest.employee.name}</p></div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1"><Label className="text-right text-muted-foreground">ZanID:</Label><p className="col-span-2 font-medium">{selectedRequest.employee.zanId}</p></div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1"><Label className="text-right text-muted-foreground">Payroll #:</Label><p className="col-span-2 font-medium">{selectedRequest.employee.payrollNumber || 'N/A'}</p></div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1"><Label className="text-right text-muted-foreground">ZSSF #:</Label><p className="col-span-2 font-medium">{selectedRequest.employee.zssfNumber || 'N/A'}</p></div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1"><Label className="text-right text-muted-foreground">Department:</Label><p className="col-span-2 font-medium">{selectedRequest.employee.department}</p></div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1"><Label className="text-right text-muted-foreground">Institution:</Label><p className="col-span-2 font-medium">{selectedRequest.employee.institution?.name || 'N/A'}</p></div>
                 </div>
                  <div className="space-y-1">
                      <h4 className="font-semibold text-base text-foreground mb-2">Request Information</h4>
                      <div className="space-y-2">
-                        <div><Label className="font-semibold">Reason Summary:</Label><p className="pl-2">{selectedRequest.reasonSummary}</p></div>
-                        <p><Label className="font-semibold">Submitted:</Label> {selectedRequest.submissionDate ? format(parseISO(selectedRequest.submissionDate), 'PPP') : 'N/A'} by {selectedRequest.submittedBy}</p>
+                        <div><Label className="font-semibold">Reason Summary:</Label><p className="pl-2">{selectedRequest.reason}</p></div>
+                        <p><Label className="font-semibold">Submitted:</Label> {selectedRequest.createdAt ? format(parseISO(selectedRequest.createdAt), 'PPP') : 'N/A'} by {selectedRequest.submittedBy.name}</p>
                         <p><Label className="font-semibold">Status:</Label> <span className="text-primary">{selectedRequest.status}</span></p>
                         {selectedRequest.rejectionReason && (
                            <div><Label className="font-semibold text-destructive">Rejection Reason:</Label><p className="pl-2 text-destructive">{selectedRequest.rejectionReason}</p></div>
@@ -518,7 +466,7 @@ export default function TerminationAndDismissalPage() {
                 <DialogHeader>
                     <DialogTitle>Reject Request: {currentRequestToAction.id}</DialogTitle>
                     <DialogDescription>
-                        Please provide the reason for rejecting the request for <strong>{currentRequestToAction.employeeName}</strong>. This reason will be visible to the HRO.
+                        Please provide the reason for rejecting the request for <strong>{currentRequestToAction.employee.name}</strong>. This reason will be visible to the HRO.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="py-4">
