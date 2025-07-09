@@ -9,263 +9,27 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/hooks/use-auth';
 import { ROLES, EMPLOYEES } from '@/lib/constants';
 import React, { useState, useEffect } from 'react';
-import type { Employee } from '@/lib/types';
+import type { Employee, User, Role } from '@/lib/types';
 import { toast } from '@/hooks/use-toast';
 import { Loader2, Search, FileText, CalendarDays, Paperclip } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Pagination } from '@/components/shared/pagination';
 
-interface MockPendingResignationRequest {
+interface ResignationRequest {
   id: string;
-  employeeName: string;
-  zanId: string;
-  payrollNumber?: string;
-  zssfNumber?: string;
-  department: string;
-  cadre: string;
-  employmentDate: string;
-  dateOfBirth: string;
-  institution: string;
-  effectiveDate: string;
-  reason?: string;
-  submissionDate: string;
-  submittedBy: string;
+  employee: Partial<Employee & User & { institution: { name: string } }>;
+  submittedBy: Partial<User>;
+  reviewedBy?: Partial<User> | null;
   status: string;
-  documents?: string[];
+  reviewStage: string;
+  rejectionReason?: string | null;
+  createdAt: string;
+
+  effectiveDate: string;
+  reason?: string | null;
+  documents: string[];
 }
-
-const mockPendingResignationRequests: MockPendingResignationRequest[] = [
-  {
-    id: 'RESIGN001',
-    employeeName: 'Zainab Ali Khamis',
-    zanId: '556789345',
-    department: 'Planning',
-    cadre: 'Planning Officer',
-    employmentDate: "2022-02-01",
-    dateOfBirth: "1992-12-30",
-    institution: "TUME YA UTUMISHI SERIKALINI",
-    effectiveDate: '2024-09-30',
-    reason: 'Relocating to another country.',
-    submissionDate: '2024-07-20',
-    submittedBy: 'K. Mnyonge (HRO)',
-    status: 'Pending HHRMD Acknowledgement',
-    documents: ['Letter of Request', '3 Month Notice/Receipt'],
-  },
-  {
-    id: 'RESIGN002',
-    employeeName: 'Hassan Mzee Juma',
-    zanId: '445678912',
-    department: 'ICT',
-    cadre: 'IT Support',
-    employmentDate: "2017-01-20",
-    dateOfBirth: "1975-09-01",
-    institution: "WAKALA WA SERIKALI MTANDAO (eGAZ)",
-    effectiveDate: '2024-08-15',
-    reason: 'Pursuing further studies.',
-    submissionDate: '2024-07-15',
-    submittedBy: 'K. Mnyonge (HRO)',
-    status: 'Pending HRMO Acknowledgement',
-    documents: ['Letter of Request', '3 Month Notice/Receipt'],
-  },
-  {
-    id: 'RESIGN003',
-    employeeName: 'Ali Juma Ali',
-    zanId: '221458232',
-    department: 'Administration',
-    cadre: 'Administrative Officer',
-    employmentDate: "2023-01-10",
-    dateOfBirth: "1980-05-15",
-    institution: "OFISI YA RAIS, FEDHA NA MIPANGO",
-    effectiveDate: '2024-10-01',
-    reason: 'Found a better opportunity elsewhere.',
-    submissionDate: '2024-07-01',
-    submittedBy: 'K. Mnyonge (HRO)',
-    status: 'Pending HHRMD Acknowledgement',
-    documents: ['Letter of Request', '3 Month Notice/Receipt'],
-  },
-  {
-    id: 'RESIGN004',
-    employeeName: 'Fatma Said Omar',
-    zanId: '334589123',
-    department: 'Finance',
-    cadre: 'Accountant',
-    employmentDate: "2018-09-15",
-    dateOfBirth: "1988-02-10",
-    institution: "Ofisi ya Mhasibu Mkuu wa Serikali",
-    effectiveDate: '2024-11-20',
-    reason: 'Personal reasons.',
-    submissionDate: '2024-08-20',
-    submittedBy: 'K. Mnyonge (HRO)',
-    status: 'Acknowledged',
-    documents: ['Letter of Request', '3 Month Notice/Receipt'],
-  },
-  {
-    id: 'RESIGN005',
-    employeeName: 'Juma Omar Ali',
-    zanId: '667890456',
-    department: 'Procurement',
-    cadre: 'Procurement Officer',
-    employmentDate: "2015-10-11",
-    dateOfBirth: "1983-06-18",
-    institution: "WIZARA YA BIASHARA NA MAENDELEO YA VIWANDA",
-    effectiveDate: '2024-12-31',
-    reason: 'Starting a personal business.',
-    submissionDate: '2024-09-25',
-    submittedBy: 'K. Mnyonge (HRO)',
-    status: 'Pending HRMO Acknowledgement',
-    documents: ['Letter of Request', '3 Month Notice/Receipt'],
-  },
-  // Add 10 more
-  {
-    id: 'RESIGN006',
-    employeeName: 'Khadija Nassor',
-    zanId: '890123456',
-    department: 'Secondary Education',
-    cadre: 'Head Teacher',
-    employmentDate: "1990-07-15",
-    dateOfBirth: "1970-01-20",
-    institution: "WIZARA YA ELIMU NA MAFUNZO YA AMALI",
-    effectiveDate: '2025-01-10',
-    reason: 'Early retirement.',
-    submissionDate: '2024-10-10',
-    submittedBy: 'K. Mnyonge (HRO)',
-    status: 'Pending HHRMD Acknowledgement',
-    documents: ['Letter of Request', '3 Month Notice/Receipt'],
-  },
-  {
-    id: 'RESIGN007',
-    employeeName: 'Yussuf Makame',
-    zanId: '901234567',
-    department: 'Primary Education',
-    cadre: 'Teacher',
-    employmentDate: "2018-08-20",
-    dateOfBirth: "1995-04-11",
-    institution: "WIZARA YA ELIMU NA MAFUNZO YA AMALI",
-    effectiveDate: '2024-11-30',
-    reason: 'Health reasons.',
-    submissionDate: '2024-08-28',
-    submittedBy: 'K. Mnyonge (HRO)',
-    status: 'Pending HRMO Acknowledgement',
-    documents: ['Letter of Request', '3 Month Notice/Receipt'],
-  },
-  {
-    id: 'RESIGN008',
-    employeeName: 'Asha Hamad Faki',
-    zanId: '101010101',
-    department: 'Secretarial',
-    cadre: 'Secretary',
-    employmentDate: "2019-07-22",
-    dateOfBirth: "1990-01-01",
-    institution: "OFISI YA RAIS, FEDHA NA MIPANGO",
-    effectiveDate: '2025-02-15',
-    reason: 'Family relocation.',
-    submissionDate: '2024-11-15',
-    submittedBy: 'K. Mnyonge (HRO)',
-    status: 'Pending HHRMD Acknowledgement',
-    documents: ['Letter of Request', '3 Month Notice/Receipt'],
-  },
-  {
-    id: 'RESIGN009',
-    employeeName: 'Salim Omar Bakar',
-    zanId: '111111111',
-    department: 'Finance',
-    cadre: 'Accountant Assistant',
-    employmentDate: "2021-02-15",
-    dateOfBirth: "1994-05-20",
-    institution: "OFISI YA RAIS, FEDHA NA MIPANGO",
-    effectiveDate: '2025-03-01',
-    submissionDate: '2024-12-01',
-    submittedBy: 'K. Mnyonge (HRO)',
-    status: 'Pending HRMO Acknowledgement',
-    documents: ['Letter of Request', '3 Month Notice/Receipt'],
-  },
-  {
-    id: 'RESIGN010',
-    employeeName: 'Ismail Mohamed Kassim',
-    zanId: '131313131',
-    department: 'Administration',
-    cadre: 'Senior Administrative Officer',
-    employmentDate: "2015-03-10",
-    dateOfBirth: "1985-08-15",
-    institution: "OFISI YA RAIS, FEDHA NA MIPANGO",
-    effectiveDate: '2025-04-20',
-    submissionDate: '2025-01-20',
-    status: 'Acknowledged',
-    documents: ['Letter of Request', '3 Month Notice/Receipt'],
-  },
-  {
-    id: 'RESIGN011',
-    employeeName: 'Riziki Mussa Haji',
-    zanId: '141414141',
-    department: 'Human Resources',
-    cadre: 'HR Officer',
-    employmentDate: "2017-11-01",
-    dateOfBirth: "1989-02-28",
-    institution: "OFISI YA RAIS, FEDHA NA MIPANGO",
-    effectiveDate: '2025-05-18',
-    submissionDate: '2025-02-18',
-    status: 'Pending HHRMD Acknowledgement',
-    documents: ['Letter of Request', '3 Month Notice/Receipt'],
-  },
-  {
-    id: 'RESIGN012',
-    employeeName: 'Kassim Ali Khamis',
-    zanId: '151515151',
-    department: 'Support Staff',
-    cadre: 'Office Assistant',
-    employmentDate: "2024-01-05",
-    dateOfBirth: "2000-03-14",
-    institution: "OFISI YA RAIS, FEDHA NA MIPANGO",
-    effectiveDate: '2025-01-01',
-    submissionDate: '2024-10-01',
-    status: 'Pending HRMO Acknowledgement',
-    documents: ['Letter of Request', '3 Month Notice/Receipt'],
-  },
-  {
-    id: 'RESIGN013',
-    employeeName: 'Naila Said Suleiman',
-    zanId: '161616161',
-    department: 'Economics',
-    cadre: 'Economist',
-    employmentDate: "2016-08-20",
-    dateOfBirth: "1991-07-25",
-    institution: "OFISI YA RAIS, FEDHA NA MIPANGO",
-    effectiveDate: '2024-12-01',
-    submissionDate: '2024-09-01',
-    status: 'Acknowledged',
-    documents: ['Letter of Request', '3 Month Notice/Receipt'],
-  },
-  {
-    id: 'RESIGN014',
-    employeeName: 'Abdalla Foum Abdalla',
-    zanId: '171717171',
-    department: 'ICT',
-    cadre: 'IT Officer',
-    employmentDate: "2020-05-30",
-    dateOfBirth: "1993-10-05",
-    institution: "OFISI YA RAIS, FEDHA NA MIPANGO",
-    effectiveDate: '2025-02-28',
-    submissionDate: '2024-11-28',
-    status: 'Pending HHRMD Acknowledgement',
-    documents: ['Letter of Request', '3 Month Notice/Receipt'],
-  },
-  {
-    id: 'RESIGN015',
-    employeeName: 'Zuhura Juma Makame',
-    zanId: '181818181',
-    department: 'Legal',
-    cadre: 'Legal Officer',
-    employmentDate: "2018-09-12",
-    dateOfBirth: "1992-12-12",
-    institution: "OFISI YA RAIS, FEDHA NA MIPANGO",
-    effectiveDate: '2025-03-15',
-    submissionDate: '2024-12-15',
-    status: 'Pending HRMO Acknowledgement',
-    documents: ['Letter of Request', '3 Month Notice/Receipt'],
-  },
-];
-
 
 export default function ResignationPage() {
   const { role, user } = useAuth();
@@ -273,6 +37,7 @@ export default function ResignationPage() {
   const [employeeDetails, setEmployeeDetails] = useState<Employee | null>(null);
   const [isFetchingEmployee, setIsFetchingEmployee] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [effectiveDate, setEffectiveDate] = useState('');
   const [reason, setReason] = useState('');
@@ -280,16 +45,36 @@ export default function ResignationPage() {
   const [letterOfRequestFile, setLetterOfRequestFile] = useState<FileList | null>(null);
   const [minEffectiveDate, setMinEffectiveDate] = useState('');
 
-  const [pendingRequests, setPendingRequests] = useState<MockPendingResignationRequest[]>(mockPendingResignationRequests);
-  const [selectedRequest, setSelectedRequest] = useState<MockPendingResignationRequest | null>(null);
+  const [pendingRequests, setPendingRequests] = useState<ResignationRequest[]>([]);
+  const [selectedRequest, setSelectedRequest] = useState<ResignationRequest | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  
+  const [isRejectionModalOpen, setIsRejectionModalOpen] = useState(false);
+  const [rejectionReasonInput, setRejectionReasonInput] = useState('');
+  const [currentRequestToAction, setCurrentRequestToAction] = useState<ResignationRequest | null>(null);
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  
+  const fetchRequests = async () => {
+    if (!user || !role) return;
+    setIsLoading(true);
+    try {
+      const response = await fetch(`/api/resignation?userId=${user.id}&userRole=${role}&userInstitutionId=${user.institutionId || ''}`);
+      if (!response.ok) throw new Error('Failed to fetch resignation requests');
+      const data = await response.json();
+      setPendingRequests(data);
+    } catch (error) {
+      toast({ title: "Error", description: "Could not load resignation requests.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
+    fetchRequests();
     setMinEffectiveDate(format(new Date(), 'yyyy-MM-dd'));
-  }, []);
+  }, [user, role]);
 
   const resetFormFields = () => {
     setEffectiveDate('');
@@ -321,71 +106,103 @@ export default function ResignationPage() {
     }, 1000);
   };
 
-  const handleSubmitResignationRequest = () => {
-    if (!employeeDetails) {
-      toast({ title: "Submission Error", description: "Employee details are missing.", variant: "destructive" });
+  const handleSubmitResignationRequest = async () => {
+    if (!employeeDetails || !user) {
+      toast({ title: "Submission Error", description: "Employee or user details are missing.", variant: "destructive" });
       return;
     }
-    if (!effectiveDate) {
-      toast({ title: "Submission Error", description: "Effective Date of Resignation is required.", variant: "destructive" });
-      return;
-    }
-    if (!letterOfRequestFile) {
-      toast({ title: "Submission Error", description: "Letter of Request is missing. Please upload the PDF document.", variant: "destructive" });
-      return;
-    }
-    if (!noticeOrReceiptFile) {
-      toast({ title: "Submission Error", description: "3 months resignation notice or receipt is required. Please upload the PDF document.", variant: "destructive" });
-      return;
-    }
-
-    const checkPdf = (fileList: FileList | null) => fileList && fileList[0] && fileList[0].type === "application/pdf";
-
-    if (!checkPdf(letterOfRequestFile)) {
-      toast({ title: "Submission Error", description: "Letter of Request must be a PDF file.", variant: "destructive" });
-      return;
-    }
-    if (!checkPdf(noticeOrReceiptFile)) {
-      toast({ title: "Submission Error", description: "The 3 months notice or receipt must be a PDF file.", variant: "destructive" });
-      return;
+    // Validation
+    if (!effectiveDate || !letterOfRequestFile || !noticeOrReceiptFile) {
+        toast({ title: "Submission Error", description: "Please fill all required fields and upload required documents.", variant: "destructive"});
+        return;
     }
 
     setIsSubmitting(true);
-    
-    const newRequestId = `RESIGN${Date.now().toString().slice(-3)}`;
     const documentsList = ['Letter of Request', '3 Month Notice/Receipt'];
-
-    const newRequest: MockPendingResignationRequest = {
-        id: newRequestId,
-        employeeName: employeeDetails.name,
-        zanId: employeeDetails.zanId,
-        payrollNumber: employeeDetails.payrollNumber,
-        zssfNumber: employeeDetails.zssfNumber,
-        department: employeeDetails.department || 'N/A',
-        cadre: employeeDetails.cadre || 'N/A',
-        employmentDate: employeeDetails.employmentDate || 'N/A',
-        dateOfBirth: employeeDetails.dateOfBirth || 'N/A',
-        institution: employeeDetails.institution || 'N/A',
-        effectiveDate: effectiveDate,
+    
+    const payload = {
+        employeeId: employeeDetails.id,
+        submittedById: user.id,
+        status: role === ROLES.HHRMD ? 'Pending HHRMD Acknowledgement' : 'Pending HRMO Acknowledgement',
+        effectiveDate: new Date(effectiveDate).toISOString(),
         reason: reason,
-        submissionDate: format(new Date(), 'yyyy-MM-dd'),
-        submittedBy: `${user?.name} (${user?.role})`,
-        status: 'Pending HHRMD Acknowledgement',
-        documents: documentsList,
+        documents: documentsList
     };
 
-    console.log("Submitting Resignation Request:", newRequest);
+    try {
+        const response = await fetch('/api/resignation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
 
-    setTimeout(() => {
-      setPendingRequests(prev => [newRequest, ...prev]);
-      toast({ title: "Resignation Request Submitted", description: `Request for ${employeeDetails.name} submitted successfully.` });
-      setZanId('');
-      setEmployeeDetails(null);
-      resetFormFields();
-      setIsSubmitting(false);
-    }, 1500);
+        if (!response.ok) throw new Error('Failed to submit resignation request.');
+
+        await fetchRequests();
+        toast({ title: "Resignation Request Submitted", description: `Request for ${employeeDetails.name} submitted successfully.` });
+        setZanId('');
+        setEmployeeDetails(null);
+        resetFormFields();
+
+    } catch(error) {
+        toast({ title: "Submission Failed", description: "Could not submit the resignation request.", variant: "destructive" });
+    } finally {
+        setIsSubmitting(false);
+    }
   };
   
+  const handleUpdateRequest = async (requestId: string, payload: any) => {
+    try {
+        const response = await fetch(`/api/resignation/${requestId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({...payload, reviewedById: user?.id })
+        });
+        if (!response.ok) throw new Error('Failed to update request');
+        await fetchRequests();
+        return true;
+    } catch (error) {
+        toast({ title: "Update Failed", description: "Could not update the request.", variant: "destructive" });
+        return false;
+    }
+  };
+
+  const handleAcknowledge = async (requestId: string) => {
+    const payload = { status: "Acknowledged - Awaiting Commission Decision", reviewStage: 'commission_review' };
+    const success = await handleUpdateRequest(requestId, payload);
+    if(success) toast({ title: "Request Acknowledged", description: "The resignation has been acknowledged and forwarded." });
+  };
+  
+  const handleFlagIssue = (request: ResignationRequest) => {
+    setCurrentRequestToAction(request);
+    setRejectionReasonInput('');
+    setIsRejectionModalOpen(true);
+  };
+  
+  const handleRejectionSubmit = async () => {
+     if (!currentRequestToAction || !rejectionReasonInput.trim()) return;
+     const payload = {
+        status: `Rejected by ${role} - Awaiting HRO Action`,
+        rejectionReason: rejectionReasonInput,
+        reviewStage: 'initial'
+     };
+     const success = await handleUpdateRequest(currentRequestToAction.id, payload);
+     if(success) {
+        toast({ title: "Request Rejected", description: `Request for ${currentRequestToAction.employee.name} has been rejected.`, variant: "destructive" });
+        setIsRejectionModalOpen(false);
+        setCurrentRequestToAction(null);
+     }
+  };
+  
+  const handleCommissionDecision = async (requestId: string, decision: 'approved' | 'rejected') => {
+    const finalStatus = decision === 'approved' ? "Approved by Commission" : "Rejected by Commission";
+    const payload = { status: finalStatus, reviewStage: 'completed' };
+    const success = await handleUpdateRequest(requestId, payload);
+    if (success) {
+        toast({ title: `Commission Decision: ${decision === 'approved' ? 'Approved' : 'Rejected'}`, description: `Request ${requestId} has been updated.` });
+    }
+  };
+
   const paginatedRequests = pendingRequests.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
@@ -478,18 +295,31 @@ export default function ResignationPage() {
             <CardDescription>Acknowledge and process resignation requests.</CardDescription>
           </CardHeader>
           <CardContent>
-            {paginatedRequests.length > 0 ? (
+            {isLoading ? (
+              <div className="flex justify-center items-center h-40"><Loader2 className="h-8 w-8 animate-spin" /></div>
+            ) : paginatedRequests.length > 0 ? (
               paginatedRequests.map((request) => (
                 <div key={request.id} className="mb-4 border p-4 rounded-md space-y-2 shadow-sm bg-background hover:shadow-md transition-shadow">
-                  <h3 className="font-semibold text-base">Resignation for: {request.employeeName} (ZanID: {request.zanId})</h3>
+                  <h3 className="font-semibold text-base">Resignation for: {request.employee.name} (ZanID: {request.employee.zanId})</h3>
                   <p className="text-sm text-muted-foreground">Effective Date: {request.effectiveDate ? format(parseISO(request.effectiveDate), 'PPP') : 'N/A'}</p>
                   {request.reason && <p className="text-sm text-muted-foreground">Reason: {request.reason}</p>}
-                  <p className="text-sm text-muted-foreground">Submitted: {request.submissionDate ? format(parseISO(request.submissionDate), 'PPP') : 'N/A'} by {request.submittedBy}</p>
+                  <p className="text-sm text-muted-foreground">Submitted: {request.createdAt ? format(parseISO(request.createdAt), 'PPP') : 'N/A'} by {request.submittedBy.name}</p>
                   <p className="text-sm"><span className="font-medium">Status:</span> <span className="text-primary">{request.status}</span></p>
+                  {request.rejectionReason && <p className="text-sm text-destructive"><span className="font-medium">Rejection Reason:</span> {request.rejectionReason}</p>}
                   <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                     <Button size="sm" variant="outline" onClick={() => { setSelectedRequest(request); setIsDetailsModalOpen(true); }}>View Details</Button>
-                    <Button size="sm">Acknowledge</Button>
-                    <Button size="sm" variant="destructive">Flag Issue</Button>
+                    {request.reviewStage === 'initial' && request.status.startsWith(`Pending ${role} Acknowledgement`) && (
+                      <>
+                        <Button size="sm" onClick={() => handleAcknowledge(request.id)}>Acknowledge & Forward</Button>
+                        <Button size="sm" variant="destructive" onClick={() => handleFlagIssue(request)}>Flag Issue & Return to HRO</Button>
+                      </>
+                    )}
+                    {request.reviewStage === 'commission_review' && (
+                       <>
+                        <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => handleCommissionDecision(request.id, 'approved')}>Approve (Commission)</Button>
+                        <Button size="sm" variant="destructive" onClick={() => handleCommissionDecision(request.id, 'rejected')}>Reject (Commission)</Button>
+                       </>
+                    )}
                   </div>
                 </div>
               ))
@@ -513,7 +343,7 @@ export default function ResignationPage() {
             <DialogHeader>
               <DialogTitle>Request Details: {selectedRequest.id}</DialogTitle>
               <DialogDescription>
-                Resignation request for <strong>{selectedRequest.employeeName}</strong> (ZanID: {selectedRequest.zanId}).
+                Resignation request for <strong>{selectedRequest.employee.name}</strong> (ZanID: {selectedRequest.employee.zanId}).
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4 text-sm max-h-[70vh] overflow-y-auto">
@@ -521,39 +351,39 @@ export default function ResignationPage() {
                     <h4 className="font-semibold text-base text-foreground mb-2">Employee Information</h4>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
                         <Label className="text-right text-muted-foreground">Full Name:</Label>
-                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employeeName}</p>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employee.name}</p>
                     </div>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
                         <Label className="text-right text-muted-foreground">ZanID:</Label>
-                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.zanId}</p>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employee.zanId}</p>
                     </div>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
                         <Label className="text-right text-muted-foreground">Payroll #:</Label>
-                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.payrollNumber || 'N/A'}</p>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employee.payrollNumber || 'N/A'}</p>
                     </div>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
                         <Label className="text-right text-muted-foreground">ZSSF #:</Label>
-                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.zssfNumber || 'N/A'}</p>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employee.zssfNumber || 'N/A'}</p>
                     </div>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
                         <Label className="text-right text-muted-foreground">Department:</Label>
-                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.department}</p>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employee.department}</p>
                     </div>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
                         <Label className="text-right text-muted-foreground">Cadre/Position:</Label>
-                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.cadre}</p>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employee.cadre}</p>
                     </div>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
                         <Label className="text-right text-muted-foreground">Employment Date:</Label>
-                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employmentDate ? format(parseISO(selectedRequest.employmentDate), 'PPP') : 'N/A'}</p>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employee.employmentDate ? format(parseISO(selectedRequest.employee.employmentDate), 'PPP') : 'N/A'}</p>
                     </div>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
                         <Label className="text-right text-muted-foreground">Date of Birth:</Label>
-                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.dateOfBirth ? format(parseISO(selectedRequest.dateOfBirth), 'PPP') : 'N/A'}</p>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employee.dateOfBirth ? format(parseISO(selectedRequest.employee.dateOfBirth), 'PPP') : 'N/A'}</p>
                     </div>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
                         <Label className="text-right text-muted-foreground">Institution:</Label>
-                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.institution || 'N/A'}</p>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employee.institution?.name || 'N/A'}</p>
                     </div>
                 </div>
                 <div className="space-y-1">
@@ -568,12 +398,18 @@ export default function ResignationPage() {
                     </div>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
                         <Label className="text-right font-semibold">Submitted:</Label>
-                        <p className="col-span-2">{selectedRequest.submissionDate ? format(parseISO(selectedRequest.submissionDate), 'PPP') : 'N/A'} by {selectedRequest.submittedBy}</p>
+                        <p className="col-span-2">{selectedRequest.createdAt ? format(parseISO(selectedRequest.createdAt), 'PPP') : 'N/A'} by {selectedRequest.submittedBy.name}</p>
                     </div>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
                         <Label className="text-right font-semibold">Status:</Label>
                         <p className="col-span-2 text-primary">{selectedRequest.status}</p>
                     </div>
+                     {selectedRequest.rejectionReason && (
+                        <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2">
+                            <Label className="text-right font-semibold text-destructive pt-1">Rejection Reason:</Label>
+                            <p className="col-span-2 text-destructive">{selectedRequest.rejectionReason}</p>
+                        </div>
+                    )}
                 </div>
                 <div className="pt-3 mt-3 border-t">
                     <Label className="font-semibold">Attached Documents</Label>
@@ -602,6 +438,31 @@ export default function ResignationPage() {
               </DialogClose>
             </DialogFooter>
           </DialogContent>
+        </Dialog>
+      )}
+      
+       {currentRequestToAction && (
+        <Dialog open={isRejectionModalOpen} onOpenChange={setIsRejectionModalOpen}>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Flag Issue on Request: {currentRequestToAction.id}</DialogTitle>
+                    <DialogDescription>
+                        Please provide the reason for flagging this issue for <strong>{currentRequestToAction.employee.name}</strong>. The request will be returned to the HRO.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                    <Textarea
+                        placeholder="Enter reason here..."
+                        value={rejectionReasonInput}
+                        onChange={(e) => setRejectionReasonInput(e.target.value)}
+                        rows={4}
+                    />
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => { setIsRejectionModalOpen(false); setCurrentRequestToAction(null); }}>Cancel</Button>
+                    <Button variant="destructive" onClick={handleRejectionSubmit} disabled={!rejectionReasonInput.trim()}>Submit Issue</Button>
+                </DialogFooter>
+            </DialogContent>
         </Dialog>
       )}
     </div>
