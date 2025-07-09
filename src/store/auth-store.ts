@@ -1,15 +1,15 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { User, Role } from '@/lib/types';
-import { USERS } from '@/lib/constants';
+import { ROLES } from '@/lib/constants';
 
 interface AuthState {
   user: User | null;
   role: Role | null;
   isAuthenticated: boolean;
-  login: (username: string) => boolean;
+  login: (username: string, password?: string) => Promise<User | null>;
   logout: () => void;
-  setUserManually: (user: User) => void; // For demo role switching
+  setUserManually: (user: User) => void; 
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -18,24 +18,36 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       role: null,
       isAuthenticated: false,
-      login: (username) => {
-        const foundUser = USERS.find(u => u.username === username);
-        if (foundUser) {
-          set({ user: foundUser, role: foundUser.role, isAuthenticated: true });
-          return true;
+      login: async (username, password) => {
+        try {
+          const response = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password }),
+          });
+
+          if (!response.ok) {
+            return null;
+          }
+
+          const user: User = await response.json();
+          set({ user, role: user.role, isAuthenticated: true });
+          return user;
+        } catch (error) {
+          console.error('Login error:', error);
+          return null;
         }
-        return false;
       },
       logout: () => {
         set({ user: null, role: null, isAuthenticated: false });
       },
-      setUserManually: (user: User) => { // For demo purposes to easily switch roles
+      setUserManually: (user: User) => {
         set({ user, role: user.role, isAuthenticated: true });
       }
     }),
     {
-      name: 'auth-storage', // name of the item in the storage (must be unique)
-      storage: createJSONStorage(() => localStorage), // (optional) by default, 'localStorage' is used
+      name: 'auth-storage',
+      storage: createJSONStorage(() => localStorage), 
     }
   )
 );
