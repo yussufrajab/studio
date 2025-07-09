@@ -1,9 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,26 +10,52 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id            String    @id @default(cuid())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  name          String
+  username      String    @unique
+  password      String
+  role          String
+  active        Boolean   @default(true)
+  employeeId    String?   @unique
+  institutionId String
+  institution   Institution @relation(fields: [institutionId], references: [id])
+  
+  complaintsSubmitted Complaint[] @relation("ComplaintsSubmitted")
+  complaintsReviewed  Complaint[] @relation("ComplaintsReviewed")
+}
+
 model Institution {
   id      String @id @default(cuid())
   name    String @unique
   users   User[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
-model User {
-  id            String      @id @default(cuid())
-  name          String
-  username      String      @unique
-  password      String
-  role          String
-  active        Boolean     @default(true)
-  employeeId    String?     @unique
-  institutionId String
-  institution   Institution @relation(fields: [institutionId], references: [id])
+model Complaint {
+  id                    String      @id @default(cuid())
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  complaintType         String
+  subject               String
+  details               String      @db.Text
+  complainantPhoneNumber String
+  nextOfKinPhoneNumber  String
+  
+  status                String
+  reviewStage           String
+  
+  attachments           String[]    @default([])
+  officerComments       String?     @db.Text
+  internalNotes         String?     @db.Text
+  rejectionReason       String?     @db.Text
+
+  complainantId         String
+  complainant           User        @relation("ComplaintsSubmitted", fields: [complainantId], references: [id])
+
+  assignedOfficerRole   String?
+  reviewedById          String?
+  reviewedBy            User?       @relation("ComplaintsReviewed", fields: [reviewedById], references: [id])
 }

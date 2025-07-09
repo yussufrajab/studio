@@ -48,108 +48,38 @@ const complaintSchema = z.object({
 
 type ComplaintFormValues = z.infer<typeof complaintSchema>;
 
-interface MockSubmittedComplaint {
+interface SubmittedComplaint {
   id: string;
-  employeeId: string; 
+  employeeId?: string | null;
   employeeName: string; 
-  zanId?: string; 
-  department?: string;
-  cadre?: string;
+  zanId?: string | null; 
+  department?: string | null;
+  cadre?: string | null;
   complaintType: string;
   subject: string;
   details: string; 
   complainantPhoneNumber?: string;
   nextOfKinPhoneNumber?: string;
   submissionDate: string;
-  status: "Submitted" | "Under Review" | "Awaiting More Information" | "Resolved - Pending Employee Confirmation" | "Rejected - Pending Employee Confirmation" | "Closed - Satisfied" | "Awaiting Commission Review" | "Resolved - Approved by Commission" | "Resolved - Rejected by Commission" | "Rejected by DO - Awaiting HRO/Submitter Action" | "Rejected by HHRMD - Awaiting HRO/Submitter Action";
+  status: string;
   attachments?: string[]; 
-  officerComments?: string;
-  internalNotes?: string; 
-  assignedOfficerRole?: typeof ROLES.DO | typeof ROLES.HHRMD; 
-  reviewStage: 'initial' | 'commission_review' | 'completed';
-  rejectionReason?: string;
-  reviewedBy?: UserRole;
+  officerComments?: string | null;
+  internalNotes?: string | null;
+  assignedOfficerRole?: string | null;
+  reviewStage: string;
+  rejectionReason?: string | null;
+  reviewedBy?: UserRole | null;
 }
-
-const initialMockComplaints: MockSubmittedComplaint[] = [
-  {
-    id: 'COMP001',
-    employeeId: 'emp3', 
-    employeeName: 'Fatma Said Omar',
-    zanId: '334589123',
-    department: 'Finance',
-    cadre: 'Accountant',
-    complaintType: 'Unfair Treatment',
-    subject: 'Overlooked for Training Opportunity',
-    details: 'Employee states that they were unfairly overlooked for a training opportunity despite meeting all criteria and having relevant experience. This has happened multiple times.',
-    complainantPhoneNumber: '0777123456',
-    nextOfKinPhoneNumber: '0777654321',
-    submissionDate: '2024-07-20',
-    status: 'Submitted',
-    attachments: ['Evidence_Screenshot.png', 'Criteria_Doc.pdf'],
-    assignedOfficerRole: ROLES.DO,
-    reviewStage: 'initial',
-  },
-  {
-    id: 'COMP002',
-    employeeId: 'emp1', 
-    employeeName: 'Ali Juma Ali',
-    zanId: '221458232',
-    department: 'Administration',
-    cadre: 'Administrative Officer',
-    complaintType: 'Workplace Safety',
-    subject: 'Inadequate Safety Equipment',
-    details: 'Complaint regarding inadequate safety equipment in the workshop, leading to a minor preventable incident. Requesting immediate inspection and provision of necessary gear.',
-    submissionDate: '2024-07-18',
-    status: 'Under Review',
-    assignedOfficerRole: ROLES.HHRMD,
-    internalNotes: "Forwarded to safety committee for initial assessment. Photos of workshop attached internally.",
-    reviewStage: 'initial',
-  },
-  {
-    id: 'COMP003',
-    employeeId: 'emp7', 
-    employeeName: 'Hamid Mohamed',
-    zanId: '778901234', 
-    department: 'Transport',
-    cadre: 'Senior Driver',
-    complaintType: 'Salary Issue',
-    subject: 'Incorrect Overtime Payment',
-    details: 'My overtime for the past two months has been calculated incorrectly. I have attached my timesheets and pay slips for review.',
-    complainantPhoneNumber: '0773987654',
-    submissionDate: '2024-07-25',
-    status: 'Resolved - Pending Employee Confirmation',
-    attachments: ['Timesheet_June.pdf', 'Payslip_June.pdf', 'Timesheet_July.pdf', 'Payslip_July.pdf'],
-    officerComments: "We reviewed your timesheets and found an error in the overtime calculation due to a system glitch. This has been corrected, and the outstanding amount will be included in your next paycheck. We apologize for the inconvenience.",
-    assignedOfficerRole: ROLES.HHRMD,
-    reviewStage: 'completed',
-  },
-   {
-    id: 'COMP004',
-    employeeId: 'emp2', 
-    employeeName: 'Safia Juma Ali',
-    zanId: '125468957',
-    department: 'Human Resources',
-    cadre: 'HR Officer',
-    complaintType: 'Promotion Delay',
-    subject: 'Enquiry about Promotion Application Status',
-    details: 'I submitted my application for promotion to Senior HR Officer three months ago and have not received any update. Could you please provide information on the status of my application?',
-    submissionDate: '2024-05-10',
-    status: 'Awaiting More Information',
-    officerComments: "Thank you for your enquiry. To assist you better, could you please provide the submission ID or exact date you submitted your promotion application?",
-    assignedOfficerRole: ROLES.DO,
-    reviewStage: 'initial',
-  },
-];
-
 
 export default function ComplaintsPage() {
   const { role, user } = useAuth();
   const [rewrittenComplaint, setRewrittenComplaint] = useState<string | null>(null);
   const [isRewriting, setIsRewriting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const [complaints, setComplaints] = useState<MockSubmittedComplaint[]>(initialMockComplaints);
-  const [selectedComplaint, setSelectedComplaint] = useState<MockSubmittedComplaint | null>(null);
+  const [complaints, setComplaints] = useState<SubmittedComplaint[]>([]);
+  const [selectedComplaint, setSelectedComplaint] = useState<SubmittedComplaint | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   
   const [isActionModalOpen, setIsActionModalOpen] = useState(false); 
@@ -159,7 +89,7 @@ export default function ComplaintsPage() {
 
   const [isRejectionModalOpen, setIsRejectionModalOpen] = useState(false); 
   const [rejectionReasonInput, setRejectionReasonInput] = useState('');
-  const [currentRequestToAction, setCurrentRequestToAction] = useState<MockSubmittedComplaint | null>(null);
+  const [currentRequestToAction, setCurrentRequestToAction] = useState<SubmittedComplaint | null>(null);
 
 
   const form = useForm<ComplaintFormValues>({
@@ -174,7 +104,26 @@ export default function ComplaintsPage() {
     },
   });
   
-  const employeeSubmittedComplaints = complaints.filter(c => c.employeeId === user?.employeeId);
+  useEffect(() => {
+    const fetchComplaints = async () => {
+        if (!user || !role) return;
+        setIsLoading(true);
+        try {
+            const response = await fetch(`/api/complaints?userId=${user.id}&userRole=${role}`);
+            if (!response.ok) {
+                throw new Error('Failed to fetch complaints');
+            }
+            const data = await response.json();
+            setComplaints(data);
+        } catch (error) {
+            toast({ title: "Error", description: "Could not load complaints.", variant: "destructive" });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    fetchComplaints();
+  }, [user, role]);
+
 
   const handleStandardizeComplaint = async () => {
     const complaintText = form.getValues("complaintText");
@@ -197,39 +146,64 @@ export default function ComplaintsPage() {
     }
   };
   
-  const onEmployeeSubmit = (data: ComplaintFormValues) => {
-    if (!user || !user.employeeId) {
+  const onEmployeeSubmit = async (data: ComplaintFormValues) => {
+    if (!user) {
       toast({title: "Error", description: "User information not found.", variant: "destructive"});
       return;
     }
-    const employeeSubmitting = EMPLOYEES.find(e => e.id === user.employeeId);
+    setIsSubmitting(true);
+    
+    // In a real app, file upload would be handled here, e.g., to a cloud storage service.
+    // For this prototype, we'll just pass the file names.
+    const attachmentNames = data.evidence ? Array.from(data.evidence).map(file => file.name) : [];
+    
+    try {
+        const response = await fetch('/api/complaints', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...data, attachments: attachmentNames, complainantId: user.id }),
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to submit complaint');
+        }
 
-    const newComplaint: MockSubmittedComplaint = {
-      id: `COMP${Date.now().toString().slice(-4)}`,
-      employeeId: user.employeeId,
-      employeeName: user.name,
-      zanId: employeeSubmitting?.zanId,
-      department: employeeSubmitting?.department,
-      cadre: employeeSubmitting?.cadre,
-      complaintType: data.complaintType,
-      subject: data.subject,
-      details: data.complaintText,
-      complainantPhoneNumber: data.complainantPhoneNumber,
-      nextOfKinPhoneNumber: data.nextOfKinPhoneNumber,
-      submissionDate: new Date().toISOString().split('T')[0], 
-      status: "Submitted",
-      attachments: data.evidence ? Array.from(data.evidence).map(file => file.name) : [],
-      assignedOfficerRole: ROLES.DO, 
-      reviewStage: 'initial',
-    };
-
-    setComplaints(prev => [newComplaint, ...prev]);
-    toast({ title: "Complaint Submitted", description: "Your complaint has been successfully submitted. It will be reviewed by the relevant department." });
-    form.reset();
-    setRewrittenComplaint(null);
+        const newComplaint = await response.json();
+        
+        setComplaints(prev => [newComplaint, ...prev]);
+        toast({ title: "Complaint Submitted", description: "Your complaint has been successfully submitted." });
+        form.reset();
+        setRewrittenComplaint(null);
+    } catch (error) {
+        toast({ title: "Submission Failed", description: "An error occurred while submitting your complaint.", variant: "destructive" });
+    } finally {
+        setIsSubmitting(false);
+    }
+  };
+  
+  const updateComplaintState = (updatedComplaint: SubmittedComplaint) => {
+      setComplaints(prev => prev.map(c => c.id === updatedComplaint.id ? { ...c, ...updatedComplaint } : c));
   };
 
-  const handleInitialAction = (complaintId: string, action: 'forward' | 'reject_initial') => {
+  const handleUpdateComplaint = async (complaintId: string, payload: any) => {
+      try {
+          const response = await fetch(`/api/complaints/${complaintId}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+          });
+          if (!response.ok) throw new Error('Failed to update complaint');
+          const updatedComplaint = await response.json();
+          updateComplaintState(updatedComplaint);
+          return updatedComplaint;
+      } catch (error) {
+          toast({ title: "Update Failed", description: "Could not update the complaint.", variant: "destructive" });
+          return null;
+      }
+  };
+
+
+  const handleInitialAction = async (complaintId: string, action: 'forward' | 'reject_initial') => {
     const complaint = complaints.find(c => c.id === complaintId);
     if (!complaint) return;
 
@@ -238,88 +212,53 @@ export default function ComplaintsPage() {
       setRejectionReasonInput(''); 
       setIsRejectionModalOpen(true);
     } else if (action === 'forward') {
-      let toastMessage = "";
-      setComplaints(prevComplaints =>
-        prevComplaints.map(c => {
-          if (c.id === complaintId) {
-            toastMessage = `Complaint ${complaintId} for ${c.employeeName} forwarded for Commission Review.`;
-            return { 
-              ...c, 
-              status: "Awaiting Commission Review", 
-              reviewStage: 'commission_review', 
-              reviewedBy: role as UserRole || undefined 
-            };
-          }
-          return c;
-        })
-      );
-      if (toastMessage) {
-        toast({ title: "Complaint Forwarded", description: toastMessage });
+      const payload = { 
+        status: "Awaiting Commission Review", 
+        reviewStage: 'commission_review', 
+        reviewedById: user?.id 
+      };
+      const updated = await handleUpdateComplaint(complaintId, payload);
+      if (updated) {
+        toast({ title: "Complaint Forwarded", description: `Complaint ${complaintId} forwarded for Commission Review.` });
       }
     }
   };
   
-  const handleRejectionSubmit = () => {
+  const handleRejectionSubmit = async () => {
     if (!currentRequestToAction || !rejectionReasonInput.trim()) {
       toast({ title: "Rejection Error", description: "Reason for rejection is required.", variant: "destructive" });
       return;
     }
-    const complaintId = currentRequestToAction.id;
-    const employeeName = currentRequestToAction.employeeName;
-    let toastMessage = "";
+    const { id, employeeName } = currentRequestToAction;
     const rejectedByRole = role === ROLES.DO ? "DO" : "HHRMD";
 
+    const payload = {
+        status: `Rejected by ${rejectedByRole} - Awaiting HRO/Submitter Action`,
+        rejectionReason: rejectionReasonInput,
+        reviewStage: 'initial',
+        reviewedById: user?.id
+    };
 
-    setComplaints(prevComplaints =>
-      prevComplaints.map(c => {
-        if (c.id === complaintId) {
-          toastMessage = `Complaint ${complaintId} for ${employeeName} rejected and returned.`;
-          return { 
-            ...c, 
-            status: `Rejected by ${rejectedByRole} - Awaiting HRO/Submitter Action` as MockSubmittedComplaint['status'], 
-            rejectionReason: rejectionReasonInput, 
-            reviewStage: 'initial' 
-          };
-        }
-        return c;
-      })
-    );
-    if(toastMessage) {
-        toast({ title: "Complaint Rejected", description: toastMessage, variant: 'destructive' });
+    const updated = await handleUpdateComplaint(id, payload);
+    if (updated) {
+        toast({ title: "Complaint Rejected", description: `Complaint ${id} for ${employeeName} rejected.`, variant: 'destructive' });
+        setIsRejectionModalOpen(false);
+        setCurrentRequestToAction(null);
+        setRejectionReasonInput('');
     }
-    setIsRejectionModalOpen(false);
-    setCurrentRequestToAction(null);
-    setRejectionReasonInput('');
   };
 
-  const handleCommissionDecision = (complaintId: string, decision: 'commission_approve' | 'commission_reject') => {
-    const complaint = complaints.find(c => c.id === complaintId);
-    if (!complaint) return;
-    let toastMessage = "";
-    let finalStatus: MockSubmittedComplaint['status'] = complaint.status;
-
-    if (decision === 'commission_approve') {
-        finalStatus = "Resolved - Approved by Commission";
-    } else {
-        finalStatus = "Resolved - Rejected by Commission";
-    }
+  const handleCommissionDecision = async (complaintId: string, decision: 'commission_approve' | 'commission_reject') => {
+    const finalStatus = decision === 'commission_approve' ? "Resolved - Approved by Commission" : "Resolved - Rejected by Commission";
+    const payload = { status: finalStatus, reviewStage: 'completed', reviewedById: user?.id };
     
-    setComplaints(prevComplaints =>
-      prevComplaints.map(c => {
-        if (c.id === complaintId) {
-           toastMessage = `Complaint ${complaintId} for ${c.employeeName} has been ${decision === 'commission_approve' ? 'approved' : 'rejected'} by Commission.`;
-          return { ...c, status: finalStatus, reviewStage: 'completed' };
-        }
-        return c;
-      })
-    );
-    if (toastMessage) {
-        toast({ title: `Commission Decision: ${decision === 'commission_approve' ? 'Approved' : 'Rejected'}`, description: toastMessage });
+    const updated = await handleUpdateComplaint(complaintId, payload);
+    if (updated) {
+       toast({ title: `Commission Decision: ${decision === 'commission_approve' ? 'Approved' : 'Rejected'}`, description: `Complaint ${complaintId} updated.` });
     }
   };
 
-
-  const openActionModal = (complaint: MockSubmittedComplaint, type: "resolve" | "request_info") => {
+  const openActionModal = (complaint: SubmittedComplaint, type: "resolve" | "request_info") => {
     setSelectedComplaint(complaint);
     setActionType(type); 
     setOfficerActionComment(complaint.officerComments || '');
@@ -327,13 +266,13 @@ export default function ComplaintsPage() {
     setIsActionModalOpen(true);
   };
   
-  const handleOfficerSubmitLegacyAction = () => {
+  const handleOfficerSubmitLegacyAction = async () => {
     if (!selectedComplaint || !actionType || !officerActionComment.trim()) {
-      toast({title: "Action Error", description: "Officer comments are required to proceed.", variant: "destructive"});
+      toast({title: "Action Error", description: "Officer comments are required.", variant: "destructive"});
       return;
     }
 
-    let newStatus: MockSubmittedComplaint['status'] = selectedComplaint.status;
+    let newStatus: string = selectedComplaint.status;
     let toastMessage = "";
 
     if (actionType === 'resolve') {
@@ -342,60 +281,39 @@ export default function ComplaintsPage() {
     } else if (actionType === 'request_info') {
       newStatus = "Awaiting More Information";
       toastMessage = `More information requested for complaint ${selectedComplaint.id}.`;
-    } else {
-        console.warn("Unhandled legacy action type:", actionType);
-        return;
     }
     
-    let updatedComplaint: MockSubmittedComplaint | null = null;
-    setComplaints(prevComplaints =>
-      prevComplaints.map(c => {
-        if (c.id === selectedComplaint.id) {
-          updatedComplaint = { 
-            ...c, 
-            status: newStatus, 
-            officerComments: officerActionComment, 
-            internalNotes: officerInternalNote, 
-            assignedOfficerRole: role as typeof ROLES.DO | typeof ROLES.HHRMD,
-            reviewStage: 'completed' 
-          };
-          return updatedComplaint;
-        }
-        return c;
-      })
-    );
-    
-    if (toastMessage) {
+    const payload = {
+        status: newStatus,
+        officerComments: officerActionComment,
+        internalNotes: officerInternalNote,
+        assignedOfficerRole: role,
+        reviewStage: 'completed',
+        reviewedById: user?.id
+    };
+
+    const updated = await handleUpdateComplaint(selectedComplaint.id, payload);
+
+    if (updated) {
       toast({ title: "Action Taken", description: toastMessage });
+      setIsActionModalOpen(false);
+      setSelectedComplaint(null);
+      setOfficerActionComment('');
+      setOfficerInternalNote('');
+      setActionType(null);
     }
-    setIsActionModalOpen(false);
-    setSelectedComplaint(null);
-    setOfficerActionComment('');
-    setOfficerInternalNote('');
-    setActionType(null);
   };
 
-
-  const handleEmployeeConfirmOutcome = (complaintId: string) => {
-    let toastMessage = "";
-    setComplaints(prevComplaints =>
-      prevComplaints.map(c => {
-        if (c.id === complaintId) {
-          toastMessage = "Thank you for your feedback. The complaint has been closed.";
-          return { ...c, status: "Closed - Satisfied" };
-        }
-        return c;
-      })
-    );
-    if (toastMessage) {
-      toast({title: "Complaint Closed", description: toastMessage});
+  const handleEmployeeConfirmOutcome = async (complaintId: string) => {
+    const payload = { status: "Closed - Satisfied" };
+    const updated = await handleUpdateComplaint(complaintId, payload);
+    if (updated) {
+      toast({title: "Complaint Closed", description: "Thank you for your feedback."});
     }
   };
   
-  const complaintsForOfficerReview = complaints.filter(c => 
-    (role === ROLES.DO && c.assignedOfficerRole === ROLES.DO) ||
-    (role === ROLES.HHRMD && c.assignedOfficerRole === ROLES.HHRMD)
-  );
+  const complaintsForOfficerReview = complaints.filter(c => c.assignedOfficerRole === role);
+  const employeeSubmittedComplaints = complaints.filter(c => c.employeeId === user?.employeeId);
 
   return (
     <div>
@@ -511,8 +429,8 @@ export default function ComplaintsPage() {
                     {isRewriting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Edit3 className="mr-2 h-4 w-4"/>}
                     Standardize Description with AI
                   </Button>
-                  <Button type="submit" disabled={isRewriting}>
-                    <Send className="mr-2 h-4 w-4"/>
+                  <Button type="submit" disabled={isRewriting || isSubmitting}>
+                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4"/>}
                     Submit Complaint
                   </Button>
                 </div>
@@ -537,7 +455,11 @@ export default function ComplaintsPage() {
                 <CardDescription>Track the status of complaints you have submitted.</CardDescription>
             </CardHeader>
             <CardContent>
-                {employeeSubmittedComplaints.length > 0 ? (
+                {isLoading ? (
+                    <div className="flex justify-center items-center h-40">
+                        <Loader2 className="h-8 w-8 animate-spin" />
+                    </div>
+                ) : employeeSubmittedComplaints.length > 0 ? (
                     employeeSubmittedComplaints.map(complaint => (
                         <div key={complaint.id} className="mb-4 border p-4 rounded-md space-y-3 shadow-sm bg-background hover:shadow-md transition-shadow">
                             <div className="flex justify-between items-start">
@@ -604,8 +526,12 @@ export default function ComplaintsPage() {
             <CardDescription>Review, take action, or request more information on employee complaints assigned to your role.</CardDescription>
           </CardHeader>
           <CardContent>
-            {complaintsForOfficerReview.filter(c => c.status !== "Closed - Satisfied").length > 0 ? (
-              complaintsForOfficerReview.filter(c => c.status !== "Closed - Satisfied").map((complaint) => (
+            {isLoading ? (
+                 <div className="flex justify-center items-center h-40">
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                </div>
+            ) : complaintsForOfficerReview.length > 0 ? (
+              complaintsForOfficerReview.map((complaint) => (
                 <div key={complaint.id} className="mb-4 border p-4 rounded-md space-y-2 shadow-sm bg-background hover:shadow-md transition-shadow">
                   <div className="flex justify-between items-start">
                     <h3 className="font-semibold text-base">{complaint.subject} (Type: {complaint.complaintType})</h3>
