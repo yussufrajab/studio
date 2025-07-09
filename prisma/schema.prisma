@@ -1,9 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,162 +10,184 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Institution {
-  id      String @id @default(cuid())
-  name    String @unique
-  users   User[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model User {
+  id              String       @id @default(cuid())
+  name            String
+  username        String       @unique
+  password        String
+  role            String
+  active          Boolean      @default(true)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  employeeId      String?      @unique // For linking to an external employee system if needed
+  institutionId   String
+  institution     Institution  @relation(fields: [institutionId], references: [id])
+
+  submittedComplaints   Complaint[]           @relation("SubmittedComplaints")
+  reviewedComplaints    Complaint[]           @relation("ReviewedComplaints")
+  
+  submittedConfirmations   ConfirmationRequest[] @relation("ConfirmationSubmittedBy")
+  reviewedConfirmations    ConfirmationRequest[] @relation("ConfirmationReviewedBy")
+  confirmationsAsEmployee  ConfirmationRequest[] @relation("ConfirmationEmployee")
+
+  submittedPromotions   PromotionRequest[]    @relation("PromotionSubmittedBy")
+  reviewedPromotions    PromotionRequest[]    @relation("PromotionReviewedBy")
+  promotionsAsEmployee  PromotionRequest[]    @relation("PromotionEmployee")
+
+  submittedLwops   LwopRequest[]         @relation("LwopSubmittedBy")
+  reviewedLwops    LwopRequest[]         @relation("LwopReviewedBy")
+  lwopsAsEmployee  LwopRequest[]         @relation("LwopEmployee")
+
+  submittedCadreChanges   CadreChangeRequest[]  @relation("CadreChangeSubmittedBy")
+  reviewedCadreChanges    CadreChangeRequest[]  @relation("CadreChangeReviewedBy")
+  cadreChangesAsEmployee  CadreChangeRequest[]  @relation("CadreChangeEmployee")
+
+  submittedRetirementRequests   RetirementRequest[] @relation("RetirementSubmittedBy")
+  reviewedRetirementRequests    RetirementRequest[] @relation("RetirementReviewedBy")
+  retirementRequestsAsEmployee  RetirementRequest[] @relation("RetirementEmployee")
 }
 
-model User {
-  id        String @id @default(cuid())
+model Institution {
+  id        String   @id @default(cuid())
+  name      String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
-  name      String
-  username  String   @unique
-  password  String
-  role      String
-  active    Boolean  @default(true)
-  employeeId String? @unique
-
-  institutionId String
-  institution   Institution @relation(fields: [institutionId], references: [id])
-
-  submittedConfirmationRequests ConfirmationRequest[] @relation("SubmittedConfirmationRequests")
-  reviewedConfirmationRequests  ConfirmationRequest[] @relation("ReviewedConfirmationRequests")
-  employeeConfirmationRequests  ConfirmationRequest[] @relation("EmployeeConfirmationRequests")
-
-  submittedLWOPRequests LWOPRequest[] @relation("SubmittedLWOPRequests")
-  reviewedLWOPRequests  LWOPRequest[] @relation("ReviewedLWOPRequests")
-  employeeLWOPRequests  LWOPRequest[] @relation("EmployeeLWOPRequests")
-
-  submittedPromotionRequests PromotionRequest[] @relation("SubmittedPromotionRequests")
-  reviewedPromotionRequests  PromotionRequest[] @relation("ReviewedPromotionRequests")
-  employeePromotionRequests  PromotionRequest[] @relation("EmployeePromotionRequests")
-
-  submittedCadreChangeRequests CadreChangeRequest[] @relation("SubmittedCadreChangeRequests")
-  reviewedCadreChangeRequests  CadreChangeRequest[] @relation("ReviewedCadreChangeRequests")
-  employeeCadreChangeRequests  CadreChangeRequest[] @relation("EmployeeCadreChangeRequests")
-
-  complaintsAsComplainant Complaint[] @relation("ComplainantComplaints")
-  complaintsAsReviewedBy  Complaint[] @relation("ReviewedByComplaints")
+  users     User[]
 }
 
 model Complaint {
-  id        String @id @default(cuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  complainantId String
-  complainant   User   @relation("ComplainantComplaints", fields: [complainantId], references: [id])
-  
-  reviewedById String?
-  reviewedBy   User?  @relation("ReviewedByComplaints", fields: [reviewedById], references: [id])
-
+  id                    String    @id @default(cuid())
   complaintType         String
   subject               String
   details               String
-  complainantPhoneNumber String
-  nextOfKinPhoneNumber   String
-  attachments           String[]
   status                String
-  reviewStage           String
-  assignedOfficerRole   String?
+  reviewStage           String    // e.g., 'initial', 'commission_review', 'completed'
+  rejectionReason       String?
   officerComments       String?
   internalNotes         String?
-  rejectionReason       String?
+  complainantPhoneNumber String
+  nextOfKinPhoneNumber  String
+  attachments           String[]
+  assignedOfficerRole   String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  complainantId         String
+  complainant           User      @relation("SubmittedComplaints", fields: [complainantId], references: [id])
+  
+  reviewedById          String?
+  reviewedBy            User?     @relation("ReviewedComplaints", fields: [reviewedById], references: [id])
 }
 
 model ConfirmationRequest {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  employeeId String
-  employee   User   @relation("EmployeeConfirmationRequests", fields: [employeeId], references: [id])
-
-  submittedById String
-  submittedBy   User   @relation("SubmittedConfirmationRequests", fields: [submittedById], references: [id])
-
-  reviewedById String?
-  reviewedBy   User?  @relation("ReviewedConfirmationRequests", fields: [reviewedById], references: [id])
-
-  documents              String[]
-  status                 String
-  reviewStage            String
-  rejectionReason        String?
-  decisionDate           DateTime?
+  id                    String    @id @default(cuid())
+  status                String
+  reviewStage           String
+  documents             String[]
+  rejectionReason       String?
+  decisionDate          DateTime?
   commissionDecisionDate DateTime?
-}
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
-model LWOPRequest {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  employeeId            String
+  employee              User      @relation("ConfirmationEmployee", fields: [employeeId], references: [id])
+  
+  submittedById         String
+  submittedBy           User      @relation("ConfirmationSubmittedBy", fields: [submittedById], references: [id])
 
-  employeeId String
-  employee   User   @relation("EmployeeLWOPRequests", fields: [employeeId], references: [id])
-
-  submittedById String
-  submittedBy   User   @relation("SubmittedLWOPRequests", fields: [submittedById], references: [id])
-
-  reviewedById String?
-  reviewedBy   User?  @relation("ReviewedLWOPRequests", fields: [reviewedById], references: [id])
-
-  duration        String
-  reason          String
-  documents       String[]
-  status          String
-  reviewStage     String
-  rejectionReason String?
+  reviewedById          String?
+  reviewedBy            User?     @relation("ConfirmationReviewedBy", fields: [reviewedById], references: [id])
 }
 
 model PromotionRequest {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  employeeId String
-  employee   User   @relation("EmployeePromotionRequests", fields: [employeeId], references: [id])
-
-  submittedById String
-  submittedBy   User   @relation("SubmittedPromotionRequests", fields: [submittedById], references: [id])
-
-  reviewedById String?
-  reviewedBy   User?  @relation("ReviewedPromotionRequests", fields: [reviewedById], references: [id])
+  id                    String    @id @default(cuid())
+  status                String
+  reviewStage           String
+  rejectionReason       String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   proposedCadre         String
   promotionType         String // 'Experience' or 'EducationAdvancement'
   documents             String[]
   studiedOutsideCountry Boolean?
 
-  status          String
-  reviewStage     String
-  rejectionReason String?
+  employeeId            String
+  employee              User      @relation("PromotionEmployee", fields: [employeeId], references: [id])
+  
+  submittedById         String
+  submittedBy           User      @relation("PromotionSubmittedBy", fields: [submittedById], references: [id])
+
+  reviewedById          String?
+  reviewedBy            User?     @relation("PromotionReviewedBy", fields: [reviewedById], references: [id])
+}
+
+model LwopRequest {
+  id                    String    @id @default(cuid())
+  status                String
+  reviewStage           String
+  rejectionReason       String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  duration              String
+  reason                String
+  documents             String[]
+
+  employeeId            String
+  employee              User      @relation("LwopEmployee", fields: [employeeId], references: [id])
+  
+  submittedById         String
+  submittedBy           User      @relation("LwopSubmittedBy", fields: [submittedById], references: [id])
+
+  reviewedById          String?
+  reviewedBy            User?     @relation("LwopReviewedBy", fields: [reviewedById], references: [id])
 }
 
 model CadreChangeRequest {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                    String    @id @default(cuid())
+  status                String
+  reviewStage           String
+  rejectionReason       String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
-  employeeId String
-  employee   User   @relation("EmployeeCadreChangeRequests", fields: [employeeId], references: [id])
+  newCadre              String
+  reason                String?
+  documents             String[]
+  studiedOutsideCountry Boolean?
 
-  submittedById String
-  submittedBy   User   @relation("SubmittedCadreChangeRequests", fields: [submittedById], references: [id])
+  employeeId            String
+  employee              User      @relation("CadreChangeEmployee", fields: [employeeId], references: [id])
+  
+  submittedById         String
+  submittedBy           User      @relation("CadreChangeSubmittedBy", fields: [submittedById], references: [id])
 
-  reviewedById String?
-  reviewedBy   User?  @relation("ReviewedCadreChangeRequests", fields: [reviewedById], references: [id])
+  reviewedById          String?
+  reviewedBy            User?     @relation("CadreChangeReviewedBy", fields: [reviewedById], references: [id])
+}
 
-  newCadre                String
-  reason                  String?
-  documents               String[]
-  studiedOutsideCountry   Boolean?
+model RetirementRequest {
+  id                    String    @id @default(cuid())
+  status                String
+  reviewStage           String
+  rejectionReason       String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
-  status          String
-  reviewStage     String
-  rejectionReason String?
+  retirementType        String // 'Compulsory', 'Voluntary', 'Illness'
+  illnessDescription    String?
+  proposedDate          DateTime
+  delayReason           String?
+  documents             String[]
+
+  employeeId            String
+  employee              User      @relation("RetirementEmployee", fields: [employeeId], references: [id])
+  
+  submittedById         String
+  submittedBy           User      @relation("RetirementSubmittedBy", fields: [submittedById], references: [id])
+
+  reviewedById          String?
+  reviewedBy            User?     @relation("RetirementReviewedBy", fields: [reviewedById], references: [id])
 }
