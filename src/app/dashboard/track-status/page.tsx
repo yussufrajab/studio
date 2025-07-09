@@ -6,8 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/use-auth';
-import { ROLES, EMPLOYEES, INSTITUTIONS } from '@/lib/constants';
-import React, { useState, useEffect } from 'react';
+import { ROLES, INSTITUTIONS } from '@/lib/constants';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Loader2, Search, Eye, CalendarDays, Filter, Building, ListFilter as StatusFilterIcon, FileDown } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import {
@@ -36,16 +36,7 @@ declare module 'jspdf' {
   }
 }
 
-
-interface RequestAction {
-  role: string;
-  actorName?: string;
-  action: string;
-  date: string;
-  comments?: string;
-}
-
-interface MockTrackedRequest {
+interface TrackedRequest {
   id: string;
   employeeName: string;
   zanId: string;
@@ -55,264 +46,112 @@ interface MockTrackedRequest {
   lastUpdatedDate: string;
   currentStage: string;
   employeeInstitution?: string;
-  actions?: RequestAction[];
-  gender?: 'Male' | 'Female' | 'N/A'; // Add gender
+  gender?: 'Male' | 'Female' | 'N/A';
 }
-
-const ALL_MOCK_REQUESTS: MockTrackedRequest[] = [
-  {
-    id: 'CONF001', employeeName: 'Ali Juma Ali', zanId: "221458232", requestType: 'Confirmation',
-    submissionDate: '2024-07-28', status: 'Pending HHRMD Review', lastUpdatedDate: '2024-07-28', currentStage: 'Awaiting HHRMD Verification',
-    employeeInstitution: 'OFISI YA RAIS, FEDHA NA MIPANGO',
-    actions: [{ role: ROLES.HRO, actorName: 'K. Mnyonge', action: 'Submitted', date: '2024-07-28', comments: 'Initial submission for confirmation.' }]
-  },
-  {
-    id: 'LWOP001', employeeName: 'Fatma Said Omar', zanId: "334589123", requestType: 'LWOP',
-    submissionDate: '2024-07-25', status: 'Pending HHRMD Review', lastUpdatedDate: '2024-07-25', currentStage: 'Awaiting HHRMD Review',
-    employeeInstitution: 'Ofisi ya Mhasibu Mkuu wa Serikali',
-    actions: [{ role: ROLES.HRO, actorName: 'K. Mnyonge', action: 'Submitted', date: '2024-07-25', comments: 'LWOP for further studies.' }]
-  },
-  {
-    id: 'PROM002', employeeName: 'Juma Omar Ali', zanId: "667890456", requestType: 'Promotion',
-    submissionDate: '2024-07-26', status: 'Pending HRMO Review', lastUpdatedDate: '2024-07-26', currentStage: 'Awaiting HRMO Verification',
-    employeeInstitution: 'WIZARA YA BIASHARA NA MAENDELEO YA VIWANDA',
-    actions: [{ role: ROLES.HRO, actorName: 'K. Mnyonge', action: 'Submitted', date: '2024-07-26', comments: 'Promotion based on Education Advancement.' }]
-  },
-  {
-    id: 'CADRE001', employeeName: 'Ali Juma Ali', zanId: "221458232", requestType: 'Change of Cadre',
-    submissionDate: '2024-07-29', status: 'Pending HHRMD Review', lastUpdatedDate: '2024-07-29', currentStage: 'Awaiting HHRMD Review',
-    employeeInstitution: 'OFISI YA RAIS, FEDHA NA MIPANGO',
-    actions: [{ role: ROLES.HRO, actorName: 'K. Mnyonge', action: 'Submitted', date: '2024-07-29', comments: 'Request for cadre change to Senior Officer.' }]
-  },
-  {
-    id: 'RETIRE002', employeeName: 'Juma Omar Ali', zanId: "667890456", requestType: 'Retirement',
-    submissionDate: '2024-07-28', status: 'Approved by Commission', lastUpdatedDate: '2024-08-05', currentStage: 'Completed - Approved',
-    employeeInstitution: 'WIZARA YA BIASHARA NA MAENDELEO YA VIWANDA',
-    actions: [
-      { role: ROLES.HRO, actorName: 'K. Mnyonge', action: 'Submitted', date: '2024-07-28', comments: 'Voluntary retirement application.' },
-      { role: ROLES.HRMO, actorName: 'F. Iddi', action: 'Verified & Forwarded to Commission', date: '2024-07-30', comments: 'All documents in order.' },
-      { role: ROLES.HRMO, actorName: 'F. Iddi', action: 'Approved by Commission', date: '2024-08-05', comments: 'Commission approved on 05/08/2024.' }
-    ]
-  },
-  {
-    id: 'SEXT001', employeeName: 'Hamid Khalfan Abdalla', zanId: "778901234", requestType: 'Service Extension',
-    submissionDate: '2024-07-20', status: 'Rejected by Commission', lastUpdatedDate: '2024-08-02', currentStage: 'Completed - Rejected',
-    employeeInstitution: 'WIZARA YA UJENZI MAWASILIANO NA UCHUKUZI',
-    actions: [
-      { role: ROLES.HRO, actorName: 'K. Mnyonge', action: 'Submitted', date: '2024-07-20', comments: 'Service extension for critical project.' },
-      { role: ROLES.HHRMD, actorName: 'S. Khamis', action: 'Verified & Forwarded to Commission', date: '2024-07-25', comments: 'Justification seems valid.' },
-      { role: ROLES.HHRMD, actorName: 'S. Khamis', action: 'Rejected by Commission', date: '2024-08-02', comments: 'Commission rejected; policy states no extension for this cadre.' }
-    ]
-  },
-  {
-    id: 'TERM001', employeeName: 'Ali Juma Ali', zanId: "221458232", requestType: 'Termination',
-    submissionDate: '2024-07-25', status: 'Pending DO Review', lastUpdatedDate: '2024-07-25', currentStage: 'Awaiting DO Initial Review',
-    employeeInstitution: 'OFISI YA RAIS, FEDHA NA MIPANGO',
-    actions: [{ role: ROLES.HRO, actorName: 'K. Mnyonge', action: 'Submitted', date: '2024-07-25', comments: 'Termination due to unauthorized absence.' }]
-  },
-  {
-    id: 'COMP001', employeeName: 'Fatma Said Omar', zanId: "334589123", requestType: 'Complaints',
-    submissionDate: '2024-07-20', status: 'Resolved - Pending Employee Confirmation', lastUpdatedDate: '2024-07-28', currentStage: 'DO Resolved, Awaiting Confirmation',
-    employeeInstitution: 'Ofisi ya Mhasibu Mkuu wa Serikali',
-    actions: [
-      { role: ROLES.EMPLOYEE, actorName: 'Fatma Said Omar', action: 'Submitted', date: '2024-07-20', comments: 'Complaint about unfair treatment.' },
-      { role: ROLES.DO, actorName: 'M. Ussi', action: 'Reviewed & Resolved', date: '2024-07-28', comments: 'Issue addressed with department head.' }
-    ]
-  },
-   {
-    id: 'CONF002', employeeName: 'Safia Juma Ali', zanId: "125468957", requestType: 'Confirmation',
-    submissionDate: '2024-06-15', status: 'Request Received – Awaiting Commission Decision', lastUpdatedDate: '2024-06-20', currentStage: 'HRMO Forwarded to Commission',
-    employeeInstitution: 'KAMISHENI YA UTUMISHI WA UMMA',
-    actions: [
-      { role: ROLES.HRO, actorName: 'K. Mnyonge', action: 'Submitted', date: '2024-06-15' },
-      { role: ROLES.HRMO, actorName: 'F. Iddi', action: 'Verified & Forwarded', date: '2024-06-20', comments: 'Ready for commission review.' }
-    ]
-  },
-  {
-    id: 'PROM001', employeeName: 'Zainab Ali Khamis', zanId: "556789345", requestType: 'Promotion',
-    submissionDate: '2024-05-10', status: 'Rejected by HHRMD - Awaiting HRO Correction', lastUpdatedDate: '2024-05-15', currentStage: 'HHRMD Rejected, HRO to Correct',
-    employeeInstitution: 'TUME YA UTUMISHI SERIKALINI',
-    actions: [
-      { role: ROLES.HRO, actorName: 'K. Mnyonge', action: 'Submitted', date: '2024-05-10' },
-      { role: ROLES.HHRMD, actorName: 'S. Khamis', action: 'Rejected', date: '2024-05-15', comments: 'Incomplete performance appraisals submitted.' }
-    ]
-  },
-  {
-    id: 'CADRE015', employeeName: 'Zuhura Juma Makame', zanId: '181818181', requestType: 'Change of Cadre',
-    submissionDate: '2024-06-20', status: 'Approved by Commission', lastUpdatedDate: '2024-07-05', currentStage: 'Completed - Approved',
-    employeeInstitution: 'OFISI YA RAIS, FEDHA NA MIPANGO',
-    actions: [
-      { role: ROLES.HRO, actorName: 'K. Mnyonge', action: 'Submitted', date: '2024-06-20' },
-      { role: ROLES.HHRMD, actorName: 'S. Khamis', action: 'Verified & Forwarded', date: '2024-06-25' },
-      { role: ROLES.HHRMD, actorName: 'S. Khamis', action: 'Approved by Commission', date: '2024-07-05', comments: 'Approved.' }
-    ]
-  },
-  {
-    id: 'LWOP005', employeeName: 'Ismail Mohamed Kassim', zanId: '131313131', requestType: 'LWOP',
-    submissionDate: '2024-06-10', status: 'Pending HRMO Review', lastUpdatedDate: '2024-06-10', currentStage: 'Awaiting HRMO Review',
-    employeeInstitution: 'OFISI YA RAIS, FEDHA NA MIPANGO',
-    actions: [{ role: ROLES.HRO, actorName: 'K. Mnyonge', action: 'Submitted', date: '2024-06-10', comments: 'Requesting 1 year for personal development.' }]
-  },
-  {
-    id: 'TERM002', employeeName: 'Safia Juma Ali', zanId: '125468957', requestType: 'Termination',
-    submissionDate: '2024-07-22', status: 'Pending HHRMD Review', lastUpdatedDate: '2024-07-22', currentStage: 'Awaiting HHRMD Review',
-    employeeInstitution: 'KAMISHENI YA UTUMISHI WA UMMA',
-    actions: [{ role: ROLES.HRO, actorName: 'K. Mnyonge', action: 'Submitted', date: '2024-07-22', comments: 'Gross misconduct.' }]
-  },
-  {
-    id: 'RESIGN001', employeeName: 'Zainab Ali Khamis', zanId: '556789345', requestType: 'Resignation',
-    submissionDate: '2024-07-20', status: 'Pending HHRMD Acknowledgement', lastUpdatedDate: '2024-07-20', currentStage: 'Awaiting Acknowledgement',
-    employeeInstitution: 'TUME YA UTUMISHI SERIKALINI',
-    actions: [{ role: ROLES.HRO, actorName: 'K. Mnyonge', action: 'Submitted', date: '2024-07-20', comments: 'Relocating to another country.' }]
-  },
-  {
-    id: 'COMP003', employeeName: 'Hamid Mohamed', zanId: '778901234', requestType: 'Complaints',
-    submissionDate: '2024-07-25', status: 'Closed - Satisfied', lastUpdatedDate: '2024-08-01', currentStage: 'Completed',
-    employeeInstitution: 'WIZARA YA UJENZI MAWASILIANO NA UCHUKUZI',
-    actions: [
-        { role: ROLES.EMPLOYEE, actorName: 'Hamid Mohamed', action: 'Submitted', date: '2024-07-25' },
-        { role: ROLES.HHRMD, actorName: 'S. Khamis', action: 'Resolved', date: '2024-07-28' },
-        { role: ROLES.EMPLOYEE, actorName: 'Hamid Mohamed', action: 'Confirmed & Closed', date: '2024-08-01' }
-    ]
-  }
-];
 
 const ALL_INSTITUTIONS_FILTER_VALUE = "__ALL_INSTITUTIONS__";
 const ALL_STATUSES_FILTER_VALUE = "__ALL_STATUSES__";
-
-const REQUEST_STATUSES_FILTER_OPTIONS = Array.from(new Set(ALL_MOCK_REQUESTS.map(req => req.status))).sort();
-
 
 export default function TrackStatusPage() {
   const { user, role } = useAuth();
   const [zanIdInput, setZanIdInput] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [searchAttempted, setSearchAttempted] = useState(false);
-  const [foundRequests, setFoundRequests] = useState<MockTrackedRequest[]>([]);
-
+  
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  const [allRequests, setAllRequests] = useState<MockTrackedRequest[]>([]);
-  const [filteredRequests, setFilteredRequests] = useState<MockTrackedRequest[]>([]);
+  const [allRequests, setAllRequests] = useState<TrackedRequest[]>([]);
+  const [filteredRequests, setFilteredRequests] = useState<TrackedRequest[]>([]);
   const [fromDateFilter, setFromDateFilter] = useState('');
   const [toDateFilter, setToDateFilter] = useState('');
   const [zanIdFilter, setZanIdFilter] = useState('');
   const [institutionFilter, setInstitutionFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [availableInstitutions, setAvailableInstitutions] = useState<string[]>([]);
-  const [selectedRequestDetails, setSelectedRequestDetails] = useState<MockTrackedRequest | null>(null);
+  const [requestStatuses, setRequestStatuses] = useState<string[]>([]);
+  
+  const [selectedRequestDetails, setSelectedRequestDetails] = useState<TrackedRequest | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
-  const isTableView = role === ROLES.HRO || role === ROLES.CSCS || role === ROLES.HRRP;
-  const canAccessModule = role === ROLES.HHRMD || role === ROLES.HRMO || role === ROLES.DO || isTableView;
+  const isTableView = role === ROLES.HRO || role === ROLES.CSCS || role === ROLES.HRRP || role === ROLES.HHRMD || role === ROLES.HRMO || role === ROLES.DO;
 
+  const fetchRequests = useCallback(async (params: URLSearchParams = new URLSearchParams()) => {
+    setIsSearching(true);
+    try {
+        const response = await fetch(`/api/requests/track?${params.toString()}`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch requests');
+        }
+        const data: TrackedRequest[] = await response.json();
+
+        if (isTableView) {
+            setAllRequests(data);
+            setFilteredRequests(data);
+            const statuses = Array.from(new Set(data.map(req => req.status))).sort();
+            setRequestStatuses(statuses);
+            const institutions = Array.from(new Set(data.map(req => req.employeeInstitution).filter(Boolean) as string[]));
+            setAvailableInstitutions(institutions.sort());
+        } else {
+             setFilteredRequests(data);
+             if (data.length === 0 && searchAttempted) {
+                toast({ title: "No Requests Found", description: `No requests found for ZanID: ${params.get('zanId')}.` });
+             } else if (searchAttempted) {
+                toast({ title: "Requests Found", description: `Displaying requests for ZanID: ${params.get('zanId')}.` });
+             }
+        }
+        setSearchAttempted(true);
+
+    } catch (error) {
+        toast({ title: "Error", description: "Could not load requests.", variant: "destructive" });
+    } finally {
+        setIsSearching(false);
+    }
+  }, [isTableView, searchAttempted]);
+  
   useEffect(() => {
     if (isTableView) {
-      const enrichedData = ALL_MOCK_REQUESTS.map(req => {
-          const employee = EMPLOYEES.find(emp => emp.zanId === req.zanId);
-          return {
-              ...req,
-              gender: employee?.gender || 'N/A'
-          };
-      });
-
-      let initialRequests = [...enrichedData].sort((a, b) => new Date(b.lastUpdatedDate).getTime() - new Date(a.lastUpdatedDate).getTime());
-
-      if (role === ROLES.HRO && user?.institutionId) {
-        const hroInstitution = INSTITUTIONS.find(i => i.id === user.institutionId)?.name;
-        initialRequests = initialRequests.filter(req => req.employeeInstitution === hroInstitution);
-        if (hroInstitution) {
-          setInstitutionFilter(hroInstitution);
-        }
+      let params = new URLSearchParams();
+      if (role === ROLES.HRO && user?.institution?.name) {
+          params.append('institutionName', user.institution.name);
+          setInstitutionFilter(user.institution.name);
       }
-
-      setAllRequests(initialRequests);
-      setFilteredRequests(initialRequests);
-      setSearchAttempted(true);
-
-      const institutions = Array.from(new Set(ALL_MOCK_REQUESTS.map(req => req.employeeInstitution).filter(Boolean) as string[]));
-      setAvailableInstitutions(institutions.sort());
+      fetchRequests(params);
     }
-  }, [role, user, isTableView]);
+  }, [role, user, isTableView, fetchRequests]);
+
 
   const handleSearchRequests = () => {
     if (!zanIdInput.trim()) {
       toast({ title: "ZanID Required", description: "Please enter an employee's ZanID to search.", variant: "destructive" });
       return;
     }
-    setIsSearching(true);
-    setSearchAttempted(false);
-    setFoundRequests([]);
-    setCurrentPage(1);
-
-    setTimeout(() => {
-      const requests = ALL_MOCK_REQUESTS.map(req => {
-        const employee = EMPLOYEES.find(emp => emp.zanId === req.zanId);
-        return { ...req, gender: employee?.gender || 'N/A' };
-      }).filter(req => req.zanId === zanIdInput.trim());
-      
-      setFoundRequests(requests);
-      setSearchAttempted(true);
-      setIsSearching(false);
-      if (requests.length === 0) {
-        toast({ title: "No Requests Found", description: `No requests found for ZanID: ${zanIdInput}.` });
-      } else {
-        toast({ title: "Requests Found", description: `Displaying requests for ZanID: ${zanIdInput}.` });
-      }
-    }, 1000);
+    const params = new URLSearchParams({ zanId: zanIdInput.trim() });
+    fetchRequests(params);
   };
 
   const handleFilterRequests = () => {
-    setIsSearching(true);
-    setCurrentPage(1);
-    let filtered = [...allRequests];
-
-    if (fromDateFilter && toDateFilter) {
-      const startDate = startOfDay(parseISO(fromDateFilter));
-      const endDate = endOfDay(parseISO(toDateFilter));
-      if (isValid(startDate) && isValid(endDate) && !isWithinInterval(endDate, { start: new Date(0), end: startDate })) {
-         filtered = filtered.filter(req => {
-          const submissionDate = parseISO(req.submissionDate);
-          return isValid(submissionDate) && isWithinInterval(submissionDate, { start: startDate, end: endDate });
-        });
-      } else {
-         toast({ title: "Invalid Date Range", description: "End date must be after start date, if both are provided.", variant: "destructive"});
-         setIsSearching(false);
-         return;
-      }
+    const params = new URLSearchParams();
+    if(fromDateFilter) params.append('fromDate', fromDateFilter);
+    if(toDateFilter) params.append('toDate', toDateFilter);
+    if(zanIdFilter.trim()) params.append('zanId', zanIdFilter.trim());
+    if(institutionFilter && institutionFilter !== ALL_INSTITUTIONS_FILTER_VALUE) params.append('institutionName', institutionFilter);
+    if(statusFilter && statusFilter !== ALL_STATUSES_FILTER_VALUE) params.append('status', statusFilter);
+    
+    if (role === ROLES.HRO && user?.institution?.name) {
+      params.set('institutionName', user.institution.name);
     }
-
-    if (zanIdFilter.trim()) {
-      filtered = filtered.filter(req => req.zanId === zanIdFilter.trim());
-    }
-
-    if (institutionFilter && institutionFilter !== ALL_INSTITUTIONS_FILTER_VALUE && role !== ROLES.HRO) {
-      filtered = filtered.filter(req => req.employeeInstitution === institutionFilter);
-    }
-
-    if (statusFilter && statusFilter !== ALL_STATUSES_FILTER_VALUE) {
-      filtered = filtered.filter(req => req.status === statusFilter);
-    }
-
-    setFilteredRequests(filtered);
-    setIsSearching(false);
-    if (filtered.length === 0) {
-      toast({ title: "No Results", description: "No requests match your filter criteria."});
-    } else {
-      toast({ title: "Filter Applied", description: `Displaying ${filtered.length} matching requests.`});
-    }
+    
+    fetchRequests(params);
   };
 
-  const handleViewDetails = (request: MockTrackedRequest) => {
+  const handleViewDetails = (request: TrackedRequest) => {
     setSelectedRequestDetails(request);
     setIsDetailsModalOpen(true);
   };
-
-  const displayRequests = isTableView ? filteredRequests : foundRequests;
-
+  
   const handleExport = (format: 'pdf' | 'excel') => {
-    if (displayRequests.length === 0) {
+    if (filteredRequests.length === 0) {
       toast({ title: "Export Error", description: "There is no data to export.", variant: "destructive" });
       return;
     }
@@ -328,7 +167,7 @@ export default function TrackStatusPage() {
       
       const tableColumn = headers;
       const tableRows: any[][] = [];
-      displayRequests.forEach(item => {
+      filteredRequests.forEach(item => {
         const rowData = dataKeys.map(key => (item as any)[key] !== undefined ? String((item as any)[key]) : '');
         tableRows.push(rowData);
       });
@@ -343,7 +182,7 @@ export default function TrackStatusPage() {
       doc.save(`${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_report.pdf`);
       toast({ title: "PDF Exported", description: "Report exported to PDF successfully." });
     } else if (format === 'excel') {
-      const wsData = [headers, ...displayRequests.map(item => dataKeys.map(key => (item as any)[key] ?? ''))];
+      const wsData = [headers, ...filteredRequests.map(item => dataKeys.map(key => (item as any)[key] ?? ''))];
       const ws = XLSX.utils.aoa_to_sheet(wsData);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Requests");
@@ -353,8 +192,8 @@ export default function TrackStatusPage() {
   };
 
 
-  const totalPages = Math.ceil(displayRequests.length / itemsPerPage);
-  const paginatedRequests = displayRequests.slice(
+  const totalPages = Math.ceil(filteredRequests.length / itemsPerPage);
+  const paginatedRequests = filteredRequests.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
@@ -363,12 +202,6 @@ export default function TrackStatusPage() {
   return (
     <div>
       <PageHeader title="Track Request Status" description="Monitor the status of requests submitted to the Civil Service Commission." />
-      {!canAccessModule ? (
-        <Card className="shadow-lg">
-          <CardHeader><CardTitle>Access Denied</CardTitle></CardHeader>
-          <CardContent><p className="text-muted-foreground">You do not have permission to access this module.</p></CardContent>
-        </Card>
-      ) : (
         <>
           <Card className="shadow-lg mb-6">
             <CardHeader>
@@ -416,7 +249,7 @@ export default function TrackStatusPage() {
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value={ALL_STATUSES_FILTER_VALUE}>All Statuses</SelectItem>
-                            {REQUEST_STATUSES_FILTER_OPTIONS.map(status => (
+                            {requestStatuses.map(status => (
                                 <SelectItem key={status} value={status}>{status}</SelectItem>
                             ))}
                         </SelectContent>
@@ -457,10 +290,10 @@ export default function TrackStatusPage() {
                     {isTableView ? "Requests List" : `Request Status for ZanID: ${zanIdInput}`}
                     </CardTitle>
                     <CardDescription>
-                    {isTableView && `Displaying ${displayRequests.length} matching requests.`}
+                    {isTableView && `Displaying ${filteredRequests.length} matching requests.`}
                     </CardDescription>
                 </div>
-                {displayRequests.length > 0 && (
+                {filteredRequests.length > 0 && (
                     <div className="flex space-x-2 mt-4 md:mt-0">
                         <Button variant="outline" size="sm" onClick={() => handleExport('pdf')}>
                             <FileDown className="mr-2 h-4 w-4" /> PDF
@@ -472,7 +305,7 @@ export default function TrackStatusPage() {
                 )}
               </CardHeader>
               <CardContent>
-                {displayRequests.length > 0 ? (
+                {filteredRequests.length > 0 ? (
                   <>
                   <Table>
                     <TableCaption>
@@ -515,7 +348,7 @@ export default function TrackStatusPage() {
                     currentPage={currentPage}
                     totalPages={totalPages}
                     onPageChange={setCurrentPage}
-                    totalItems={displayRequests.length}
+                    totalItems={filteredRequests.length}
                     itemsPerPage={itemsPerPage}
                   />
                   </>
@@ -536,7 +369,6 @@ export default function TrackStatusPage() {
             </Card>
           )}
         </>
-      )}
 
       {selectedRequestDetails && isDetailsModalOpen && (
         <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
@@ -556,25 +388,7 @@ export default function TrackStatusPage() {
                 <div><Label className="font-semibold">Current Status:</Label> <p className="text-primary">{selectedRequestDetails.status}</p></div>
                 <div><Label className="font-semibold">Current Stage:</Label> <p>{selectedRequestDetails.currentStage}</p></div>
               </div>
-
-              <h4 className="font-semibold text-md mt-4 pt-3 border-t">Workflow History</h4>
-              {selectedRequestDetails.actions && selectedRequestDetails.actions.length > 0 ? (
-                <div className="space-y-3">
-                  {selectedRequestDetails.actions.map((action, index) => (
-                    <Card key={index} className="bg-secondary/30 p-3 shadow-sm">
-                      <div className="flex justify-between items-start mb-1">
-                        <span className="font-semibold text-primary-foreground bg-primary px-2 py-0.5 rounded-sm text-xs">{action.role}</span>
-                        <span className="text-xs text-muted-foreground">{format(parseISO(action.date), 'PPP p')}</span>
-                      </div>
-                       {action.actorName && <p className="text-xs text-muted-foreground mb-1">By: {action.actorName}</p>}
-                      <p className="font-medium">{action.action}</p>
-                      {action.comments && <p className="text-xs text-muted-foreground mt-1"><em>Comments: {action.comments}</em></p>}
-                    </Card>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-muted-foreground">No workflow history available for this request.</p>
-              )}
+              <p className="text-xs text-muted-foreground pt-4 border-t">A detailed, step-by-step workflow history will be available in a future update.</p>
             </div>
             <DialogFooter>
               <DialogClose asChild>

@@ -136,7 +136,7 @@ export const NAV_ITEMS: NavItem[] = [
     title: 'Track Status',
     href: '/dashboard/track-status',
     icon: ListChecks,
-    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO, ROLES.DO, ROLES.CSCS, ROLES.HRRP],
+    roles: [ROLES.HRO, ROLES.HHRMD, ROLES.HRMO, ROLES.DO, ROLES.CSCS, ROLES.HRRP, ROLES.PO],
     description: 'Track the status of submitted requests.',
   },
   {
