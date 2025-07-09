@@ -4,18 +4,19 @@ import { PageHeader } from '@/components/shared/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import React, { useState } from 'react';
-import { USERS, ROLES, INSTITUTIONS } from '@/lib/constants';
-import { Pencil, PlusCircle, Trash2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { USERS, ROLES } from '@/lib/constants';
+import { Pencil, PlusCircle, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import type { User, Role } from '@/lib/types';
+import type { Institution } from '../institutions/page';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Pagination } from '@/components/shared/pagination';
@@ -24,28 +25,35 @@ const userSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   username: z.string().min(3, { message: "Username must be at least 3 characters." }),
   role: z.nativeEnum(ROLES),
-  institutionId: z.string().optional(),
-  // Add password validation for creation
+  institutionId: z.string().min(1, "Institution is required."),
   password: z.string().min(6, "Password must be at least 6 characters.").optional(),
-}).refine(data => {
-  if (data.role && data.role !== ROLES.EMPLOYEE && !data.institutionId) {
-    return false;
-  }
-  return true;
-}, {
-  message: "Institution is required for this user role.",
-  path: ["institutionId"],
 });
 
 type UserFormValues = z.infer<typeof userSchema>;
 
 export default function UserManagementPage() {
   const [users, setUsers] = useState(USERS.map(u => ({...u, active: true})));
+  const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User & { active: boolean } | null>(null);
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  
+  const fetchInstitutions = async () => {
+    try {
+      const response = await fetch('/api/institutions');
+      if (!response.ok) throw new Error('Failed to fetch');
+      const data = await response.json();
+      setInstitutions(data);
+    } catch (error) {
+      toast({title: "Error", description: "Could not load institutions for dropdown.", variant: "destructive"});
+    }
+  };
+
+  useEffect(() => {
+    fetchInstitutions();
+  }, []);
 
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userSchema),
@@ -62,8 +70,8 @@ export default function UserManagementPage() {
             name: data.name, 
             username: data.username, 
             role: data.role,
-            institutionId: data.role !== ROLES.EMPLOYEE ? data.institutionId : undefined,
-            institution: data.role !== ROLES.EMPLOYEE ? INSTITUTIONS.find(i => i.id === data.institutionId)?.name : undefined,
+            institutionId: data.institutionId,
+            institution: institutions.find(i => i.id === data.institutionId)?.name,
         } : u
       ));
       toast({ title: "User Updated", description: "The user has been updated successfully." });
@@ -78,8 +86,8 @@ export default function UserManagementPage() {
         name: data.name,
         username: data.username,
         role: data.role,
-        institutionId: data.role !== ROLES.EMPLOYEE ? data.institutionId : undefined,
-        institution: data.role !== ROLES.EMPLOYEE ? INSTITUTIONS.find(i => i.id === data.institutionId)?.name : undefined,
+        institutionId: data.institutionId,
+        institution: institutions.find(i => i.id === data.institutionId)?.name,
         active: true,
       };
       setUsers([...users, newUser]);
@@ -120,7 +128,6 @@ export default function UserManagementPage() {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
-
 
   return (
     <div>
@@ -220,22 +227,22 @@ export default function UserManagementPage() {
                   <FormMessage />
                 </FormItem>
               )}/>
-              { watchRole && watchRole !== ROLES.EMPLOYEE && (
-                <FormField name="institutionId" control={form.control} render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Institution</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl><SelectTrigger><SelectValue placeholder="Select an institution" /></SelectTrigger></FormControl>
-                      <SelectContent>
-                        {INSTITUTIONS.map(inst => (
-                          <SelectItem key={inst.id} value={inst.id}>{inst.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}/>
-              )}
+              <FormField name="institutionId" control={form.control} render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Institution</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl><SelectTrigger>
+                      <SelectValue placeholder={institutions.length > 0 ? "Select an institution" : "Loading institutions..."} />
+                    </SelectTrigger></FormControl>
+                    <SelectContent>
+                      {institutions.length > 0 ? institutions.map(inst => (
+                        <SelectItem key={inst.id} value={inst.id}>{inst.name}</SelectItem>
+                      )) : <SelectItem value="loading" disabled>Loading...</SelectItem>}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}/>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={closeDialog}>Cancel</Button>
                 <Button type="submit">Save User</Button>

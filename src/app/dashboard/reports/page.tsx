@@ -15,9 +15,10 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { useAuth } from '@/hooks/use-auth';
-import { ROLES, INSTITUTIONS } from '@/lib/constants';
+import { ROLES } from '@/lib/constants';
 import { isWithinInterval, isValid, parseISO, startOfDay, endOfDay } from 'date-fns';
 import { Pagination } from '@/components/shared/pagination';
+import type { Institution } from '@/app/dashboard/admin/institutions/page';
 
 
 // Augment jsPDF with autoTable
@@ -232,7 +233,7 @@ export default function ReportsPage() {
   const itemsPerPage = 10;
 
   const [institutionFilter, setInstitutionFilter] = useState<string>('');
-  const [availableInstitutions, setAvailableInstitutions] = useState<string[]>([]);
+  const [availableInstitutions, setAvailableInstitutions] = useState<Institution[]>([]);
 
   const isHigherLevelUser = useMemo(() => 
     [ROLES.HHRMD, ROLES.HRMO, ROLES.DO, ROLES.PO, ROLES.CSCS].includes(role as any),
@@ -240,8 +241,18 @@ export default function ReportsPage() {
   );
   
   useEffect(() => {
-    const allInst = INSTITUTIONS.map(inst => inst.name);
-    setAvailableInstitutions(Array.from(allInst).sort());
+    const fetchInstitutions = async () => {
+        try {
+            const response = await fetch('/api/institutions');
+            if (response.ok) {
+                const data = await response.json();
+                setAvailableInstitutions(data);
+            }
+        } catch (error) {
+            toast({title: "Error", description: "Could not load institutions for filter.", variant: "destructive"});
+        }
+    };
+    fetchInstitutions();
   }, []);
 
   const getObjectKeys = (obj: any): string[] => {
@@ -273,7 +284,7 @@ export default function ReportsPage() {
         // Role-based and Institution filtering
         if (isHigherLevelUser) {
           if (institutionFilter && institutionFilter !== ALL_INSTITUTIONS_FILTER_VALUE) {
-            filteredData = filteredData.filter(item => item.wizara === institutionFilter);
+            filteredData = filteredData.filter(item => item.wizara === availableInstitutions.find(i => i.id === institutionFilter)?.name);
           }
         } else if (role === ROLES.HRO) {
           if (user?.institution) {
@@ -339,7 +350,8 @@ export default function ReportsPage() {
     doc.setFontSize(10);
     doc.text(`Kipindi: ${fromDate || 'N/A'} hadi ${toDate || 'N/A'}`, 14, 30);
     if(isHigherLevelUser && institutionFilter && institutionFilter !== ALL_INSTITUTIONS_FILTER_VALUE) {
-        doc.text(`Taasisi: ${institutionFilter}`, 14, 36);
+        const instName = availableInstitutions.find(i => i.id === institutionFilter)?.name;
+        doc.text(`Taasisi: ${instName}`, 14, 36);
     } else if(role === ROLES.HRO && user?.institution) {
         doc.text(`Taasisi: ${user.institution}`, 14, 36);
     }
@@ -525,7 +537,7 @@ export default function ReportsPage() {
                      <SelectContent>
                          <SelectItem value={ALL_INSTITUTIONS_FILTER_VALUE}>Taasisi Zote</SelectItem>
                          {availableInstitutions.map(inst => (
-                             <SelectItem key={inst} value={inst}>{inst}</SelectItem>
+                             <SelectItem key={inst.id} value={inst.id}>{inst.name}</SelectItem>
                          ))}
                      </SelectContent>
                  </Select>
