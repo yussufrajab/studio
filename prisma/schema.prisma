@@ -1,88 +1,136 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
 
 model User {
-  id            String    @id @default(cuid())
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
   name          String
-  username      String    @unique
+  username      String   @unique
   password      String
   role          String
-  active        Boolean   @default(true)
-  employeeId    String?   @unique // This might be the employee's check number or similar
-  zanId         String?   @unique // Official ZanID card number
+  active        Boolean  @default(true)
+  employeeId    String?  @unique
   
   institutionId String
   institution   Institution @relation(fields: [institutionId], references: [id])
 
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  complaintsSubmitted    Complaint[] @relation("ComplaintSubmittedBy")
+  complaintsReviewed     Complaint[] @relation("ComplaintReviewedBy")
+  complaintsForEmployee  Complaint[] @relation("ComplaintEmployee")
 
-  // --- Relations ---
-  complaintsAsComplainant Complaint[] @relation("Complainant")
-  complaintsAsReviewer    Complaint[] @relation("ReviewedBy")
+  confirmationRequestsSubmitted  ConfirmationRequest[] @relation("ConfirmationSubmittedBy")
+  confirmationRequestsReviewed   ConfirmationRequest[] @relation("ConfirmationReviewedBy")
+  confirmationRequestsForEmployee ConfirmationRequest[] @relation("ConfirmationEmployee")
 
-  submittedConfirmations ConfirmationRequest[] @relation("SubmittedConfirmation")
-  reviewedConfirmations  ConfirmationRequest[] @relation("ReviewedConfirmation")
-  confirmationRequests ConfirmationRequest[] @relation("ConfirmedEmployee")
+  promotionRequestsSubmitted   PromotionRequest[] @relation("PromotionSubmittedBy")
+  promotionRequestsReviewed    PromotionRequest[] @relation("PromotionReviewedBy")
+  promotionRequestsForEmployee PromotionRequest[] @relation("PromotionEmployee")
+
+  @@index([institutionId])
 }
 
 model Institution {
-  id      String   @id @default(cuid())
-  name    String   @unique
-  users   User[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id    String @id @default(cuid())
+  name  String @unique
+  users User[]
 }
 
 model Complaint {
-  id                      String   @id @default(cuid())
-  complaintType           String
-  subject                 String
-  details                 String
-  complainantPhoneNumber  String
-  nextOfKinPhoneNumber    String
-  attachments             String[]
+  id              String   @id @default(cuid())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
   
-  status                  String   @default("Submitted")
-  reviewStage             String   @default("initial")
-  officerComments         String?
-  internalNotes           String?
-  rejectionReason         String?
+  complainantId   String
+  complainant     User     @relation("ComplaintEmployee", fields: [complainantId], references: [id])
   
-  complainantId           String
-  complainant             User     @relation("Complainant", fields: [complainantId], references: [id])
+  reviewedById    String?
+  reviewedBy      User?    @relation("ComplaintReviewedBy", fields: [reviewedById], references: [id])
+
+  complaintType   String
+  subject         String
+  details         String   @db.Text
+  status          String
+  reviewStage     String
   
-  assignedOfficerRole     String?
-  reviewedById            String?
-  reviewedBy              User?    @relation("ReviewedBy", fields: [reviewedById], references: [id])
+  complainantPhoneNumber String
+  nextOfKinPhoneNumber   String
+  attachments            String[]
   
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
+  officerComments   String?
+  internalNotes     String?
+  rejectionReason   String?
+  assignedOfficerRole String?
+  
+  @@index([complainantId])
+  @@index([reviewedById])
 }
 
 model ConfirmationRequest {
-  id                String   @id @default(cuid())
-  
-  status            String   @default("Pending HHRMD Review")
-  reviewStage       String   @default("initial") // 'initial', 'commission_review', 'completed'
-  rejectionReason   String?
-  
-  // Who is being confirmed
-  employeeId        String
-  employee          User     @relation("ConfirmedEmployee", fields: [employeeId], references: [id])
+  id              String   @id @default(cuid())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  // Who submitted the request (e.g., HRO)
-  submittedById     String
-  submittedBy       User     @relation("SubmittedConfirmation", fields: [submittedById], references: [id])
+  employeeId      String
+  employee        User     @relation("ConfirmationEmployee", fields: [employeeId], references: [id])
   
-  // Who reviewed/actioned the request (e.g., HHRMD, HRMO)
-  reviewedById      String?
-  reviewedBy        User?    @relation("ReviewedConfirmation", fields: [reviewedById], references: [id])
+  submittedById   String
+  submittedBy     User     @relation("ConfirmationSubmittedBy", fields: [submittedById], references: [id])
 
-  decisionDate          DateTime?
+  reviewedById    String?
+  reviewedBy      User?    @relation("ConfirmationReviewedBy", fields: [reviewedById], references: [id])
+  
+  status                 String
+  reviewStage            String
+  rejectionReason        String?
+  documents              String[]
+  decisionDate           DateTime?
   commissionDecisionDate DateTime?
 
-  // documents will be stored as an array of strings (e.g., URLs to a storage bucket)
-  documents         String[]
+  @@index([employeeId])
+  @@index([submittedById])
+  @@index([reviewedById])
+}
 
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+enum PromotionType {
+  Experience
+  EducationAdvancement
+}
+
+model PromotionRequest {
+  id              String   @id @default(cuid())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  employeeId      String
+  employee        User     @relation("PromotionEmployee", fields: [employeeId], references: [id])
+  
+  submittedById   String
+  submittedBy     User     @relation("PromotionSubmittedBy", fields: [submittedById], references: [id])
+
+  reviewedById    String?
+  reviewedBy      User?    @relation("PromotionReviewedBy", fields: [reviewedById], references: [id])
+  
+  status          String // e.g., 'Pending HHRMD Review', 'Approved by Commission'
+  reviewStage     String // e.g., 'initial', 'commission_review', 'completed'
+  rejectionReason String?
+  
+  proposedCadre            String
+  promotionType            PromotionType
+  documents                String[]
+  studiedOutsideCountry    Boolean?
+
+  @@index([employeeId])
+  @@index([submittedById])
+  @@index([reviewedById])
 }
