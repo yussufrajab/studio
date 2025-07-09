@@ -24,6 +24,23 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       }
     });
 
+    if (validatedData.status) {
+      const userToNotify = await db.user.findUnique({
+        where: { employeeId: updatedRequest.employeeId },
+        select: { id: true }
+      });
+
+      if (userToNotify) {
+        await db.notification.create({
+          data: {
+            userId: userToNotify.id,
+            message: `Your ${updatedRequest.retirementType} Retirement request has been updated to: ${validatedData.status}.`,
+            link: `/dashboard/retirement`,
+          },
+        });
+      }
+    }
+
     return NextResponse.json(updatedRequest);
   } catch (error) {
     console.error("[RETIREMENT_PUT]", error);

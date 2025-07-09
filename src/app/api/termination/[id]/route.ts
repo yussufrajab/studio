@@ -24,6 +24,24 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       }
     });
 
+    if (validatedData.status) {
+      const userToNotify = await db.user.findUnique({
+        where: { employeeId: updatedRequest.employeeId },
+        select: { id: true }
+      });
+
+      if (userToNotify) {
+        const typeString = updatedRequest.type === 'TERMINATION' ? 'Termination' : 'Dismissal';
+        await db.notification.create({
+          data: {
+            userId: userToNotify.id,
+            message: `Your ${typeString} request has been updated to: ${validatedData.status}.`,
+            link: `/dashboard/termination`,
+          },
+        });
+      }
+    }
+
     return NextResponse.json(updatedRequest);
   } catch (error) {
     console.error("[SEPARATION_PUT]", error);

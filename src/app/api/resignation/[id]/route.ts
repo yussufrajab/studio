@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { z } from 'zod';
+import { format } from 'date-fns';
 
 const updateSchema = z.object({
   status: z.string().optional(),
@@ -23,6 +24,23 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
         reviewedBy: { select: { name: true, role: true } },
       }
     });
+
+    if (validatedData.status) {
+      const userToNotify = await db.user.findUnique({
+        where: { employeeId: updatedRequest.employeeId },
+        select: { id: true }
+      });
+
+      if (userToNotify) {
+        await db.notification.create({
+          data: {
+            userId: userToNotify.id,
+            message: `Your Resignation request with effective date ${format(new Date(updatedRequest.effectiveDate), 'PPP')} has been updated to: ${validatedData.status}.`,
+            link: `/dashboard/resignation`,
+          },
+        });
+      }
+    }
 
     return NextResponse.json(updatedRequest);
   } catch (error) {
