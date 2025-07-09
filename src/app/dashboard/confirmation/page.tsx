@@ -87,7 +87,7 @@ export default function ConfirmationPage() {
     fileInputs.forEach(input => (input as HTMLInputElement).value = '');
   }
 
-  const handleFetchEmployeeDetails = () => {
+  const handleFetchEmployeeDetails = async () => {
     if (!zanId) {
       toast({ title: "ZanID Required", description: "Please enter an employee's ZanID.", variant: "destructive" });
       return;
@@ -95,9 +95,14 @@ export default function ConfirmationPage() {
     setIsFetchingEmployee(true);
     resetEmployeeAndForm();
 
-    setTimeout(() => {
-      const foundEmployee = EMPLOYEES.find(emp => emp.zanId === zanId);
-      if (foundEmployee) {
+    try {
+        const response = await fetch(`/api/employees/search?zanId=${zanId}`);
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || "Employee not found");
+        }
+        const foundEmployee: Employee = await response.json();
+
         setEmployeeToConfirm(foundEmployee);
         if (foundEmployee.employmentDate) {
             try {
@@ -113,11 +118,11 @@ export default function ConfirmationPage() {
         } else {
             toast({ title: "Employee Found", description: `Details for ${foundEmployee.name} loaded.` });
         }
-      } else {
-        toast({ title: "Employee Not Found", description: `No employee found with ZanID: ${zanId}.`, variant: "destructive" });
-      }
-      setIsFetchingEmployee(false);
-    }, 1000);
+    } catch (error: any) {
+        toast({ title: "Employee Not Found", description: error.message || `No employee found with ZanID: ${zanId}.`, variant: "destructive" });
+    } finally {
+        setIsFetchingEmployee(false);
+    }
   };
 
   const handleSubmitRequest = async () => {
@@ -258,8 +263,8 @@ export default function ConfirmationPage() {
                       <div><Label className="text-muted-foreground">ZSSF Number:</Label> <p className="font-semibold text-foreground">{employeeToConfirm.zssfNumber || 'N/A'}</p></div>
                       <div><Label className="text-muted-foreground">Department:</Label> <p className="font-semibold text-foreground">{employeeToConfirm.department || 'N/A'}</p></div>
                       <div><Label className="text-muted-foreground">Cadre/Position:</Label> <p className="font-semibold text-foreground">{employeeToConfirm.cadre || 'N/A'}</p></div>
-                      <div><Label className="text-muted-foreground">Employment Date:</Label> <p className="font-semibold text-foreground">{employeeToConfirm.employmentDate ? format(parseISO(employeeToConfirm.employmentDate), 'PPP') : 'N/A'}</p></div>
-                      <div><Label className="text-muted-foreground">Date of Birth:</Label> <p className="font-semibold text-foreground">{employeeToConfirm.dateOfBirth ? format(parseISO(employeeToConfirm.dateOfBirth), 'PPP') : 'N/A'}</p></div>
+                      <div><Label className="text-muted-foreground">Employment Date:</Label> <p className="font-semibold text-foreground">{employeeToConfirm.employmentDate ? format(parseISO(employeeToConfirm.employmentDate.toString()), 'PPP') : 'N/A'}</p></div>
+                      <div><Label className="text-muted-foreground">Date of Birth:</Label> <p className="font-semibold text-foreground">{employeeToConfirm.dateOfBirth ? format(parseISO(employeeToConfirm.dateOfBirth.toString()), 'PPP') : 'N/A'}</p></div>
                       <div className="lg:col-span-1"><Label className="text-muted-foreground">Institution:</Label> <p className="font-semibold text-foreground">{employeeToConfirm.institution || 'N/A'}</p></div>
                       <div className="md:col-span-2 lg:col-span-3"><Label className="text-muted-foreground">Current Status:</Label> <p className={`font-semibold ${employeeToConfirm.status === 'Confirmed' ? 'text-green-600' : employeeToConfirm.status === 'On Probation' ? 'text-orange-500' : 'text-foreground'}`}>{employeeToConfirm.status || 'N/A'}</p></div>
                     </div>

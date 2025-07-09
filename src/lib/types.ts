@@ -7,53 +7,54 @@ export interface User {
   name: string;
   role: Role;
   employeeId?: string; 
-  institutionId?: string; // For HRRP/HRO to identify their institution
-  institution?: string; // For HRO to identify their institution by name
+  institutionId?: string;
+  institution?: { name: string };
 }
 
 export interface EmployeeCertificate {
+  id: string;
   type: "Certificate" | "Diploma" | "Bachelor Degree" | "Master Degree" | "PhD" | "Other";
   name: string; 
   url: string; 
+  employeeId: string;
 }
 
 export interface Employee {
   id: string;
-  employeeEntityId: string;
+  employeeEntityId?: string | null;
   name: string;
-  gender: 'Male' | 'Female';
-  profileImageUrl?: string; 
-  dateOfBirth?: string; 
-  placeOfBirth?: string;
-  region?: string;
-  countryOfBirth?: string;
+  gender: 'Male' | 'Female' | 'N/A';
+  profileImageUrl?: string | null;
+  dateOfBirth?: string | Date | null;
+  placeOfBirth?: string | null;
+  region?: string | null;
+  countryOfBirth?: string | null;
   zanId: string;
-  phoneNumber?: string;
-  contactAddress?: string;
-  zssfNumber?: string;
-  payrollNumber?: string;
+  phoneNumber?: string | null;
+  contactAddress?: string | null;
+  zssfNumber?: string | null;
+  payrollNumber?: string | null;
   
-  cadre?: string; 
-  salaryScale?: string;
-  ministry?: string;
-  institutionId?: string; // To link employee to an institution
-  institution?: string; // Institution the employee belongs to
-  department?: string;
-  appointmentType?: string; 
-  contractType?: string; 
-  recentTitleDate?: string; 
-  currentReportingOffice?: string;
-  currentWorkplace?: string;
-  employmentDate?: string; 
-  confirmationDate?: string; 
-  retirementDate?: string;
-  status?: string; 
+  cadre?: string | null;
+  salaryScale?: string | null;
+  ministry?: string | null;
+  institutionId?: string;
+  institution?: string | { name: string };
+  department?: string | null;
+  appointmentType?: string | null;
+  contractType?: string | null;
+  recentTitleDate?: string | Date | null;
+  currentReportingOffice?: string | null;
+  currentWorkplace?: string | null;
+  employmentDate?: string | Date | null;
+  confirmationDate?: string | Date | null;
+  retirementDate?: string | Date | null;
+  status?: string | null;
 
-  
-  ardhilHaliUrl?: string;
-  confirmationLetterUrl?: string;
-  jobContractUrl?: string;
-  birthCertificateUrl?: string;
+  ardhilHaliUrl?: string | null;
+  confirmationLetterUrl?: string | null;
+  jobContractUrl?: string | null;
+  birthCertificateUrl?: string | null;
   certificates?: EmployeeCertificate[];
 }
 

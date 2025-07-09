@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/hooks/use-auth';
-import { ROLES, EMPLOYEES } from '@/lib/constants';
+import { ROLES } from '@/lib/constants';
 import React, { useState, useEffect } from 'react';
 import type { Employee } from '@/lib/types';
 import { toast } from '@/hooks/use-toast';
@@ -108,7 +108,7 @@ export default function DismissalPage() {
     fileInputs.forEach(input => (input as HTMLInputElement).value = '');
   };
 
-  const handleFetchEmployeeDetails = () => {
+  const handleFetchEmployeeDetails = async () => {
     if (!zanId) {
       toast({ title: "ZanID Required", description: "Please enter an employee's ZanID.", variant: "destructive" });
       return;
@@ -117,9 +117,13 @@ export default function DismissalPage() {
     setEmployeeDetails(null);
     resetFormFields();
 
-    setTimeout(() => {
-      const foundEmployee = EMPLOYEES.find(emp => emp.zanId === zanId);
-      if (foundEmployee) {
+    try {
+        const response = await fetch(`/api/employees/search?zanId=${zanId}`);
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || "Employee not found");
+        }
+        const foundEmployee: Employee = await response.json();
         setEmployeeDetails(foundEmployee);
         if (foundEmployee.status !== 'On Probation') {
           toast({
@@ -131,11 +135,11 @@ export default function DismissalPage() {
         } else {
            toast({ title: "Employee Found", description: `Details for ${foundEmployee.name} loaded.` });
         }
-      } else {
-        toast({ title: "Employee Not Found", description: `No employee found with ZanID: ${zanId}.`, variant: "destructive" });
-      }
-      setIsFetchingEmployee(false);
-    }, 1000);
+    } catch(error: any) {
+        toast({ title: "Employee Not Found", description: error.message || `No employee found with ZanID: ${zanId}.`, variant: "destructive" });
+    } finally {
+        setIsFetchingEmployee(false);
+    }
   };
 
   const handleSubmitDismissalRequest = () => {
@@ -204,9 +208,9 @@ export default function DismissalPage() {
         zanId: employeeDetails.zanId,
         department: employeeDetails.department || 'N/A',
         cadre: employeeDetails.cadre || 'N/A',
-        employmentDate: employeeDetails.employmentDate || 'N/A',
-        dateOfBirth: employeeDetails.dateOfBirth || 'N/A',
-        institution: employeeDetails.institution || 'N/A',
+        employmentDate: employeeDetails.employmentDate?.toString() || 'N/A',
+        dateOfBirth: employeeDetails.dateOfBirth?.toString() || 'N/A',
+        institution: typeof employeeDetails.institution === 'object' ? employeeDetails.institution.name : employeeDetails.institution || 'N/A',
         reasonSummary: reasonDismissal,
         proposedDate: proposedDateDismissal,
         submissionDate: format(new Date(), 'yyyy-MM-dd'),
@@ -339,9 +343,9 @@ export default function DismissalPage() {
                       <div><Label className="text-muted-foreground">ZSSF Number:</Label> <p className="font-semibold text-foreground">{employeeDetails.zssfNumber || 'N/A'}</p></div>
                       <div><Label className="text-muted-foreground">Department:</Label> <p className="font-semibold text-foreground">{employeeDetails.department || 'N/A'}</p></div>
                       <div><Label className="text-muted-foreground">Cadre/Position:</Label> <p className="font-semibold text-foreground">{employeeDetails.cadre || 'N/A'}</p></div>
-                      <div><Label className="text-muted-foreground">Employment Date:</Label> <p className="font-semibold text-foreground">{employeeDetails.employmentDate ? format(parseISO(employeeDetails.employmentDate), 'PPP') : 'N/A'}</p></div>
-                      <div><Label className="text-muted-foreground">Date of Birth:</Label> <p className="font-semibold text-foreground">{employeeDetails.dateOfBirth ? format(parseISO(employeeDetails.dateOfBirth), 'PPP') : 'N/A'}</p></div>
-                      <div className="lg:col-span-1"><Label className="text-muted-foreground">Institution:</Label> <p className="font-semibold text-foreground">{employeeDetails.institution || 'N/A'}</p></div>
+                      <div><Label className="text-muted-foreground">Employment Date:</Label> <p className="font-semibold text-foreground">{employeeDetails.employmentDate ? format(parseISO(employeeDetails.employmentDate.toString()), 'PPP') : 'N/A'}</p></div>
+                      <div><Label className="text-muted-foreground">Date of Birth:</Label> <p className="font-semibold text-foreground">{employeeDetails.dateOfBirth ? format(parseISO(employeeDetails.dateOfBirth.toString()), 'PPP') : 'N/A'}</p></div>
+                      <div className="lg:col-span-1"><Label className="text-muted-foreground">Institution:</Label> <p className="font-semibold text-foreground">{typeof employeeDetails.institution === 'object' ? employeeDetails.institution.name : employeeDetails.institution || 'N/A'}</p></div>
                       <div className="md:col-span-2 lg:col-span-3"><Label className="text-muted-foreground">Current Status:</Label> <p className={`font-semibold ${isDismissalAllowed ? 'text-green-600' : 'text-red-600'}`}>{employeeDetails.status || 'N/A'}</p></div>
                     </div>
                   </div>
@@ -584,5 +588,3 @@ export default function DismissalPage() {
     </div>
   );
 }
-
-    

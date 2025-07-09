@@ -7,12 +7,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/use-auth';
-import { EMPLOYEES, ROLES } from '@/lib/constants';
+import { ROLES } from '@/lib/constants';
 import type { Employee, EmployeeCertificate } from '@/lib/types';
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, Search, FileText, UserCircle, Building, Briefcase, Award, ArrowLeft } from 'lucide-react';
+import { Loader2, Search, FileText, UserCircle, Briefcase, Award, ArrowLeft } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { Pagination } from '@/components/shared/pagination';
 
@@ -77,7 +77,7 @@ const EmployeeDetailsCard = ({ emp, onBack }: { emp: Employee, onBack: () => voi
             <div><Label className="text-muted-foreground">Rank (Cadre):</Label><p className="font-medium text-foreground">{emp.cadre || 'N/A'}</p></div>
             <div><Label className="text-muted-foreground">Salary Scale:</Label><p className="font-medium text-foreground">{emp.salaryScale || 'N/A'}</p></div>
             <div><Label className="text-muted-foreground">Ministry:</Label><p className="font-medium text-foreground">{emp.ministry || 'N/A'}</p></div>
-            <div><Label className="text-muted-foreground">Institution:</Label><p className="font-medium text-foreground">{emp.institution || 'N/A'}</p></div>
+            <div><Label className="text-muted-foreground">Institution:</Label><p className="font-medium text-foreground">{typeof emp.institution === 'object' ? emp.institution.name : emp.institution || 'N/A'}</p></div>
             <div><Label className="text-muted-foreground">Department:</Label><p className="font-medium text-foreground">{emp.department || 'N/A'}</p></div>
             <div><Label className="text-muted-foreground">Appointment Type:</Label><p className="font-medium text-foreground">{emp.appointmentType || 'N/A'}</p></div>
             <div><Label className="text-muted-foreground">Contract Type:</Label><p className="font-medium text-foreground">{emp.contractType || 'N/A'}</p></div>
@@ -151,8 +151,7 @@ const EmployeeDetailsCard = ({ emp, onBack }: { emp: Employee, onBack: () => voi
 export default function ProfilePage() {
   const { user, role, isLoading: authLoading } = useAuth();
   
-  const [allEmployeesForUser, setAllEmployeesForUser] = useState<Employee[]>([]);
-  const [filteredEmployees, setFilteredEmployees] = useState<Employee[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [pageLoading, setPageLoading] = useState(true);
@@ -170,45 +169,61 @@ export default function ProfilePage() {
     [role]
   );
 
-  useEffect(() => {
+  const fetchEmployees = useCallback(async (query = '') => {
     setPageLoading(true);
-    if (!authLoading && user) {
-      if (role === ROLES.EMPLOYEE && user.employeeId) {
-        const foundEmployee = EMPLOYEES.find(e => e.id === user.employeeId);
-        setSelectedEmployee(foundEmployee || null);
-        if (!foundEmployee) toast({ title: "Profile Not Found", description: "Your employee profile could not be loaded. Please contact HR.", variant: "destructive" });
-      } else if (isInstitutionalViewer && user.institutionId) {
-        const institutionEmployees = EMPLOYEES.filter(e => e.institutionId === user.institutionId);
-        setAllEmployeesForUser(institutionEmployees);
-        setFilteredEmployees(institutionEmployees);
-      } else if (isCommissionUser) {
-        setAllEmployeesForUser(EMPLOYEES);
-        setFilteredEmployees(EMPLOYEES);
-      }
+    try {
+        const url = `/api/employees?userRole=${role}&userInstitutionId=${user?.institutionId || ''}&q=${query}`;
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Failed to fetch employees');
+        const data = await response.json();
+        setEmployees(data);
+    } catch (error) {
+        toast({ title: "Error", description: "Could not load employee data.", variant: "destructive" });
+    } finally {
+        setPageLoading(false);
     }
-    setPageLoading(false);
-  }, [user, role, authLoading, isCommissionUser, isInstitutionalViewer]);
+  }, [role, user?.institutionId]);
+
+  useEffect(() => {
+    if (authLoading) return;
+    
+    if (role === ROLES.EMPLOYEE && user?.employeeId) {
+        const fetchOwnProfile = async () => {
+            setPageLoading(true);
+            try {
+                // Assuming an API endpoint exists to get a profile by employee ID
+                const response = await fetch(`/api/employees/search?zanId=${user.zanId}`); // A bit of a hack, would be better to have a dedicated /api/profile
+                if (!response.ok) throw new Error("Could not load your profile.");
+                const data = await response.json();
+                setSelectedEmployee(data);
+            } catch (error) {
+                toast({ title: "Profile Not Found", description: "Your employee profile could not be loaded. Please contact HR.", variant: "destructive" });
+            } finally {
+                setPageLoading(false);
+            }
+        };
+        fetchOwnProfile();
+    } else if (isInstitutionalViewer || isCommissionUser) {
+        fetchEmployees();
+    } else {
+      setPageLoading(false);
+    }
+  }, [user, role, authLoading, isCommissionUser, isInstitutionalViewer, fetchEmployees]);
   
   useEffect(() => {
-    if (!searchTerm.trim()) {
-      setFilteredEmployees(allEmployeesForUser);
-      return;
-    }
-    const lowercasedTerm = searchTerm.toLowerCase();
-    const filtered = allEmployeesForUser.filter(emp => 
-        emp.name.toLowerCase().includes(lowercasedTerm) ||
-        emp.zanId.includes(lowercasedTerm) ||
-        (emp.cadre && emp.cadre.toLowerCase().includes(lowercasedTerm)) ||
-        (emp.institution && emp.institution.toLowerCase().includes(lowercasedTerm))
-    );
-    setFilteredEmployees(filtered);
-    setCurrentPage(1); // Reset to first page on search
-  }, [searchTerm, allEmployeesForUser]);
+    const delayDebounceFn = setTimeout(() => {
+      if (isInstitutionalViewer || isCommissionUser) {
+        fetchEmployees(searchTerm);
+        setCurrentPage(1);
+      }
+    }, 500);
 
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm, fetchEmployees, isInstitutionalViewer, isCommissionUser]);
 
   const pageTitle = useMemo(() => {
     if (role === ROLES.EMPLOYEE) return "My Profile";
-    if (isInstitutionalViewer) return `Employee Profiles - ${user?.institutionId || 'Your Institution'}`;
+    if (isInstitutionalViewer) return `Employee Profiles - ${user?.institution?.name || 'Your Institution'}`;
     return "All Employee Profiles";
   }, [role, isInstitutionalViewer, user]);
 
@@ -218,14 +233,14 @@ export default function ProfilePage() {
     return "Search and view profiles for all employees across all institutions.";
   }, [role, isInstitutionalViewer]);
 
-  const totalPages = Math.ceil(filteredEmployees.length / itemsPerPage);
-  const paginatedEmployees = filteredEmployees.slice(
+  const totalPages = Math.ceil(employees.length / itemsPerPage);
+  const paginatedEmployees = employees.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
 
 
-  if (authLoading || pageLoading) {
+  if (authLoading || (pageLoading && !selectedEmployee)) {
     return (
       <div>
         <PageHeader title="Loading Profile..." />
@@ -242,7 +257,9 @@ export default function ProfilePage() {
   }
   
   if (selectedEmployee) {
-    return <EmployeeDetailsCard emp={selectedEmployee} onBack={() => setSelectedEmployee(null)} />;
+    // Employee role should not see the back button
+    const onBack = role === ROLES.EMPLOYEE ? () => {} : () => setSelectedEmployee(null);
+    return <EmployeeDetailsCard emp={selectedEmployee} onBack={onBack} />;
   }
 
   return (
@@ -268,7 +285,7 @@ export default function ProfilePage() {
         <Card>
             <CardHeader>
               <CardTitle>Employee List</CardTitle>
-              <CardDescription>{filteredEmployees.length} employee(s) found.</CardDescription>
+              <CardDescription>{employees.length} employee(s) found.</CardDescription>
             </CardHeader>
             <CardContent>
                  <Table>
@@ -290,7 +307,7 @@ export default function ProfilePage() {
                                     <TableCell className="font-medium">{emp.name}</TableCell>
                                     <TableCell>{emp.gender}</TableCell>
                                     <TableCell>{emp.zanId}</TableCell>
-                                    <TableCell>{emp.institution || 'N/A'}</TableCell>
+                                    <TableCell>{typeof emp.institution === 'object' ? emp.institution.name : emp.institution || 'N/A'}</TableCell>
                                     <TableCell>{emp.cadre || 'N/A'}</TableCell>
                                     <TableCell>{emp.status || 'N/A'}</TableCell>
                                 </TableRow>
@@ -306,7 +323,7 @@ export default function ProfilePage() {
                   currentPage={currentPage}
                   totalPages={totalPages}
                   onPageChange={setCurrentPage}
-                  totalItems={filteredEmployees.length}
+                  totalItems={employees.length}
                   itemsPerPage={itemsPerPage}
                 />
             </CardContent>

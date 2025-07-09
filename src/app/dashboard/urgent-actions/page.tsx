@@ -1,15 +1,17 @@
 
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/use-auth';
-import { ROLES, EMPLOYEES } from '@/lib/constants';
+import { ROLES } from '@/lib/constants';
 import { PageHeader } from '@/components/shared/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { differenceInMonths, parseISO, format } from 'date-fns';
 import type { Employee } from '@/lib/types';
 import { Pagination } from '@/components/shared/pagination';
+import { Loader2 } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 
 // Helper function to calculate precise age
 const calculateAge = (dob: string) => {
@@ -29,36 +31,36 @@ export default function UrgentActionsPage() {
   const [currentPageProbation, setCurrentPageProbation] = useState(1);
   const [currentPageRetirement, setCurrentPageRetirement] = useState(1);
   const itemsPerPage = 10;
+  const [isLoading, setIsLoading] = useState(true);
+
+  const [probationOverdue, setProbationOverdue] = useState<Employee[]>([]);
+  const [nearingRetirement, setNearingRetirement] = useState<Employee[]>([]);
 
   const isAuthorized = role === ROLES.HRO || role === ROLES.HRRP;
 
-  const { probationOverdue, nearingRetirement } = useMemo(() => {
+  useEffect(() => {
     if (!isAuthorized || !user?.institutionId) {
-      return { probationOverdue: [], nearingRetirement: [] };
+        setIsLoading(false);
+        return;
     }
-
-    const institutionEmployees = EMPLOYEES.filter(e => e.institutionId === user.institutionId);
-
-    const overdue: Employee[] = institutionEmployees.filter(emp => {
-      if (!emp.employmentDate || emp.status !== 'On Probation') return false;
-      try {
-        return differenceInMonths(new Date(), parseISO(emp.employmentDate)) >= 12;
-      } catch {
-        return false;
-      }
-    });
-
-    const retiring: Employee[] = institutionEmployees.filter(emp => {
-      if (!emp.dateOfBirth) return false;
-      try {
-        const age = parseFloat(calculateAge(emp.dateOfBirth) as string);
-        return age >= 59.5 && age < 60;
-      } catch {
-        return false;
-      }
-    });
-
-    return { probationOverdue: overdue, nearingRetirement: retiring };
+    
+    const fetchUrgentActions = async () => {
+        setIsLoading(true);
+        try {
+            const response = await fetch(`/api/employees/urgent-actions?userInstitutionId=${user.institutionId}`);
+            if (!response.ok) {
+                throw new Error("Failed to fetch urgent actions data");
+            }
+            const data = await response.json();
+            setProbationOverdue(data.probationOverdue);
+            setNearingRetirement(data.nearingRetirement);
+        } catch (error) {
+            toast({ title: "Error", description: "Could not load urgent actions.", variant: "destructive" });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    fetchUrgentActions();
   }, [isAuthorized, user?.institutionId]);
 
   const totalProbationPages = Math.ceil(probationOverdue.length / itemsPerPage);
@@ -84,6 +86,17 @@ export default function UrgentActionsPage() {
         </Card>
       </div>
     );
+  }
+  
+  if (isLoading) {
+    return (
+        <div>
+            <PageHeader title="Urgent Actions" description="Loading urgent items for your institution..."/>
+            <div className="flex justify-center items-center h-64">
+                <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+        </div>
+    )
   }
 
   return (
@@ -112,8 +125,8 @@ export default function UrgentActionsPage() {
                     <TableRow key={emp.id}>
                       <TableCell>{emp.name}</TableCell>
                       <TableCell>{emp.zanId}</TableCell>
-                      <TableCell>{emp.employmentDate ? format(parseISO(emp.employmentDate), 'PPP') : 'N/A'}</TableCell>
-                      <TableCell>{emp.employmentDate ? differenceInMonths(new Date(), parseISO(emp.employmentDate)) : 'N/A'}</TableCell>
+                      <TableCell>{emp.employmentDate ? format(parseISO(emp.employmentDate.toString()), 'PPP') : 'N/A'}</TableCell>
+                      <TableCell>{emp.employmentDate ? differenceInMonths(new Date(), parseISO(emp.employmentDate.toString())) : 'N/A'}</TableCell>
                     </TableRow>
                   ))
                 ) : (
@@ -154,7 +167,7 @@ export default function UrgentActionsPage() {
                     <TableRow key={emp.id}>
                       <TableCell>{emp.name}</TableCell>
                       <TableCell>{emp.zanId}</TableCell>
-                      <TableCell>{emp.dateOfBirth ? format(parseISO(emp.dateOfBirth), 'PPP') : 'N/A'}</TableCell>
+                      <TableCell>{emp.dateOfBirth ? format(parseISO(emp.dateOfBirth.toString()), 'PPP') : 'N/A'}</TableCell>
                       <TableCell>{calculateAge(emp.dateOfBirth as string)}</TableCell>
                     </TableRow>
                   ))

@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/hooks/use-auth';
-import { ROLES, EMPLOYEES } from '@/lib/constants';
+import { ROLES } from '@/lib/constants';
 import React, { useState, useEffect } from 'react';
 import type { Employee, User, Role } from '@/lib/types';
 import { toast } from '@/hooks/use-toast';
@@ -107,7 +107,7 @@ export default function PromotionPage() {
     if (checkboxInput) checkboxInput.checked = false;
   };
 
-  const handleFetchEmployeeDetails = () => {
+  const handleFetchEmployeeDetails = async () => {
     if (!zanId) {
       toast({ title: "ZanID Required", description: "Please enter an employee's ZanID.", variant: "destructive" });
       return;
@@ -117,14 +117,19 @@ export default function PromotionPage() {
     resetFormFields();
     setEligibilityError(null);
 
-    setTimeout(() => {
-      const foundEmployee = EMPLOYEES.find(emp => emp.zanId === zanId);
-      if (foundEmployee) {
+    try {
+        const response = await fetch(`/api/employees/search?zanId=${zanId}`);
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || "Employee not found");
+        }
+        const foundEmployee: Employee = await response.json();
+
         let error = null;
         if (foundEmployee.status === 'On Probation' || foundEmployee.status === 'On LWOP') {
           error = `Employee is currently '${foundEmployee.status}' and is not eligible for promotion.`;
         } else if (foundEmployee.employmentDate) {
-          const yearsOfService = differenceInYears(new Date(), parseISO(foundEmployee.employmentDate));
+          const yearsOfService = differenceInYears(new Date(), parseISO(foundEmployee.employmentDate.toString()));
           if (yearsOfService < 3) {
             error = `Employee must have at least 3 years of service for promotion. Current service: ${yearsOfService} years.`;
           }
@@ -139,11 +144,11 @@ export default function PromotionPage() {
           setEligibilityError(null);
           toast({ title: "Employee Found", description: `Details for ${foundEmployee.name} loaded.` });
         }
-      } else {
-        toast({ title: "Employee Not Found", description: `No employee found with ZanID: ${zanId}.`, variant: "destructive" });
-      }
-      setIsFetchingEmployee(false);
-    }, 1000);
+    } catch (error: any) {
+        toast({ title: "Employee Not Found", description: error.message || `No employee found with ZanID: ${zanId}.`, variant: "destructive" });
+    } finally {
+        setIsFetchingEmployee(false);
+    }
   };
 
   const handleSubmitPromotionRequest = async () => {
@@ -303,9 +308,9 @@ export default function PromotionPage() {
                       <div><Label className="text-muted-foreground">ZSSF Number:</Label> <p className="font-semibold text-foreground">{employeeDetails.zssfNumber || 'N/A'}</p></div>
                       <div><Label className="text-muted-foreground">Department:</Label> <p className="font-semibold text-foreground">{employeeDetails.department || 'N/A'}</p></div>
                       <div><Label className="text-muted-foreground">Current Cadre/Position:</Label> <p className="font-semibold text-foreground">{employeeDetails.cadre || 'N/A'}</p></div>
-                      <div><Label className="text-muted-foreground">Employment Date:</Label> <p className="font-semibold text-foreground">{employeeDetails.employmentDate ? format(parseISO(employeeDetails.employmentDate), 'PPP') : 'N/A'}</p></div>
-                      <div><Label className="text-muted-foreground">Date of Birth:</Label> <p className="font-semibold text-foreground">{employeeDetails.dateOfBirth ? format(parseISO(employeeDetails.dateOfBirth), 'PPP') : 'N/A'}</p></div>
-                      <div className="lg:col-span-1"><Label className="text-muted-foreground">Institution:</Label> <p className="font-semibold text-foreground">{employeeDetails.institution || 'N/A'}</p></div>
+                      <div><Label className="text-muted-foreground">Employment Date:</Label> <p className="font-semibold text-foreground">{employeeDetails.employmentDate ? format(parseISO(employeeDetails.employmentDate.toString()), 'PPP') : 'N/A'}</p></div>
+                      <div><Label className="text-muted-foreground">Date of Birth:</Label> <p className="font-semibold text-foreground">{employeeDetails.dateOfBirth ? format(parseISO(employeeDetails.dateOfBirth.toString()), 'PPP') : 'N/A'}</p></div>
+                      <div className="lg:col-span-1"><Label className="text-muted-foreground">Institution:</Label> <p className="font-semibold text-foreground">{typeof employeeDetails.institution === 'object' ? employeeDetails.institution.name : employeeDetails.institution || 'N/A'}</p></div>
                     </div>
                   </div>
                 </div>
@@ -491,11 +496,11 @@ export default function PromotionPage() {
                     </div>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
                         <Label className="text-right text-muted-foreground">Employment Date:</Label>
-                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employee.employmentDate ? format(parseISO(selectedRequest.employee.employmentDate), 'PPP') : 'N/A'}</p>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employee.employmentDate ? format(parseISO(selectedRequest.employee.employmentDate.toString()), 'PPP') : 'N/A'}</p>
                     </div>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
                         <Label className="text-right text-muted-foreground">Date of Birth:</Label>
-                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employee.dateOfBirth ? format(parseISO(selectedRequest.employee.dateOfBirth), 'PPP') : 'N/A'}</p>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employee.dateOfBirth ? format(parseISO(selectedRequest.employee.dateOfBirth.toString()), 'PPP') : 'N/A'}</p>
                     </div>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
                         <Label className="text-right text-muted-foreground">Institution:</Label>
