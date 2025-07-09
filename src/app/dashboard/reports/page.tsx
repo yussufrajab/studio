@@ -16,7 +16,6 @@ import 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { useAuth } from '@/hooks/use-auth';
 import { ROLES } from '@/lib/constants';
-import { isWithinInterval, isValid, parseISO, startOfDay, endOfDay } from 'date-fns';
 import { Pagination } from '@/components/shared/pagination';
 import type { Institution } from '@/app/dashboard/admin/institutions/page';
 
@@ -50,170 +49,9 @@ interface ReportOutput {
   data: any[];
   headers: string[];
   title: string;
-  totals?: any; // For summary rows
-  dataKeys?: string[]; // explicit data keys in order of headers
+  totals?: any;
+  dataKeys?: string[];
 }
-
-const MOCK_DATA_STORE: Record<string, () => ReportOutput> = {
-  serviceExtension: () => ({
-    title: 'Ripoti ya Nyongeza ya Utumishi',
-    headers: ["S/N", "JINA", "WIZARA/TAASISI", "CHEO/WADHIFA", "M", "F", "T", "TAREHE YA KUANZA NYONGEZA", "TAREHE YA KUMALIZA MUDA WA NYONGEZA"],
-    dataKeys: ["sn", "jina", "wizara", "cheo", "m", "f", "t", "tareheKuanza", "tareheKumaliza"],
-    data: [
-      { sn: 1, jina: 'HAMID KHALFAN ABDALLA', wizara: 'OFISI YA RAIS, FEDHA NA MIPANGO', cheo: 'DEREVA', m: 1, f: 0, t: 1, tareheKuanza: '1/7/2025', tareheKumaliza: '30/06/2026' },
-      { sn: 2, jina: 'SUBIRA JUMA ABDALLA', wizara: 'OFISI YA MAKAMO WA KWANZA WA RAISI', cheo: 'KATIBU MAHASUSI', m: 0, f: 1, t: 1, tareheKuanza: '14/12/2024', tareheKumaliza: '13/12/2026' },
-      { sn: 3, jina: 'SOMOE SAID MUSSA', wizara: 'WIZARA YA ELIMU NA MAFUNZO YA AMALI', cheo: 'AFISA ELIMU WILAYA YA KATI', m: 0, f: 1, t: 1, tareheKuanza: '1/2/2025', tareheKumaliza: '31/01/2027' },
-    ],
-    totals: { sn: 'JUMLA', wizara: '', cheo: '', m: 1, f: 2, t: 3 }
-  }),
-  compulsoryRetirement: () => ({
-    title: 'Ripoti ya Kustaafu kwa Lazima',
-    headers: ["S.NO.", "JINA", "WIZARA/TAASISI", "MALE", "FEMALE", "JUMLA", "CHEO", "TAREHE YA KUZALIWA", "TAREHE YA KUSTAAFU"],
-    dataKeys: ["sno", "jina", "wizara", "m", "f", "jumla", "cheo", "trhKuzaliwa", "trhKustaafu"],
-    data: [
-      { sno: 1, jina: 'Khamis Mcha Machano', wizara: 'WIZARA YA ELIMU NA MAFUNZO YA AMALI', m: 1, f: 0, jumla: 1, cheo: 'Mwalimu', trhKuzaliwa: '1965', trhKustaafu: '30/06/2025' },
-      { sno: 2, jina: 'Biubwa Said Seif', wizara: 'WIZARA YA ELIMU NA MAFUNZO YA AMALI', m: 0, f: 1, jumla: 1, cheo: 'Mwalimu', trhKuzaliwa: '1965', trhKustaafu: '30/06/2025' },
-      { sno: 3, jina: 'Khamis Ali Makame', wizara: 'Ofisi ya Mkuu wa Mkoa wa Kusini Unguja', m: 1, f: 0, jumla: 1, cheo: 'Tarishi', trhKuzaliwa: '15/06/1965', trhKustaafu: '14/06/2025' },
-    ],
-    totals: { sno: 'JUMLA', wizara: '', m: 2, f: 1, jumla: 3 }
-  }),
-  voluntaryRetirement: () => ({
-    title: 'Ripoti ya Kustaafu kwa Hiari',
-    headers: ["S/N", "JINA", "WIZARA/TAASISI", "CHEO/WADHIFA", "MALE", "FEMALE", "JUMLA", "TAREHE YA KUZALIWA", "UMRI"],
-    dataKeys: ["sn", "jina", "wizara", "cheo", "m", "f", "jumla", "trhKuzaliwa", "umri"],
-    data: [
-        { sn: 1, jina: 'Zahran Ali Hamad', wizara: 'WIZARA YA AFYA', cheo: 'Mfamasia', m: 1, f: 0, jumla: 1, trhKuzaliwa: '9/2/1970', umri: 55 },
-        { sn: 2, jina: 'OMAR SAID OMAR', wizara: 'WIZARA YA ELIMU NA MAFUNZO YA AMALI', cheo: 'Mwalimu', m: 1, f: 0, jumla: 1, trhKuzaliwa: '26/06/1966', umri: 58 },
-        { sn: 3, jina: 'ASHA KHAMIS MWINSHEHE', wizara: 'WIZARA YA BIASHARA NA MAENDELEO YA VIWANDA', cheo: 'Afisa viwanda', m: 0, f: 1, jumla: 1, trhKuzaliwa: '30/05/1966', umri: 57 },
-    ],
-    totals: { sn: 'JUMLA', cheo: '', m: 2, f: 1, jumla: 3 }
-  }),
-  illnessRetirement: () => ({
-    title: 'Ripoti ya Kustaafu kwa Ugonjwa',
-    headers: ["S/N", "TAREHE YA KUSTAAFISHWA", "JINA", "WIZARA/AFISI", "AINA YA MARADHI", "CHEO", "MALE", "FEMALE", "JUMLA", "TAREHE YA KUZALIWA", "UMRI"],
-    dataKeys: ["sn", "trhKustaafu", "jina", "wizara", "ainaMaradhi", "cheo", "m", "f", "jumla", "trhKuzaliwa", "umri"],
-    data: [
-        { sn: 1, trhKustaafu: '26/01/2025', jina: 'Khamis Omar Moh’d', wizara: 'WAKALA WA MAJENGO ZANZIBAR', ainaMaradhi: 'LEGALITY BLINDNESS DUE TO BRAIN TUMOR', cheo: 'Fundi Mchundo', m: 1, f: 0, jumla: 1, trhKuzaliwa: '1/12/1971', umri: 51 },
-        { sn: 2, trhKustaafu: '28/06/2030', jina: 'ISSA HASSAN ALI', wizara: 'WIZARA YA ELIMU NA MAFUNZO YA AMALI', ainaMaradhi: 'STROCK WITH LEFT SIDED HEMIPLEGIC', cheo: 'mwalimu', m: 1, f: 0, jumla: 1, trhKuzaliwa: '23/04/1970', umri: 50 },
-        { sn: 3, trhKustaafu: '28/06/2031', jina: 'MKASI NASSOR HAMAD', wizara: 'WIZARA YA ELIMU NA MAFUNZO YA AMALI', ainaMaradhi: 'RHEUMATOID ARTHRISTS', cheo: 'Mkaguzi Elimu', m: 0, f: 1, jumla: 1, trhKuzaliwa: '11/11/1970', umri: 50 },
-        { sn: 4, trhKustaafu: '28/06/2032', jina: 'ASHA JUMA KHALFAN', wizara: 'WIZARA YA ELIMU NA MAFUNZO YA AMALI', ainaMaradhi: 'HYPERTENSION, DIABETES MELLITUS TYPE 2, OLD STROCK WITH LEFT HEMIPARESIS', cheo: 'Mhudumu', m: 0, f: 1, jumla: 1, trhKuzaliwa: '07/12/1970', umri: 50 },
-    ],
-    totals: { sn: 'JUMLA', ainaMaradhi: '', cheo: '', m: 2, f: 2, jumla: 4 }
-  }),
-  lwop: () => ({
-    title: 'Ripoti ya Likizo Bila Malipo',
-    headers: ["S/N", "JINA", "WIZARA/AFISI", "MUDA", "M", "F", "T", "TAREHE YA KUIDHINISHA", "SABABU YA KUIDHINISHWA", "TAREHE YA KUANZIA", "TAREHE YA KUMALIZA", "AWAMU YA PILI", "TAREHE YA KUMALIZA (AWAMU 2)"],
-    dataKeys: ["sn", "jina", "wizara", "muda", "m", "f", "t", "trhKuidhinisha", "sababuKuidhinishwa", "trhKuanzia", "trhKumaliza", "awamu2", "trhKumaliza2"],
-    data: [
-      { sn: 1, jina: 'MGENI MUSSA HAJI', wizara: 'WIZARA YA ELIMU NA MAFUNZO YA AMALI', muda: 3, m: 0, f: 1, t: 1, trhKuidhinisha: '23/10/2019', sababuKuidhinishwa: 'Masomo zaidi', trhKuanzia: '', trhKumaliza: '', awamu2: '', trhKumaliza2: '' },
-      { sn: 2, jina: 'HASHIM CHANDE MUUMINI', wizara: 'WIZARA YA UCHUMI WA BULUU NA UVUVI', muda: 3, m: 1, f: 0, t: 1, trhKuidhinisha: '1/7/2022', sababuKuidhinishwa: 'Sababu za kifamilia', trhKuanzia: '', trhKumaliza: '', awamu2: '', trhKumaliza2: '' },
-      { sn: 3, jina: 'RAJAB ALI JAKU', wizara: 'TAASISI YA ELIMU YA ZANZIBAR', muda: 2, m: 1, f: 0, t: 1, trhKuidhinisha: '2/8/2022', sababuKuidhinishwa: 'Kozi ya Ualimu', trhKuanzia: '1/8/2022', trhKumaliza: '31/07/2024', awamu2: '', trhKumaliza2: '' },
-      { sn: 4, jina: 'SALAMA MZEE SALUM', wizara: 'TUME YA UTUMISHI SERIKALINI', muda: 3, m: 0, f: 1, t: 1, trhKuidhinisha: '11/8/2022', sababuKuidhinishwa: 'Kuuguza ndugu', trhKuanzia: '1/9/2022', trhKumaliza: '30/08/2025', awamu2: '', trhKumaliza2: '' },
-      { sn: 5, jina: 'SULEIMAN ALI BAKAR', wizara: 'WIZARA YA ELIMU NA MAFUNZO YA AMALI', muda: 1, m: 1, f: 0, t: 1, trhKuidhinisha: '29/12/2022', sababuKuidhinishwa: 'Masomo ya ziada', trhKuanzia: '1/9/2022', trhKumaliza: '30/08/2023', awamu2: '', trhKumaliza2: '' },
-      { sn: 6, jina: 'JUMA JUMBE HAJI', wizara: 'WIZARA YA ELIMU NA MAFUNZO YA AMALI', muda: 3, m: 1, f: 0, t: 1, trhKuidhinisha: '8/3/2023', sababuKuidhinishwa: 'Kujiendeleza kielimu', trhKuanzia: '21/02/2023', trhKumaliza: '20/02/2026', awamu2: '', trhKumaliza2: '' },
-      { sn: 7, jina: 'HUSSEIN MUSSA NASSOR', wizara: 'TUME YA MAADILI YA VIONGOZI WA UMMA', muda: 4, m: 1, f: 0, t: 1, trhKuidhinisha: '8/4/2023', sababuKuidhinishwa: 'Mikataba ya kimataifa', trhKuanzia: '1/1/2023', trhKumaliza: '30/12/2023', awamu2: '1/1/2024', trhKumaliza2: '30/12/2026' },
-    ],
-    totals: { sn: 'JUMLA', wizara: '', muda: '', m: 5, f: 2, t: 7, sababuKuidhinishwa: '' }
-  }),
-  promotion: () => ({
-    title: 'Ripoti ya Kupandishwa Cheo (Jumla)',
-    headers: ["S.NO", "WIZARA/TAASISI", "MALE", "FEMALE", "JUMLA"],
-    dataKeys: ["sno", "wizara", "m", "f", "jumla"],
-    data: [
-      { sno: 1, wizara: 'TUME YA UCHAGUZI YA ZANZIBAR', m: 1, f: 0, jumla: 1 },
-      { sno: 2, wizara: 'WIZARA YA ELIMU NA MAFUNZO YA AMALI', m: 4, f: 6, jumla: 10 },
-      { sno: 3, wizara: 'WIZARA YA AFYA', m: 1, f: 10, jumla: 11 },
-      { sno: 4, wizara: 'WIZARA YA KILIMO UMWAGILIAJI MALIASILI NA MIFUGO', m: 2, f: 1, jumla: 3 },
-    ],
-    totals: { sno: 'JUMLA', wizara: '', m: 8, f: 17, jumla: 25 }
-  }),
-  promotionExperience: () => ({
-    title: 'Ripoti ya Kupandishwa Cheo kwa Uzoefu',
-    headers: ["S/N", "WIZARA/TAASISI", "JINA KAMILI", "JINSIA", "TAREHE YA KUANZA KAZI", "CHEO CHA SASA & DARAJA", "CHEO KILICHOPENDEKEZWA & DARAJA", "JUMLA"],
-    dataKeys: ["sn", "wizara", "jinaKamili", "jinsia", "tareheKuanzaKazi", "cheoSasaNaDaraja", "cheoKilichopendekezwaNaDaraja", "jumla"],
-    data: [
-      { sn: 1, wizara: 'WIZARA YA ELIMU NA MAFUNZO YA AMALI', jinaKamili: 'Salum Ali Juma', jinsia: 'M', tareheKuanzaKazi: '12/08/2015', cheoSasaNaDaraja: 'Assistant ICT Officer Grade I', cheoKilichopendekezwaNaDaraja: 'Senior Assistant ICT Officer', jumla: 1 },
-      { sn: 2, wizara: 'WIZARA YA AFYA', jinaKamili: 'Asha Bakari Said', jinsia: 'F', tareheKuanzaKazi: '01/03/2012', cheoSasaNaDaraja: 'Registered Nurse Grade II', cheoKilichopendekezwaNaDaraja: 'Senior Registered Nurse', jumla: 1 },
-      { sn: 3, wizara: 'OFISI YA RAIS - KATIBA SHERIA UTUMISHI NA UTAWALA BORA', jinaKamili: 'Khamis Omar Faki', jinsia: 'M', tareheKuanzaKazi: '15/05/2010', cheoSasaNaDaraja: 'HR Officer Grade I', cheoKilichopendekezwaNaDaraja: 'Principal HR Officer', jumla: 1 },
-    ],
-    totals: { sn: 'JUMLA', cheoSasaNaDaraja: '', cheoKilichopendekezwaNaDaraja: '', jumla: 3 } 
-  }),
-  promotionEducation: () => ({
-    title: 'Ripoti ya Kupandishwa Cheo kwa Maendeleo ya Elimu',
-    headers: ["S/N", "WIZARA/TAASISI", "JINA KAMILI", "JINSIA", "TAREHE YA KUANZA KAZI", "CHEO CHA SASA & DARAJA", "CHEO KIPYA & DARAJA", "JUMLA"],
-    dataKeys: ["sn", "wizara", "jinaKamili", "jinsia", "tareheKuanzaKazi", "cheoSasaNaDaraja", "cheoKipyaNaDaraja", "jumla"],
-    data: [
-      { sn: 1, wizara: 'WIZARA YA UTALII NA MAMBO YA KALE', jinaKamili: 'Fatma Hamad Ali', jinsia: 'F', tareheKuanzaKazi: '10/07/2016', cheoSasaNaDaraja: 'Tourism Officer Grade II', cheoKipyaNaDaraja: 'Tourism Officer Grade I', jumla: 1 },
-      { sn: 2, wizara: 'WIZARA YA BIASHARA NA MAENDELEO YA VIWANDA', jinaKamili: 'Ahmed Salim Mohamed', jinsia: 'M', tareheKuanzaKazi: '05/02/2014', cheoSasaNaDaraja: 'Trade Officer Grade I', cheoKipyaNaDaraja: 'Senior Trade Officer', jumla: 1 },
-    ],
-    totals: { sn: 'JUMLA', cheoSasaNaDaraja: '', cheoKipyaNaDaraja: '', jumla: 2 } 
-  }),
-  terminationDismissal: () => ({
-    title: 'Ripoti ya Kufukuzwa/Kuachishwa Kazi',
-    headers: ["S.NO", "TAREHE YA KUWASILISHA OMBI", "JINA LA ANAEOMBEWA", "ZANID", "WIZARA/TAASISI", "MALE", "FEMALE", "JUMLA", "SABABU YA KUFUKUZWA", "TAREHE YA UAMUZI", "UAMUZI"],
-    dataKeys: ["sno", "trhKuwasilisha", "jina", "zanId", "wizara", "m", "f", "jumla", "sababu", "trhUamuzi", "uamuzi"],
-    data: [
-        { sno: 1, trhKuwasilisha: '16/03/2023', jina: 'SALUM OMAR HAJI', zanId: '123456789', wizara: 'WIZARA YA ELIMU NA MAFUNZO YA AMALI', m: 1, f: 0, jumla: 1, sababu: 'Kutokua na mahudhurio mazuri kazini', trhUamuzi: '6/7/2023', uamuzi: 'Kafukuzwa kazi' },
-        { sno: 2, trhKuwasilisha: '3/3/2024', jina: 'TIBBA G. MOLLO', zanId: '987654321', wizara: 'OFISI YA RAIS - IKULU', m: 0, f: 1, jumla: 1, sababu: 'Kutohudhuria kazini', trhUamuzi: '26/05/2023', uamuzi: 'Kafukuzwa kazi' },
-        { sno: 3, trhKuwasilisha: '17/07/2023', jina: 'MWALIM HAMAD ALAWI', zanId: '112233445', wizara: 'WIZARA YA ELIMU NA MAFUNZO YA AMALI', m: 1, f: 0, jumla: 1, sababu: 'Kutohudhuria kazini', trhUamuzi: '7/9/2024', uamuzi: 'Ameachishwa kazi' },
-    ],
-    totals: { sno: 'JUMLA', wizara: '', m: 7, f: 3, jumla: 10 }
-  }),
-  complaints: () => ({
-    title: 'Ripoti ya Malalamiko',
-    headers: ["TAREHE YA KUWASILISHA LALAMIKO", "JINA LA MLALAMIKAJI", "WIZARA/TAASISI", "MALE", "FEMALE", "JUMLA", "LALAMIKO", "UAMUZI WA LALAMIKO"],
-    dataKeys: ["trhKuwasilisha", "jina", "wizara", "m", "f", "jumla", "lalamiko", "uamuzi"],
-    data: [
-        { trhKuwasilisha: '20/12/2011', jina: 'AJUZA SILIMA ALI', wizara: 'WIZARA YA HABARI, VIJANA, UTAMADUNI NA MICHEZO', m: 1, f: 0, jumla: 1, lalamiko: 'Utoro na vitendo vya nidhamu na matusi', uamuzi: 'Amefukuzwa' },
-        { trhKuwasilisha: '21/12/2011', jina: 'MLEKWA MUHIDINI ALI', wizara: 'WIZARA YA HABARI, VIJANA, UTAMADUNI NA MICHEZO', m: 0, f: 1, jumla: 1, lalamiko: 'Utoro', uamuzi: '' },
-    ],
-    totals: { sn: 'JUMLA', wizara: '', lalamiko: '', m: 2, f: 5, jumla: 7 }
-  }),
-  cadreChange: () => ({
-    title: 'Ripoti ya Kubadilishwa Kada',
-    headers: ["S.NO", "JINA", "WIZARA/TAASISI", "MALE", "FEMALE", "JUMLA", "KADA ANAYOTOKA", "KADA ANAYOINGIA"],
-    dataKeys: ["sno", "jina", "wizara", "m", "f", "jumla", "kadaKutoka", "kadaKuingia"],
-    data: [
-        { sno: 1, jina: 'Shehe Omar Yussuf', wizara: 'OFISI YA MUFTI MKUU WA ZANZIBAR', m: 1, f: 0, jumla: 1, kadaKutoka: 'Mlinzi', kadaKuingia: 'Tarishi' },
-        { sno: 2, jina: 'Shumbana Abdulhakim Muhsini', wizara: 'OFISI YA MAKAMO WA KWANZA WA RAISI', m: 0, f: 1, jumla: 1, kadaKutoka: 'Mhudumu', kadaKuingia: 'Afisa Sheria Msaidizi' },
-    ],
-    totals: {}
-  }),
-  resignation: () => ({
-    title: 'Ripoti ya Kuacha Kazi kwa Hiari',
-    headers: ["NAM", "JINA", "WIZARA/AFISI", "MALE", "FEMALE", "JUMLA", "TAREHE YA KUIDHINISHA", "UAMUZI"],
-    dataKeys: ["nam", "jina", "wizara", "m", "f", "jumla", "trhKuidhinisha", "uamuzi"],
-    data: [
-        { nam: 1, jina: 'FEISAL ALI SALUM', wizara: 'WIZARA YA KILIMO UMWAGILIAJI MALIASILI NA MIFUGO', m: 1, f: 0, jumla: 1, trhKuidhinisha: '19/07/2024', uamuzi: 'TUME IMERIDHIA KUACHA KAZI' },
-        { nam: 2, jina: 'RABIA HAMISI SELEMAN', wizara: 'Kamisheni ya Ardhi Zanzibar', m: 0, f: 1, jumla: 1, trhKuidhinisha: '8/1/2025', uamuzi: 'TUME IMERIDHIA' },
-    ],
-    totals: {}
-  }),
-  confirmation: () => ({
-    title: 'Ripoti ya Kuthibitishwa Kazini',
-    headers: ["NAM", "JINA KAMILI", "JINSIA", "WIZARA/TAASISI", "CHEO/WADHIFA", "TAREHE YA AJIRA", "TAREHE YA KUTHIBITISHWA", "CHETI CHA IPA", "NAM. YA SIMU"],
-    dataKeys: ["nam", "jina", "jinsia", "wizara", "cheo", "trhAjira", "trhKuthibitishwa", "chetiIpa", "simu"],
-    data: [
-        { nam: 1, jina: 'ABDALLA MBARAOUK ALI', jinsia: 'M\'ME', wizara: 'Wizara ya Elimu na Mafunzo ya Amali', cheo: 'MWALIMU', trhAjira: '20/03/2023', trhKuthibitishwa: '19/03/2024', chetiIpa: 'IPA/IC/2024/9298', simu: '0772003809' },
-        { nam: 2, jina: 'ALI SULEIMAN MKASI', jinsia: 'M\'ME', wizara: 'Wizara ya Elimu na Mafunzo ya Amali', cheo: 'MWALIMU', trhAjira: '02/05/2023', trhKuthibitishwa: '01/05/2024', chetiIpa: 'IPA/IC/2024/8931', simu: '0772800294' },
-    ],
-    totals: { 
-        descriptionMale: 'JUMLA YA WANAUME', valueMale: 5,
-        descriptionFemale: 'JUMLA YA WANAWAKE', valueFemale: 6,
-        descriptionTotal: 'JUMLA KUU', valueTotal: 11
-    }
-  }),
-  contractual: () => ({
-    title: 'Ripoti ya Ajira za Mikataba',
-    headers: ["NAM", "WIZARA/TAASISI", "KADA/CHEO", "JINA KAMILI", "MUDA WA MKATABA", "M'ME", "M'KE", "JUMLA", "TAREHE YA KUTOKA KIBALI", "HALI YA MKATABA"],
-    dataKeys: ["nam", "wizara", "kada", "jina", "muda", "mme", "mke", "jumla", "trhKibali", "hali"],
-    data: [
-      { nam: 1, wizara: 'TUME YA UTUMISHI SERIKALINI', kada: 'MTAALAMU WA UCHUMI NA FEDHA', jina: 'Juma Haji', muda: 'MIAKA MIWILI', mme: 1, mke: 0, jumla: 1, trhKibali: '7-Jan-25', hali: 'AJIRA MPYA' },
-      { nam: 2, wizara: 'AFISI YA RAIS TAWALA ZA MIKOA SERIKALI ZA MITAA NA IDARA MAALUMU ZA SMZ', kada: 'MKUU WA WILAYA WA MJINI-UNGUJA', jina: 'Amina Ali', muda: '', mme: 1, mke: 0, jumla: 1, trhKibali: '7-Jan-25', hali: 'KUONGEZEWA MKATABA' },
-    ],
-    totals: { nam: 'JUMLA KUU', wizara: '', kada: '', jina: '', muda: '', mme: 16, mke: 2, jumla: 18 }
-  }),
-};
 
 const ALL_INSTITUTIONS_FILTER_VALUE = "__ALL_INSTITUTIONS__";
 
@@ -236,7 +74,7 @@ export default function ReportsPage() {
   const [availableInstitutions, setAvailableInstitutions] = useState<Institution[]>([]);
 
   const isHigherLevelUser = useMemo(() => 
-    [ROLES.HHRMD, ROLES.HRMO, ROLES.DO, ROLES.PO, ROLES.CSCS].includes(role as any),
+    [ROLES.HHRMD, ROLES.HRMO, ROLES.DO, ROLES.PO, ROLES.CSCS, ROLES.ADMIN].includes(role as any),
     [role]
   );
   
@@ -255,14 +93,7 @@ export default function ReportsPage() {
     fetchInstitutions();
   }, []);
 
-  const getObjectKeys = (obj: any): string[] => {
-    if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
-      return Object.keys(obj);
-    }
-    return [];
-  };
-
-  const handleGenerateReport = () => {
+  const handleGenerateReport = async () => {
     if (!selectedReportType) {
       toast({ title: "Kosa", description: "Tafadhali chagua aina ya ripoti.", variant: "destructive" });
       return;
@@ -275,67 +106,44 @@ export default function ReportsPage() {
     setReportDataKeys([]);
     setCurrentPage(1);
 
-    setTimeout(() => {
-      const reportGenerator = MOCK_DATA_STORE[selectedReportType];
-      if (reportGenerator) {
-        const { data, headers, title, totals, dataKeys: keys } = reportGenerator();
-        let filteredData = [...data];
-
-        // Role-based and Institution filtering
-        if (isHigherLevelUser) {
-          if (institutionFilter && institutionFilter !== ALL_INSTITUTIONS_FILTER_VALUE) {
-            filteredData = filteredData.filter(item => item.wizara === availableInstitutions.find(i => i.id === institutionFilter)?.name);
-          }
-        } else if (role === ROLES.HRO) {
-          if (user?.institution) {
-            filteredData = filteredData.filter(item => item.wizara === user.institution);
-          } else {
-            filteredData = []; // HRO with no institution assigned sees no data
-          }
-        }
-        
-        // Date filtering
-        if (fromDate && toDate) {
-          try {
-            const startDate = startOfDay(parseISO(fromDate));
-            const endDate = endOfDay(parseISO(toDate));
-
-            if (isValid(startDate) && isValid(endDate) && !isWithinInterval(endDate, { start: new Date(0), end: startDate })) {
-                filteredData = filteredData.filter(item => {
-                    const itemDateKey = Object.keys(item).find(k => k.toLowerCase().includes('tarehe') || k.toLowerCase().includes('date'));
-                    if (itemDateKey && item[itemDateKey]) {
-                        try {
-                            const itemDate = parseISO(item[itemDateKey]);
-                            return isValid(itemDate) && isWithinInterval(itemDate, { start: startDate, end: endDate });
-                        } catch (e) {
-                            return false; 
-                        }
-                    }
-                    return false;
-                });
-            } else if (isValid(startDate) && isValid(endDate)) {
-              toast({ title: "Kosa la Tarehe", description: "Tarehe ya mwisho lazima iwe baada ya tarehe ya kuanza.", variant: "destructive"});
-            }
-          } catch(e) {
-             toast({ title: "Kosa la Tarehe", description: "Muundo wa tarehe si sahihi.", variant: "destructive"});
-          }
+    try {
+        const params = new URLSearchParams({
+            reportType: selectedReportType,
+        });
+        if (fromDate) params.append('fromDate', fromDate);
+        if (toDate) params.append('toDate', toDate);
+        if (institutionFilter && institutionFilter !== ALL_INSTITUTIONS_FILTER_VALUE) {
+            params.append('institutionId', institutionFilter);
+        } else if (role === ROLES.HRO && user?.institutionId) {
+            params.append('institutionId', user.institutionId);
         }
 
-        setReportData(filteredData);
-        setReportHeaders(headers);
-        setReportTitle(title);
-        setReportTotals(totals);
-        setReportDataKeys(keys || getObjectKeys(data[0] || {}));
-        if (filteredData.length === 0) {
-            toast({ title: "Ripoti Imetolewa", description: `Hakuna taarifa kwa ${title} katika vigezo ulivyochagua.` });
+        const response = await fetch(`/api/reports?${params.toString()}`);
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || "Failed to generate report.");
+        }
+
+        const result: ReportOutput = await response.json();
+
+        setReportData(result.data);
+        setReportHeaders(result.headers);
+        setReportTitle(result.title);
+        setReportTotals(result.totals);
+        setReportDataKeys(result.dataKeys || []);
+
+        if (result.data.length === 0) {
+            toast({ title: "Ripoti Imetolewa", description: `Hakuna taarifa kwa ${result.title} katika vigezo ulivyochagua.` });
         } else {
-            toast({ title: "Ripoti Imetolewa", description: `${title} imetolewa kikamilifu.` });
+            toast({ title: "Ripoti Imetolewa", description: `${result.title} imetolewa kikamilifu.` });
         }
-      } else {
-        toast({ title: "Kosa", description: "Aina ya ripoti iliyochaguliwa haipo.", variant: "destructive" });
-      }
-      setIsGenerating(false);
-    }, 1500);
+
+    } catch (error: any) {
+        toast({ title: "Report Generation Failed", description: error.message, variant: "destructive" });
+    } finally {
+        setIsGenerating(false);
+    }
   };
 
   const handleExportToPdf = () => {
@@ -353,7 +161,7 @@ export default function ReportsPage() {
         const instName = availableInstitutions.find(i => i.id === institutionFilter)?.name;
         doc.text(`Taasisi: ${instName}`, 14, 36);
     } else if(role === ROLES.HRO && user?.institution) {
-        doc.text(`Taasisi: ${user.institution}`, 14, 36);
+        doc.text(`Taasisi: ${typeof user.institution === 'object' ? user.institution.name : user.institution}`, 14, 36);
     }
 
     const tableColumn = reportHeaders;
@@ -391,7 +199,7 @@ export default function ReportsPage() {
       headStyles: { fillColor: [22, 160, 133] },
       footStyles: { fillColor: [211, 211, 211], textColor: [0,0,0], fontStyle: 'bold' },
       styles: { fontSize: 8, cellPadding: 1.5 },
-      columnStyles: { 0: { cellWidth: 'auto' } }, // Adjust column widths as needed
+      columnStyles: { 0: { cellWidth: 'auto' } },
     });
     
     doc.save(`${reportTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_report.pdf`);
