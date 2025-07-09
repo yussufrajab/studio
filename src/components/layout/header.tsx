@@ -2,8 +2,8 @@
 
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { UserNav } from './user-nav';
-import { APP_NAME } from '@/lib/constants';
-import { useSidebar } from '../ui/sidebar'; // Ensure this path is correct
+import { NotificationBell } from './notification-bell'; // Import the new component
+import { useSidebar } from '../ui/sidebar';
 
 export function AppHeader() {
   const { isMobile } = useSidebar();
@@ -17,7 +17,8 @@ export function AppHeader() {
         
         <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
           {/* Add breadcrumbs or page title here if needed */}
-          <nav className="flex items-center">
+          <nav className="flex items-center space-x-2">
+            <NotificationBell />
             <UserNav />
           </nav>
         </div>

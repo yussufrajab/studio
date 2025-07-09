@@ -23,6 +23,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       include: {
         complainant: {
           select: {
+            id: true,
             name: true,
             employeeId: true,
             zanId: true,
@@ -39,6 +40,17 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
         }
       },
     });
+
+    // Create a notification for the user when status changes
+    if (validatedData.status) {
+      await db.notification.create({
+        data: {
+          userId: updatedComplaint.complainant.id,
+          message: `Your complaint "${updatedComplaint.subject}" has been updated to: ${validatedData.status}.`,
+          link: `/dashboard/complaints`, // Link to the complaints page
+        },
+      });
+    }
 
     return NextResponse.json(updatedComplaint);
   } catch (error) {
