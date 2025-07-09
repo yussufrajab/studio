@@ -8,71 +8,29 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/hooks/use-auth';
 import { ROLES, EMPLOYEES } from '@/lib/constants';
-import React, { useState } from 'react';
-import type { Employee } from '@/lib/types';
+import React, { useState, useEffect } from 'react';
+import type { Employee, User, Role } from '@/lib/types';
 import { toast } from '@/hooks/use-toast';
 import { Loader2, Search, FileText, AlertTriangle, CheckSquare } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { format, parseISO } from 'date-fns';
+import { Pagination } from '@/components/shared/pagination';
 
-interface MockPendingLWOPRequest {
+interface LWOPRequest {
   id: string;
-  employeeName: string;
-  zanId: string;
-  payrollNumber?: string;
-  zssfNumber?: string;
-  department: string;
-  cadre: string;
-  employmentDate: string;
-  dateOfBirth: string;
-  institution: string;
+  employee: Partial<Employee & User & { institution: { name: string } }>;
+  submittedBy: Partial<User>;
+  reviewedBy?: Partial<User> | null;
+  status: string;
+  reviewStage: string;
+  rejectionReason?: string | null;
+  createdAt: string;
+
   duration: string;
   reason: string;
-  submissionDate: string;
-  submittedBy: string;
-  status: string;
-  documents?: string[];
-  reviewStage: 'initial' | 'commission_review' | 'completed';
-  rejectionReason?: string;
-  reviewedBy?: string;
+  documents: string[];
 }
 
-const initialMockPendingLWOPRequests: MockPendingLWOPRequest[] = [
-  {
-    id: 'LWOP001',
-    employeeName: 'Fatma Said Omar',
-    zanId: '334589123',
-    department: 'Finance',
-    cadre: 'Accountant',
-    employmentDate: "2018-09-15",
-    dateOfBirth: "1988-02-10",
-    institution: "Treasury Office",
-    duration: '6 Months',
-    reason: 'Further studies abroad.',
-    submissionDate: '2024-07-25',
-    submittedBy: 'K. Mnyonge (HRO)',
-    status: 'Pending HHRMD Review',
-    documents: ['Letter of Request', 'Employee Consent Letter', 'Admission Letter Scan'],
-    reviewStage: 'initial',
-  },
-  {
-    id: 'LWOP002',
-    employeeName: 'Hassan Mzee Juma',
-    zanId: '445678912',
-    department: 'ICT',
-    cadre: 'IT Support',
-    employmentDate: "2017-01-20",
-    dateOfBirth: "1975-09-01",
-    institution: "e-Government Agency",
-    duration: '1 Year',
-    reason: 'Personal family matters requiring extended leave.',
-    submissionDate: '2024-07-22',
-    submittedBy: 'K. Mnyonge (HRO)',
-    status: 'Pending HRMO Review',
-    documents: ['Letter of Request', 'Employee Consent Letter'],
-    reviewStage: 'initial',
-  },
-];
 
 function parseDurationToMonths(durationStr: string): number | null {
   durationStr = durationStr.toLowerCase().trim();
@@ -102,21 +60,43 @@ export default function LwopPage() {
   const [employeeDetails, setEmployeeDetails] = useState<Employee | null>(null);
   const [isFetchingEmployee, setIsFetchingEmployee] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [duration, setDuration] = useState('');
   const [reason, setReason] = useState('');
   const [letterOfRequestFile, setLetterOfRequestFile] = useState<FileList | null>(null);
   const [employeeConsentLetterFile, setEmployeeConsentLetterFile] = useState<FileList | null>(null);
 
-  const [pendingRequests, setPendingRequests] = useState<MockPendingLWOPRequest[]>(initialMockPendingLWOPRequests);
-  const [selectedRequest, setSelectedRequest] = useState<MockPendingLWOPRequest | null>(null);
+  const [pendingRequests, setPendingRequests] = useState<LWOPRequest[]>([]);
+  const [selectedRequest, setSelectedRequest] = useState<LWOPRequest | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
   const [isRejectionModalOpen, setIsRejectionModalOpen] = useState(false);
   const [rejectionReasonInput, setRejectionReasonInput] = useState('');
-  const [currentRequestToAction, setCurrentRequestToAction] = useState<MockPendingLWOPRequest | null>(null);
+  const [currentRequestToAction, setCurrentRequestToAction] = useState<LWOPRequest | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const isEmployeeOnProbation = employeeDetails?.status === 'On Probation';
+  
+  const fetchRequests = async () => {
+    if (!user || !role) return;
+    setIsLoading(true);
+    try {
+      const response = await fetch(`/api/lwop?userId=${user.id}&userRole=${role}&userInstitutionId=${user.institutionId || ''}`);
+      if (!response.ok) throw new Error('Failed to fetch LWOP requests');
+      const data = await response.json();
+      setPendingRequests(data);
+    } catch (error) {
+      toast({ title: "Error", description: "Could not load LWOP requests.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRequests();
+  }, [user, role]);
 
   const handleFetchEmployeeDetails = () => {
     if (!zanId) {
@@ -145,9 +125,9 @@ export default function LwopPage() {
     }, 1000);
   };
 
-  const handleSubmitLwopRequest = () => {
-    if (!employeeDetails) {
-      toast({ title: "Submission Error", description: "Employee details are missing.", variant: "destructive" });
+  const handleSubmitLwopRequest = async () => {
+    if (!employeeDetails || !user) {
+      toast({ title: "Submission Error", description: "Employee or user details are missing.", variant: "destructive" });
       return;
     }
 
@@ -191,66 +171,65 @@ export default function LwopPage() {
       return;
     }
     
-    if (!letterOfRequestFile) {
-      toast({ title: "Submission Error", description: "Letter of Request is missing. Please upload the PDF document.", variant: "destructive" });
-      return;
-    }
-    if (letterOfRequestFile && letterOfRequestFile[0] && letterOfRequestFile[0].type !== "application/pdf") {
-        toast({ title: "Submission Error", description: "The Letter of Request must be a PDF file.", variant: "destructive" });
+    if (!letterOfRequestFile || !employeeConsentLetterFile) {
+        toast({ title: "Submission Error", description: "All required PDF documents must be attached.", variant: "destructive" });
         return;
-    }
-    if (!employeeConsentLetterFile) {
-      toast({ title: "Submission Error", description: "Employee's Consent Letter is missing. Please upload the PDF document.", variant: "destructive" });
-      return;
-    }
-    if (employeeConsentLetterFile && employeeConsentLetterFile[0] && employeeConsentLetterFile[0].type !== "application/pdf") {
-      toast({ title: "Submission Error", description: "The Employee's Consent Letter must be a PDF file.", variant: "destructive" });
-      return;
     }
 
     setIsSubmitting(true);
-     const newRequestId = `LWOP${Date.now().toString().slice(-3)}`;
-    const newRequest: MockPendingLWOPRequest = {
-        id: newRequestId,
-        employeeName: employeeDetails.name,
-        zanId: employeeDetails.zanId,
-        department: employeeDetails.department || 'N/A',
-        cadre: employeeDetails.cadre || 'N/A',
-        employmentDate: employeeDetails.employmentDate || 'N/A',
-        dateOfBirth: employeeDetails.dateOfBirth || 'N/A',
-        institution: employeeDetails.institution || 'N/A',
-        duration: duration,
-        reason: reason,
-        submissionDate: format(new Date(), 'yyyy-MM-dd'),
-        submittedBy: `${user?.name} (${user?.role})`,
-        status: role === ROLES.HHRMD ? 'Pending HHRMD Review' : 'Pending HRMO Review', 
-        documents: ['Letter of Request', 'Employee Consent Letter'],
-        reviewStage: 'initial',
+    const documentsList = ['Letter of Request', 'Employee Consent Letter'];
+    
+    const payload = {
+        employeeId: employeeDetails.id,
+        submittedById: user.id,
+        documents: documentsList,
+        status: role === ROLES.HHRMD ? 'Pending HHRMD Review' : 'Pending HRMO Review',
+        duration,
+        reason,
     };
-    console.log("Submitting LWOP Request:", {
-      employee: employeeDetails,
-      duration,
-      parsedMonths,
-      reason,
-      letterOfRequest: letterOfRequestFile[0]?.name,
-      employeeConsentLetter: employeeConsentLetterFile[0]?.name,
-    });
-    setTimeout(() => {
-      setPendingRequests(prev => [newRequest, ...prev]);
-      toast({ title: "LWOP Request Submitted", description: `LWOP request for ${employeeDetails.name} submitted successfully.` });
-      setZanId('');
-      setEmployeeDetails(null);
-      setDuration('');
-      setReason('');
-      setLetterOfRequestFile(null);
-      setEmployeeConsentLetterFile(null);
-      const fileInputs = document.querySelectorAll('input[type="file"]');
-      fileInputs.forEach(input => (input as HTMLInputElement).value = '');
-      setIsSubmitting(false);
-    }, 1500);
+
+    try {
+        const response = await fetch('/api/lwop', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!response.ok) throw new Error('Failed to submit request');
+        
+        await fetchRequests(); // Refresh list
+        toast({ title: "LWOP Request Submitted", description: `Request for ${employeeDetails.name} submitted successfully.` });
+        setZanId('');
+        setEmployeeDetails(null);
+        setDuration('');
+        setReason('');
+        setLetterOfRequestFile(null);
+        setEmployeeConsentLetterFile(null);
+        const fileInputs = document.querySelectorAll('input[type="file"]');
+        fileInputs.forEach(input => (input as HTMLInputElement).value = '');
+    } catch(error) {
+        toast({ title: "Submission Failed", description: "Could not submit the LWOP request.", variant: "destructive" });
+    } finally {
+        setIsSubmitting(false);
+    }
   };
   
-  const handleInitialAction = (requestId: string, action: 'forward' | 'reject') => {
+  const handleUpdateRequest = async (requestId: string, payload: any) => {
+      try {
+          const response = await fetch(`/api/lwop/${requestId}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({...payload, reviewedById: user?.id })
+          });
+          if (!response.ok) throw new Error('Failed to update request');
+          await fetchRequests();
+          return true;
+      } catch (error) {
+          toast({ title: "Update Failed", description: "Could not update the request.", variant: "destructive" });
+          return false;
+      }
+  };
+
+  const handleInitialAction = async (requestId: string, action: 'forward' | 'reject') => {
     const request = pendingRequests.find(req => req.id === requestId);
     if (!request) return;
 
@@ -259,68 +238,38 @@ export default function LwopPage() {
       setRejectionReasonInput('');
       setIsRejectionModalOpen(true);
     } else if (action === 'forward') {
-      let toastMessage = "";
-      setPendingRequests(prevRequests =>
-        prevRequests.map(req => {
-          if (req.id === requestId) {
-            toastMessage = `Request ${requestId} for ${req.employeeName} forwarded to Commission.`;
-            return { ...req, status: "Request Received – Awaiting Commission Decision", reviewStage: 'commission_review', reviewedBy: role || undefined };
-          }
-          return req;
-        })
-      );
-      if (toastMessage) {
-        toast({ title: "Request Forwarded", description: toastMessage });
-      }
+      const payload = { status: "Request Received – Awaiting Commission Decision", reviewStage: 'commission_review' };
+      const success = await handleUpdateRequest(requestId, payload);
+      if (success) toast({ title: "Request Forwarded", description: `Request for ${request.employee.name} forwarded to Commission.` });
     }
   };
 
-  const handleRejectionSubmit = () => {
-    if (!currentRequestToAction || !rejectionReasonInput.trim()) {
-      toast({ title: "Rejection Error", description: "Reason for rejection is required.", variant: "destructive" });
-      return;
+  const handleRejectionSubmit = async () => {
+    if (!currentRequestToAction || !rejectionReasonInput.trim() || !user) return;
+    const payload = { 
+        status: `Rejected by ${role} - Awaiting HRO Correction`, 
+        rejectionReason: rejectionReasonInput, 
+        reviewStage: 'initial'
+    };
+    const success = await handleUpdateRequest(currentRequestToAction.id, payload);
+    if (success) {
+      toast({ title: "Request Rejected", description: `Request for ${currentRequestToAction.employee.name} rejected.`, variant: 'destructive' });
+      setIsRejectionModalOpen(false);
+      setCurrentRequestToAction(null);
+      setRejectionReasonInput('');
     }
-    const requestId = currentRequestToAction.id;
-    const employeeName = currentRequestToAction.employeeName;
-    let toastMessage = "";
-
-    setPendingRequests(prevRequests =>
-      prevRequests.map(req => {
-        if (req.id === requestId) {
-          toastMessage = `Request ${requestId} for ${employeeName} rejected and returned to HRO.`;
-          return { ...req, status: `Rejected by ${role} - Awaiting HRO Correction`, rejectionReason: rejectionReasonInput, reviewStage: 'initial' };
-        }
-        return req;
-      })
-    );
-    if (toastMessage) {
-       toast({ title: "Request Rejected", description: toastMessage, variant: 'destructive' });
-    }
-    setIsRejectionModalOpen(false);
-    setCurrentRequestToAction(null);
-    setRejectionReasonInput('');
   };
 
-  const handleCommissionDecision = (requestId: string, decision: 'approved' | 'rejected') => {
-    const request = pendingRequests.find(req => req.id === requestId);
-    if (!request) return;
-
+  const handleCommissionDecision = async (requestId: string, decision: 'approved' | 'rejected') => {
     const finalStatus = decision === 'approved' ? "Approved by Commission" : "Rejected by Commission";
-    let toastMessage = "";
-    setPendingRequests(prevRequests =>
-      prevRequests.map(req => {
-        if (req.id === requestId) {
-          toastMessage = `Request ${requestId} for ${req.employeeName} has been ${finalStatus.toLowerCase()}.`;
-          return { ...req, status: finalStatus, reviewStage: 'completed' };
-        }
-        return req;
-      })
-    );
-    if (toastMessage) {
-      toast({ title: `Commission Decision: ${decision === 'approved' ? 'Approved' : 'Rejected'}`, description: toastMessage });
+    const payload = { status: finalStatus, reviewStage: 'completed' };
+    const success = await handleUpdateRequest(requestId, payload);
+    if (success) {
+        toast({ title: `Commission Decision: ${decision === 'approved' ? 'Approved' : 'Rejected'}`, description: `Request ${requestId} has been updated.` });
     }
   };
 
+  const paginatedRequests = pendingRequests.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
     <div>
@@ -410,23 +359,15 @@ export default function LwopPage() {
             <CardDescription>Review, approve, or reject pending LWOP requests.</CardDescription>
           </CardHeader>
           <CardContent>
-            {pendingRequests.filter(req => 
-                (role === ROLES.HHRMD && req.status === 'Pending HHRMD Review') ||
-                (role === ROLES.HRMO && req.status === 'Pending HRMO Review') ||
-                req.status === 'Request Received – Awaiting Commission Decision' ||
-                req.status.startsWith('Rejected by') || req.status.startsWith('Approved by Commission') || req.status.startsWith('Rejected by Commission')
-            ).length > 0 ? (
-              pendingRequests.filter(req => 
-                (role === ROLES.HHRMD && req.status === 'Pending HHRMD Review') ||
-                (role === ROLES.HRMO && req.status === 'Pending HRMO Review') ||
-                req.status === 'Request Received – Awaiting Commission Decision' ||
-                req.status.startsWith('Rejected by') || req.status.startsWith('Approved by Commission') || req.status.startsWith('Rejected by Commission')
-              ).map((request) => (
+            {isLoading ? (
+               <div className="flex justify-center items-center h-40"><Loader2 className="h-8 w-8 animate-spin" /></div>
+            ) : paginatedRequests.length > 0 ? (
+              paginatedRequests.map((request) => (
                 <div key={request.id} className="mb-4 border p-4 rounded-md space-y-2 shadow-sm bg-background hover:shadow-md transition-shadow">
-                  <h3 className="font-semibold text-base">LWOP Request for: {request.employeeName} (ZanID: {request.zanId})</h3>
+                  <h3 className="font-semibold text-base">LWOP Request for: {request.employee.name} (ZanID: {request.employee.zanId})</h3>
                   <p className="text-sm text-muted-foreground">Duration: {request.duration}</p>
                   <p className="text-sm text-muted-foreground">Reason: {request.reason}</p>
-                  <p className="text-sm text-muted-foreground">Submitted: {request.submissionDate ? format(parseISO(request.submissionDate), 'PPP') : 'N/A'} by {request.submittedBy}</p>
+                  <p className="text-sm text-muted-foreground">Submitted: {request.createdAt ? format(parseISO(request.createdAt), 'PPP') : 'N/A'} by {request.submittedBy.name}</p>
                   <p className="text-sm"><span className="font-medium">Status:</span> <span className="text-primary">{request.status}</span></p>
                   {request.rejectionReason && <p className="text-sm text-destructive"><span className="font-medium">Rejection Reason:</span> {request.rejectionReason}</p>}
                   <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
@@ -437,7 +378,7 @@ export default function LwopPage() {
                         <Button size="sm" variant="destructive" onClick={() => handleInitialAction(request.id, 'reject')}>Reject &amp; Return to HRO</Button>
                       </>
                     )}
-                    {request.reviewStage === 'commission_review' && request.status === 'Request Received – Awaiting Commission Decision' && request.reviewedBy === role && (
+                    {request.reviewStage === 'commission_review' && request.status === 'Request Received – Awaiting Commission Decision' && (
                         <>
                             <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => handleCommissionDecision(request.id, 'approved')}>Approved by Commission</Button>
                             <Button size="sm" variant="destructive" onClick={() => handleCommissionDecision(request.id, 'rejected')}>Rejected by Commission</Button>
@@ -449,6 +390,13 @@ export default function LwopPage() {
             ) : (
               <p className="text-muted-foreground">No LWOP requests pending your review.</p>
             )}
+             <Pagination
+                currentPage={currentPage}
+                totalPages={Math.ceil(pendingRequests.length / itemsPerPage)}
+                onPageChange={setCurrentPage}
+                totalItems={pendingRequests.length}
+                itemsPerPage={itemsPerPage}
+             />
           </CardContent>
         </Card>
       )}
@@ -459,7 +407,7 @@ export default function LwopPage() {
             <DialogHeader>
               <DialogTitle>Request Details: {selectedRequest.id}</DialogTitle>
               <DialogDescription>
-                LWOP request for <strong>{selectedRequest.employeeName}</strong> (ZanID: {selectedRequest.zanId}).
+                LWOP request for <strong>{selectedRequest.employee.name}</strong> (ZanID: {selectedRequest.employee.zanId}).
               </DialogDescription>
             </DialogHeader>
              <div className="space-y-4 py-4 text-sm max-h-[70vh] overflow-y-auto">
@@ -467,39 +415,39 @@ export default function LwopPage() {
                     <h4 className="font-semibold text-base text-foreground mb-2">Employee Information</h4>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
                         <Label className="text-right text-muted-foreground">Full Name:</Label>
-                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employeeName}</p>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employee.name}</p>
                     </div>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
                         <Label className="text-right text-muted-foreground">ZanID:</Label>
-                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.zanId}</p>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employee.zanId}</p>
                     </div>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
                         <Label className="text-right text-muted-foreground">Payroll #:</Label>
-                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.payrollNumber || 'N/A'}</p>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employee.payrollNumber || 'N/A'}</p>
                     </div>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
                         <Label className="text-right text-muted-foreground">ZSSF #:</Label>
-                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.zssfNumber || 'N/A'}</p>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employee.zssfNumber || 'N/A'}</p>
                     </div>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
                         <Label className="text-right text-muted-foreground">Department:</Label>
-                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.department}</p>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employee.department}</p>
                     </div>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
                         <Label className="text-right text-muted-foreground">Cadre/Position:</Label>
-                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.cadre}</p>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employee.cadre}</p>
                     </div>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
                         <Label className="text-right text-muted-foreground">Employment Date:</Label>
-                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employmentDate ? format(parseISO(selectedRequest.employmentDate), 'PPP') : 'N/A'}</p>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employee.employmentDate ? format(parseISO(selectedRequest.employee.employmentDate.toString()), 'PPP') : 'N/A'}</p>
                     </div>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
                         <Label className="text-right text-muted-foreground">Date of Birth:</Label>
-                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.dateOfBirth ? format(parseISO(selectedRequest.dateOfBirth), 'PPP') : 'N/A'}</p>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employee.dateOfBirth ? format(parseISO(selectedRequest.employee.dateOfBirth.toString()), 'PPP') : 'N/A'}</p>
                     </div>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
                         <Label className="text-right text-muted-foreground">Institution:</Label>
-                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.institution || 'N/A'}</p>
+                        <p className="col-span-2 font-medium text-foreground">{selectedRequest.employee.institution?.name || 'N/A'}</p>
                     </div>
                 </div>
 
@@ -515,7 +463,7 @@ export default function LwopPage() {
                     </div>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
                         <Label className="text-right font-semibold">Submitted:</Label>
-                        <p className="col-span-2">{selectedRequest.submissionDate ? format(parseISO(selectedRequest.submissionDate), 'PPP') : 'N/A'} by {selectedRequest.submittedBy}</p>
+                        <p className="col-span-2">{selectedRequest.createdAt ? format(parseISO(selectedRequest.createdAt), 'PPP') : 'N/A'} by {selectedRequest.submittedBy.name}</p>
                     </div>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2">
                         <Label className="text-right font-semibold">Status:</Label>
@@ -564,7 +512,7 @@ export default function LwopPage() {
                 <DialogHeader>
                     <DialogTitle>Reject LWOP Request: {currentRequestToAction.id}</DialogTitle>
                     <DialogDescription>
-                        Please provide the reason for rejecting the LWOP request for <strong>{currentRequestToAction.employeeName}</strong>. This reason will be visible to the HRO.
+                        Please provide the reason for rejecting the LWOP request for <strong>{currentRequestToAction.employee.name}</strong>. This reason will be visible to the HRO.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="py-4">
@@ -576,7 +524,7 @@ export default function LwopPage() {
                     />
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" onClick={() => { setIsRejectionModalOpen(false); setCurrentRequestToAction(null); }}>Cancel</Button>
+                    <Button variant="outline" onClick={() => { setIsRejectionModalOpen(false); setCurrentRequestToAction(null); setRejectionReasonInput(''); }}>Cancel</Button>
                     <Button variant="destructive" onClick={handleRejectionSubmit} disabled={!rejectionReasonInput.trim()}>Submit Rejection</Button>
                 </DialogFooter>
             </DialogContent>
@@ -585,4 +533,3 @@ export default function LwopPage() {
     </div>
   );
 }
-
