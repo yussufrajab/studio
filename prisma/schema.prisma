@@ -1,61 +1,88 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-generator client {
-  provider = "prisma-client-js"
-}
-
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
 
 model User {
   id            String    @id @default(cuid())
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
   name          String
   username      String    @unique
   password      String
   role          String
   active        Boolean   @default(true)
-  employeeId    String?   @unique
+  employeeId    String?   @unique // This might be the employee's check number or similar
+  zanId         String?   @unique // Official ZanID card number
+  
   institutionId String
   institution   Institution @relation(fields: [institutionId], references: [id])
-  
-  complaintsSubmitted Complaint[] @relation("ComplaintsSubmitted")
-  complaintsReviewed  Complaint[] @relation("ComplaintsReviewed")
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // --- Relations ---
+  complaintsAsComplainant Complaint[] @relation("Complainant")
+  complaintsAsReviewer    Complaint[] @relation("ReviewedBy")
+
+  submittedConfirmations ConfirmationRequest[] @relation("SubmittedConfirmation")
+  reviewedConfirmations  ConfirmationRequest[] @relation("ReviewedConfirmation")
+  confirmationRequests ConfirmationRequest[] @relation("ConfirmedEmployee")
 }
 
 model Institution {
-  id      String @id @default(cuid())
-  name    String @unique
+  id      String   @id @default(cuid())
+  name    String   @unique
   users   User[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Complaint {
-  id                    String      @id @default(cuid())
-  createdAt             DateTime    @default(now())
-  updatedAt             DateTime    @updatedAt
-
-  complaintType         String
-  subject               String
-  details               String      @db.Text
-  complainantPhoneNumber String
-  nextOfKinPhoneNumber  String
+  id                      String   @id @default(cuid())
+  complaintType           String
+  subject                 String
+  details                 String
+  complainantPhoneNumber  String
+  nextOfKinPhoneNumber    String
+  attachments             String[]
   
-  status                String
-  reviewStage           String
+  status                  String   @default("Submitted")
+  reviewStage             String   @default("initial")
+  officerComments         String?
+  internalNotes           String?
+  rejectionReason         String?
   
-  attachments           String[]    @default([])
-  officerComments       String?     @db.Text
-  internalNotes         String?     @db.Text
-  rejectionReason       String?     @db.Text
+  complainantId           String
+  complainant             User     @relation("Complainant", fields: [complainantId], references: [id])
+  
+  assignedOfficerRole     String?
+  reviewedById            String?
+  reviewedBy              User?    @relation("ReviewedBy", fields: [reviewedById], references: [id])
+  
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+}
 
-  complainantId         String
-  complainant           User        @relation("ComplaintsSubmitted", fields: [complainantId], references: [id])
+model ConfirmationRequest {
+  id                String   @id @default(cuid())
+  
+  status            String   @default("Pending HHRMD Review")
+  reviewStage       String   @default("initial") // 'initial', 'commission_review', 'completed'
+  rejectionReason   String?
+  
+  // Who is being confirmed
+  employeeId        String
+  employee          User     @relation("ConfirmedEmployee", fields: [employeeId], references: [id])
 
-  assignedOfficerRole   String?
-  reviewedById          String?
-  reviewedBy            User?       @relation("ComplaintsReviewed", fields: [reviewedById], references: [id])
+  // Who submitted the request (e.g., HRO)
+  submittedById     String
+  submittedBy       User     @relation("SubmittedConfirmation", fields: [submittedById], references: [id])
+  
+  // Who reviewed/actioned the request (e.g., HHRMD, HRMO)
+  reviewedById      String?
+  reviewedBy        User?    @relation("ReviewedConfirmation", fields: [reviewedById], references: [id])
+
+  decisionDate          DateTime?
+  commissionDecisionDate DateTime?
+
+  // documents will be stored as an array of strings (e.g., URLs to a storage bucket)
+  documents         String[]
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }
