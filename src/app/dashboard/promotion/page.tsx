@@ -1,22 +1,24 @@
-
 'use client';
 import { PageHeader } from '@/components/shared/page-header';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Textarea } from "@/components/ui/textarea";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from "@/components/ui/table";
+import { Pagination } from "@/components/shared/pagination";
 import { useAuth } from '@/hooks/use-auth';
 import { ROLES } from '@/lib/constants';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import type { Employee, User, Role } from '@/lib/types';
 import { toast } from '@/hooks/use-toast';
 import { Loader2, Search, FileText, Award, ChevronsUpDown, ListFilter, Star, AlertTriangle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { format, parseISO, differenceInYears } from 'date-fns';
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Pagination } from '@/components/shared/pagination';
+
 
 interface PromotionRequest {
   id: string;
@@ -26,6 +28,8 @@ interface PromotionRequest {
   status: string;
   reviewStage: string;
   rejectionReason?: string | null;
+  reviewedById?: string | null;
+  commissionDecisionDate?: string | null;
   createdAt: string;
 
   proposedCadre: string;
@@ -36,6 +40,21 @@ interface PromotionRequest {
 
 export default function PromotionPage() {
   const { role, user } = useAuth();
+
+  const [pendingRequests, setPendingRequests] = useState<PromotionRequest[]>([]);
+  const [selectedRequest, setSelectedRequest] = useState<PromotionRequest | null>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  const paginatedRequests = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return pendingRequests.slice(startIndex, endIndex);
+  }, [pendingRequests, currentPage, itemsPerPage]);
+
+
   const [zanId, setZanId] = useState('');
   const [employeeDetails, setEmployeeDetails] = useState<Employee | null>(null);
   const [isFetchingEmployee, setIsFetchingEmployee] = useState(false);
@@ -59,17 +78,31 @@ export default function PromotionPage() {
   // Common file
   const [letterOfRequestFile, setLetterOfRequestFile] = useState<FileList | null>(null);
 
-  const [pendingRequests, setPendingRequests] = useState<PromotionRequest[]>([]);
-  const [selectedRequest, setSelectedRequest] = useState<PromotionRequest | null>(null);
-  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+
+
+
+
 
   const [isRejectionModalOpen, setIsRejectionModalOpen] = useState(false);
   const [rejectionReasonInput, setRejectionReasonInput] = useState('');
   const [currentRequestToAction, setCurrentRequestToAction] = useState<PromotionRequest | null>(null);
+  const [isEditingExistingRequest, setIsEditingExistingRequest] = useState(false);
 
   const [eligibilityError, setEligibilityError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+
+
+
+  const handleResubmitClick = (request: PromotionRequest) => {
+    setSelectedRequest(request);
+    setIsEditingExistingRequest(true);
+    setZanId(request.employee.zanId || '');
+    setEmployeeDetails(request.employee as Employee);
+    setPromotionRequestType(request.promotionType.toLowerCase() as 'experience' | 'education' | '');
+    setProposedCadre(request.proposedCadre);
+    setStudiedOutsideCountry(request.studiedOutsideCountry || false);
+    // Note: File inputs cannot be pre-filled for security reasons.
+    // The user will need to re-upload documents if changes are required.
+  };
 
   const fetchRequests = async () => {
     if (!user || !role) return;
@@ -160,7 +193,7 @@ export default function PromotionPage() {
       toast({ title: "Submission Error", description: "Employee or user details are missing.", variant: "destructive" });
       return;
     }
-    // Validation logic...
+
     setIsSubmitting(true);
     
     let documentsList: string[] = ['Letter of Request'];
@@ -170,32 +203,39 @@ export default function PromotionPage() {
       documentsList.push('Academic Certificate');
       if (studiedOutsideCountry) documentsList.push('TCU Form');
     }
-    
+
+    const method = isEditingExistingRequest ? 'PATCH' : 'POST';
+    const url = isEditingExistingRequest ? `/api/promotions` : '/api/promotions';
     const payload = {
+      ...(isEditingExistingRequest && { id: selectedRequest?.id }),
       employeeId: employeeDetails.id,
       submittedById: user.id,
-      status: role === ROLES.HHRMD ? 'Pending HHRMD Review' : 'Pending HRMO Review',
+      status: 'Pending HRMO Review', // Always set to pending HRMO review on submission/resubmission
+      reviewStage: 'initial',
       proposedCadre,
       promotionType: promotionRequestType === 'experience' ? 'Experience' : 'EducationAdvancement',
       documents: documentsList,
       studiedOutsideCountry: promotionRequestType === 'education' ? studiedOutsideCountry : undefined,
+      rejectionReason: null, // Clear rejection reason on resubmission
     };
     
     try {
-        const response = await fetch('/api/promotions', {
-            method: 'POST',
+        const response = await fetch(url, {
+            method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
-        if (!response.ok) throw new Error('Failed to submit request');
+        if (!response.ok) throw new Error('Failed to submit/update request');
         
         await fetchRequests(); // Refresh list
-        toast({ title: "Promotion Request Submitted", description: `Request for ${employeeDetails.name} submitted successfully.` });
+        toast({ title: "Promotion Request " + (isEditingExistingRequest ? "Updated" : "Submitted"), description: `Request for ${employeeDetails.name} ` + (isEditingExistingRequest ? "updated" : "submitted") + ` successfully.` });
         setZanId('');
         setEmployeeDetails(null);
         resetFormFields();
+        setIsEditingExistingRequest(false);
+        setSelectedRequest(null);
     } catch(error) {
-        toast({ title: "Submission Failed", description: "Could not submit the promotion request.", variant: "destructive" });
+        toast({ title: "Submission Failed", description: "Could not submit/update the promotion request.", variant: "destructive" });
     } finally {
         setIsSubmitting(false);
     }
@@ -203,10 +243,10 @@ export default function PromotionPage() {
   
   const handleUpdateRequest = async (requestId: string, payload: any) => {
       try {
-          const response = await fetch(`/api/promotions/${requestId}`, {
-              method: 'PUT',
+          const response = await fetch(`/api/promotions`, {
+              method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({...payload, reviewedById: user?.id })
+              body: JSON.stringify({ id: requestId, ...payload, reviewedById: user?.id })
           });
           if (!response.ok) throw new Error('Failed to update request');
           await fetchRequests();
@@ -273,10 +313,8 @@ export default function PromotionPage() {
     }
   };
 
-  const paginatedRequests = pendingRequests.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-
   return (
-    <div>
+    <React.Fragment>
       <PageHeader title="Promotion" description="Manage employee promotions based on experience or education." />
       {role === ROLES.HRO && (
         <Card className="mb-6 shadow-lg">
@@ -375,9 +413,7 @@ export default function PromotionPage() {
                                 </div>
                                 <div className="flex items-center space-x-2">
                                 <Checkbox id="studiedOutsideCountryPromo" checked={studiedOutsideCountry} onCheckedChange={(checked) => setStudiedOutsideCountry(checked as boolean)} disabled={isSubmitting || !!eligibilityError} />
-                                <Label htmlFor="studiedOutsideCountryPromo" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                                    Employee studied outside the country? (Requires TCU Form)
-                                </Label>
+                                <Label htmlFor="studiedOutsideCountryPromo" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Employee studied outside the country? (Requires TCU Form)</Label>
                                 </div>
                                 {studiedOutsideCountry && (
                                 <div>
@@ -407,56 +443,79 @@ export default function PromotionPage() {
         </Card>
       )}
 
-      {(role === ROLES.HHRMD || role === ROLES.HRMO) && ( 
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle>Review Promotion Requests</CardTitle>
-            <CardDescription>Review, approve, or reject pending promotion requests.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-                <div className="flex justify-center items-center h-40"><Loader2 className="h-8 w-8 animate-spin" /></div>
-            ) : paginatedRequests.length > 0 ? (
-              paginatedRequests.map((request) => (
-                <div key={request.id} className="mb-4 border p-4 rounded-md space-y-2 shadow-sm bg-background hover:shadow-md transition-shadow">
-                  <h3 className="font-semibold text-base">Promotion for: {request.employee.name} (ZanID: {request.employee.zanId})</h3>
-                  <p className="text-sm text-muted-foreground">Type: {request.promotionType}</p>
-                  <p className="text-sm text-muted-foreground">Current Cadre: {request.employee.cadre}</p>
-                  <p className="text-sm text-muted-foreground">Proposed Grade: {request.proposedCadre}</p>
-                  <p className="text-sm text-muted-foreground">Submitted: {format(parseISO(request.createdAt), 'PPP')} by {request.submittedBy.name}</p>
-                  <p className="text-sm"><span className="font-medium">Status:</span> <span className="text-primary">{request.status}</span></p>
-                  {request.rejectionReason && <p className="text-sm text-destructive"><span className="font-medium">Rejection Reason:</span> {request.rejectionReason}</p>}
-                  <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-                    <Button size="sm" variant="outline" onClick={() => { setSelectedRequest(request); setIsDetailsModalOpen(true); }}>View Details</Button>
-                    
-                    {request.reviewStage === 'initial' && request.status.startsWith(`Pending ${role} Review`) && (
-                      <>
-                        <Button size="sm" onClick={() => handleInitialAction(request.id, 'forward')}>Verify &amp; Forward to Commission</Button>
-                        <Button size="sm" variant="destructive" onClick={() => handleInitialAction(request.id, 'reject')}>Reject &amp; Return to HRO</Button>
-                      </>
-                    )}
-                    {request.reviewStage === 'commission_review' && request.status === 'Request Received – Awaiting Commission Decision' && (
-                        <>
-                            <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => handleCommissionDecision(request.id, 'approved')}>Approved by Commission</Button>
-                            <Button size="sm" variant="destructive" onClick={() => handleCommissionDecision(request.id, 'rejected')}>Rejected by Commission</Button>
-                        </>
-                    )}
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p className="text-muted-foreground">No promotion requests pending your review.</p>
-            )}
-            <Pagination
-                currentPage={currentPage}
-                totalPages={Math.ceil(pendingRequests.length / itemsPerPage)}
-                onPageChange={setCurrentPage}
-                totalItems={pendingRequests.length}
-                itemsPerPage={itemsPerPage}
-            />
-          </CardContent>
-        </Card>
-      )}
+      <Card className="mb-6 shadow-lg">
+        <CardHeader>
+          <CardTitle>Pending Promotion Requests</CardTitle>
+          <CardDescription>{pendingRequests.length} request(s) found.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex justify-center items-center h-32"><Loader2 className="h-8 w-8 animate-spin" /></div>
+          ) : (
+            <Table>
+              <TableCaption>A list of pending promotion requests.</TableCaption>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Employee Name</TableHead>
+                  <TableHead>ZAN-ID</TableHead>
+                  <TableHead>Proposed Cadre</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Submitted By</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paginatedRequests.length > 0 ? (
+                  paginatedRequests.map(request => (
+                    <TableRow key={request.id}>
+                      <TableCell className="font-medium">{request.employee.name}</TableCell>
+                      <TableCell>{request.employee.zanId}</TableCell>
+                      <TableCell>{request.proposedCadre}</TableCell>
+                      <TableCell>{request.promotionType}</TableCell>
+                      <TableCell>{request.status}</TableCell>
+                      <TableCell>{request.submittedBy.name}</TableCell>
+                      <TableCell className="flex space-x-2">
+                        <Button size="sm" variant="outline" onClick={() => { setSelectedRequest(request); setIsDetailsModalOpen(true); }}>View Details</Button>
+                        {(role === ROLES.HRMO || role === ROLES.HHRMD) && (
+                          <>
+                            {request.reviewStage === 'initial' && (
+                              <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => handleInitialAction(request.id, 'forward')}>Forward to Commission</Button>
+                            )}
+                            {request.reviewStage === 'commission_review' && (
+                              <>
+                                <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => handleCommissionDecision(request.id, 'approved')}>Approve</Button>
+                                <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white" onClick={() => handleCommissionDecision(request.id, 'rejected')}>Reject</Button>
+                              </>
+                            )}
+                            {(request.reviewStage === 'initial' || request.reviewStage === 'commission_review') && (
+                              <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white" onClick={() => handleInitialAction(request.id, 'reject')}>Reject & Return to HRO</Button>
+                            )}
+                          </>
+                        )}
+                        {(role === ROLES.HRO && (request.status === 'Rejected by HRMO - Awaiting HRO Correction' || request.status === 'Rejected by HHRMD - Awaiting HRO Correction')) && (
+                          <Button size="sm" onClick={() => handleResubmitClick(request)}>Resubmit</Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center">No promotion requests found.</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
+          <Pagination
+            currentPage={currentPage}
+            totalPages={Math.ceil(pendingRequests.length / itemsPerPage)}
+            onPageChange={setCurrentPage}
+            totalItems={pendingRequests.length}
+            itemsPerPage={itemsPerPage}
+          />
+        </CardContent>
+      </Card>
 
       {selectedRequest && (
         <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
@@ -592,6 +651,6 @@ export default function PromotionPage() {
             </DialogContent>
         </Dialog>
       )}
-    </div>
+    </React.Fragment>
   );
 }

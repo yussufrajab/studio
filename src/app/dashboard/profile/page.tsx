@@ -266,7 +266,7 @@ export default function ProfilePage() {
     <div>
       <PageHeader title={pageTitle} description={pageDescription} />
       
-      {isCommissionUser && (
+      {(isCommissionUser || isInstitutionalViewer) && (
         <Card className="mb-6">
             <CardHeader>
                 <CardTitle>Search & Filter Employees</CardTitle>

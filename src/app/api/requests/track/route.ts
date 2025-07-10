@@ -14,6 +14,7 @@ interface TrackedRequest {
   currentStage: string;
   employeeInstitution?: string;
   gender?: 'Male' | 'Female' | 'N/A';
+  rejectionReason?: string | null;
 }
 
 export async function GET(req: Request) {
@@ -40,68 +41,79 @@ export async function GET(req: Request) {
         complainant: {
             select: {
                 name: true,
-                zanId: true,
+
                 gender: true,
                 institution: { select: { name: true } }
             }
         }
     };
 
-    const confirmations = await db.confirmationRequest.findMany({ include: includeEmployee });
-    const lwops = await db.lwopRequest.findMany({ include: includeEmployee });
-    const promotions = await db.promotionRequest.findMany({ include: includeEmployee });
-    const complaints = await db.complaint.findMany({ include: includeComplainant });
-    const cadreChanges = await db.cadreChangeRequest.findMany({ include: includeEmployee });
-    const retirements = await db.retirementRequest.findMany({ include: includeEmployee });
-    const resignations = await db.resignationRequest.findMany({ include: includeEmployee });
-    const serviceExtensions = await db.serviceExtensionRequest.findMany({ include: includeEmployee });
-    const separations = await db.separationRequest.findMany({ include: includeEmployee });
+    let confirmations = [];
+    try { confirmations = await db.confirmationRequest.findMany({ include: includeEmployee }); } catch (e) { console.error("Error fetching confirmations:", e); }
+    let lwops = [];
+    try { lwops = await db.lwopRequest.findMany({ include: includeEmployee }); } catch (e) { console.error("Error fetching LWOPs:", e); }
+    let promotions = [];
+    try { promotions = await db.promotionRequest.findMany({ include: includeEmployee }); } catch (e) { console.error("Error fetching promotions:", e); }
+    let complaints = [];
+    try { complaints = await db.complaint.findMany({ include: includeComplainant }); } catch (e) { console.error("Error fetching complaints:", e); }
+    let cadreChanges = [];
+    try { cadreChanges = await db.cadreChangeRequest.findMany({ include: includeEmployee }); } catch (e) { console.error("Error fetching cadre changes:", e); }
+    let retirements = [];
+    try { retirements = await db.retirementRequest.findMany({ include: includeEmployee }); } catch (e) { console.error("Error fetching retirements:", e); }
+    let resignations = [];
+    try { resignations = await db.resignationRequest.findMany({ include: includeEmployee }); } catch (e) { console.error("Error fetching resignations:", e); }
+    let serviceExtensions = [];
+    try { serviceExtensions = await db.serviceExtensionRequest.findMany({ include: includeEmployee }); } catch (e) { console.error("Error fetching service extensions:", e); }
+    let separations = [];
+    try { separations = await db.separationRequest.findMany({ include: includeEmployee }); } catch (e) { console.error("Error fetching separations:", e); }
 
     const allRequests: TrackedRequest[] = [
       ...confirmations.map(r => ({
-        id: r.id, employeeName: r.employee.name, zanId: r.employee.zanId, requestType: 'Confirmation',
+        id: r.id, employeeName: r.employee?.name || 'N/A', zanId: r.employee?.zanId || 'N/A', requestType: 'Confirmation',
         submissionDate: r.createdAt.toISOString(), status: r.status, lastUpdatedDate: r.updatedAt.toISOString(),
-        currentStage: r.reviewStage, employeeInstitution: r.employee.institution?.name, gender: r.employee.gender as 'Male' | 'Female' | 'N/A',
+        currentStage: r.reviewStage, employeeInstitution: r.employee?.institution?.name || 'N/A', gender: (r.employee?.gender as 'Male' | 'Female' | 'N/A') || 'N/A',
+        rejectionReason: r.rejectionReason,
       })),
       ...lwops.map(r => ({
-        id: r.id, employeeName: r.employee.name, zanId: r.employee.zanId, requestType: 'LWOP',
+        id: r.id, employeeName: r.employee?.name || 'N/A', zanId: r.employee?.zanId || 'N/A', requestType: 'LWOP',
         submissionDate: r.createdAt.toISOString(), status: r.status, lastUpdatedDate: r.updatedAt.toISOString(),
-        currentStage: r.reviewStage, employeeInstitution: r.employee.institution?.name, gender: r.employee.gender as 'Male' | 'Female' | 'N/A',
+        currentStage: r.reviewStage, employeeInstitution: r.employee?.institution?.name || 'N/A', gender: (r.employee?.gender as 'Male' | 'Female' | 'N/A') || 'N/A',
+        rejectionReason: r.rejectionReason,
       })),
       ...promotions.map(r => ({
-        id: r.id, employeeName: r.employee.name, zanId: r.employee.zanId, requestType: 'Promotion',
+        id: r.id, employeeName: r.employee?.name || 'N/A', zanId: r.employee?.zanId || 'N/A', requestType: 'Promotion',
         submissionDate: r.createdAt.toISOString(), status: r.status, lastUpdatedDate: r.updatedAt.toISOString(),
-        currentStage: r.reviewStage, employeeInstitution: r.employee.institution?.name, gender: r.employee.gender as 'Male' | 'Female' | 'N/A',
+        currentStage: r.reviewStage, employeeInstitution: r.employee?.institution?.name || 'N/A', gender: (r.employee?.gender as 'Male' | 'Female' | 'N/A') || 'N/A',
       })),
       ...complaints.map(r => ({
-        id: r.id, employeeName: r.complainant.name, zanId: r.complainant.zanId, requestType: 'Complaints',
+        id: r.id, employeeName: r.complainant?.name || 'N/A', zanId: r.complainant?.zanId || 'N/A', requestType: 'Complaints',
         submissionDate: r.createdAt.toISOString(), status: r.status, lastUpdatedDate: r.updatedAt.toISOString(),
-        currentStage: r.reviewStage, employeeInstitution: r.complainant.institution?.name, gender: r.complainant.gender as 'Male' | 'Female' | 'N/A',
+        currentStage: r.reviewStage, employeeInstitution: r.complainant?.institution?.name || 'N/A', gender: (r.complainant?.gender as 'Male' | 'Female' | 'N/A') || 'N/A',
       })),
       ...cadreChanges.map(r => ({
-        id: r.id, employeeName: r.employee.name, zanId: r.employee.zanId, requestType: 'Change of Cadre',
+        id: r.id, employeeName: r.employee?.name || 'N/A', zanId: r.employee?.zanId || 'N/A', requestType: 'Change of Cadre',
         submissionDate: r.createdAt.toISOString(), status: r.status, lastUpdatedDate: r.updatedAt.toISOString(),
-        currentStage: r.reviewStage, employeeInstitution: r.employee.institution?.name, gender: r.employee.gender as 'Male' | 'Female' | 'N/A',
+        currentStage: r.reviewStage, employeeInstitution: r.employee?.institution?.name || 'N/A', gender: (r.employee?.gender as 'Male' | 'Female' | 'N/A') || 'N/A',
       })),
       ...retirements.map(r => ({
-        id: r.id, employeeName: r.employee.name, zanId: r.employee.zanId, requestType: 'Retirement',
+        id: r.id, employeeName: r.employee?.name || 'N/A', zanId: r.employee?.zanId || 'N/A', requestType: 'Retirement',
         submissionDate: r.createdAt.toISOString(), status: r.status, lastUpdatedDate: r.updatedAt.toISOString(),
-        currentStage: r.reviewStage, employeeInstitution: r.employee.institution?.name, gender: r.employee.gender as 'Male' | 'Female' | 'N/A',
+        currentStage: r.reviewStage, employeeInstitution: r.employee?.institution?.name || 'N/A', gender: (r.employee?.gender as 'Male' | 'Female' | 'N/A') || 'N/A',
       })),
       ...resignations.map(r => ({
-        id: r.id, employeeName: r.employee.name, zanId: r.employee.zanId, requestType: 'Resignation',
+        id: r.id, employeeName: r.employee?.name || 'N/A', zanId: r.employee?.zanId || 'N/A', requestType: 'Resignation',
         submissionDate: r.createdAt.toISOString(), status: r.status, lastUpdatedDate: r.updatedAt.toISOString(),
-        currentStage: r.reviewStage, employeeInstitution: r.employee.institution?.name, gender: r.employee.gender as 'Male' | 'Female' | 'N/A',
+        currentStage: r.reviewStage, employeeInstitution: r.employee?.institution?.name || 'N/A', gender: (r.employee?.gender as 'Male' | 'Female' | 'N/A') || 'N/A',
       })),
       ...serviceExtensions.map(r => ({
-        id: r.id, employeeName: r.employee.name, zanId: r.employee.zanId, requestType: 'Service Extension',
+        id: r.id, employeeName: r.employee?.name || 'N/A', zanId: r.employee?.zanId || 'N/A', requestType: 'Service Extension',
         submissionDate: r.createdAt.toISOString(), status: r.status, lastUpdatedDate: r.updatedAt.toISOString(),
-        currentStage: r.reviewStage, employeeInstitution: r.employee.institution?.name, gender: r.employee.gender as 'Male' | 'Female' | 'N/A',
+        currentStage: r.reviewStage, employeeInstitution: r.employee?.institution?.name || 'N/A', gender: (r.employee?.gender as 'Male' | 'Female' | 'N/A') || 'N/A',
       })),
       ...separations.map(r => ({
-        id: r.id, employeeName: r.employee.name, zanId: r.employee.zanId, requestType: r.type === 'TERMINATION' ? 'Termination' : 'Dismissal',
+        id: r.id, employeeName: r.employee?.name || 'N/A', zanId: r.employee?.zanId || 'N/A', requestType: r.type === 'TERMINATION' ? 'Termination' : 'Dismissal',
         submissionDate: r.createdAt.toISOString(), status: r.status, lastUpdatedDate: r.updatedAt.toISOString(),
-        currentStage: r.reviewStage, employeeInstitution: r.employee.institution?.name, gender: r.employee.gender as 'Male' | 'Female' | 'N/A',
+        currentStage: r.reviewStage, employeeInstitution: r.employee?.institution?.name || 'N/A', gender: (r.employee?.gender as 'Male' | 'Female' | 'N/A') || 'N/A',
       })),
     ];
 
@@ -132,6 +144,6 @@ export async function GET(req: Request) {
     return NextResponse.json(sortedRequests);
   } catch (error) {
     console.error("[REQUESTS_TRACK_GET]", error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    return new NextResponse(`Internal Server Error: ${error.message || 'Unknown error'}`, { status: 500 });
   }
 }

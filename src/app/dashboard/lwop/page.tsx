@@ -77,6 +77,13 @@ export default function LwopPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  const [isCorrectionModalOpen, setIsCorrectionModalOpen] = useState(false);
+  const [requestToCorrect, setRequestToCorrect] = useState<LWOPRequest | null>(null);
+  const [correctedDuration, setCorrectedDuration] = useState('');
+  const [correctedReason, setCorrectedReason] = useState('');
+  const [correctedLetterOfRequestFile, setCorrectedLetterOfRequestFile] = useState<FileList | null>(null);
+  const [correctedEmployeeConsentLetterFile, setCorrectedEmployeeConsentLetterFile] = useState<FileList | null>(null);
+
   const isEmployeeOnProbation = employeeDetails?.status === 'On Probation';
   
   const fetchRequests = async () => {
@@ -86,7 +93,14 @@ export default function LwopPage() {
       const response = await fetch(`/api/lwop?userId=${user.id}&userRole=${role}&userInstitutionId=${user.institutionId || ''}`);
       if (!response.ok) throw new Error('Failed to fetch LWOP requests');
       const data = await response.json();
-      setPendingRequests(data);
+      console.log("[LWOP_FRONTEND] Data received from API:", data);
+      const processedData = data.map((req: any) => ({
+        ...req,
+        createdAt: typeof req.createdAt === 'object' ? req.createdAt.toISOString() : req.createdAt,
+        updatedAt: typeof req.updatedAt === 'object' ? req.updatedAt.toISOString() : req.updatedAt,
+        submittedBy: typeof req.submittedBy === 'object' ? req.submittedBy.name : req.submittedBy,
+      }));
+      setPendingRequests(processedData);
     } catch (error) {
       toast({ title: "Error", description: "Could not load LWOP requests.", variant: "destructive" });
     } finally {
@@ -123,6 +137,92 @@ export default function LwopPage() {
       }
       setIsFetchingEmployee(false);
     }, 1000);
+  };
+
+  const handleResubmit = (request: LWOPRequest) => {
+    setRequestToCorrect(request);
+    setCorrectedDuration(request.duration || '');
+    setCorrectedReason(request.reason || '');
+    // Clear file inputs for new upload
+    setCorrectedLetterOfRequestFile(null);
+    setCorrectedEmployeeConsentLetterFile(null);
+    setIsCorrectionModalOpen(true);
+  };
+
+  const handleConfirmResubmit = async (request: LWOPRequest | null) => {
+    if (!request || !user) return;
+
+    // Validation for corrected fields
+    if (!correctedDuration) {
+      toast({ title: "Submission Error", description: "Duration is missing. Please fill in the duration.", variant: "destructive" });
+      return;
+    }
+    if (!correctedReason) {
+      toast({ title: "Submission Error", description: "Reason for LWOP is missing. Please fill in the reason.", variant: "destructive" });
+      return;
+    }
+
+    const parsedMonths = parseDurationToMonths(correctedDuration);
+    if (parsedMonths === null) {
+      toast({ 
+        title: "Invalid Duration Format", 
+        description: "Please enter duration like '6 months', '1 year', or a number of months (e.g., '24').", 
+        variant: "destructive",
+        duration: 5000,
+      });
+      return;
+    }
+
+    if (parsedMonths > 36) {
+      toast({ 
+        title: "LWOP Duration Exceeded", 
+        description: "Maximum LWOP duration is 36 months.", 
+        variant: "destructive",
+        duration: 5000,
+      });
+      return;
+    }
+    
+    if (!correctedLetterOfRequestFile || !correctedEmployeeConsentLetterFile) {
+        toast({ title: "Submission Error", description: "All required PDF documents must be attached.", variant: "destructive" });
+        return;
+    }
+
+    try {
+      // This is where you would handle the actual file upload to a storage service
+      // For now, we'll just update the status and reason
+
+      const response = await fetch(`/api/lwop`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: request.id,
+          status: 'Pending HRMO Review', // New status after HRO correction
+          reviewStage: 'initial',
+          duration: correctedDuration, // Update duration
+          reason: correctedReason,     // Update reason
+          documents: [
+            correctedLetterOfRequestFile ? correctedLetterOfRequestFile[0].name : '',
+            correctedEmployeeConsentLetterFile ? correctedEmployeeConsentLetterFile[0].name : '',
+          ].filter(Boolean), // Filter out empty strings if no file is selected
+          rejectionReason: null, // Clear rejection reason on resubmission
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to resubmit LWOP request');
+      }
+
+      toast({ title: "Success", description: `LWOP request ${request.id} resubmitted.` });
+      setIsCorrectionModalOpen(false);
+      setRequestToCorrect(null);
+      fetchRequests(); // Refresh the list of requests
+    } catch (error) {
+      console.error("[RESUBMIT_LWOP]", error);
+      toast({ title: "Error", description: "Failed to resubmit LWOP request.", variant: "destructive" });
+    }
   };
 
   const handleSubmitLwopRequest = async () => {
@@ -261,8 +361,8 @@ export default function LwopPage() {
   };
 
   const handleCommissionDecision = async (requestId: string, decision: 'approved' | 'rejected') => {
-    const finalStatus = decision === 'approved' ? "Approved by Commission" : "Rejected by Commission";
-    const payload = { status: finalStatus, reviewStage: 'completed' };
+    const finalStatus = decision === 'approved' ? "Approved by Commission" : "Rejected by Commission - Awaiting HRO Correction";
+    const payload = { status: finalStatus, reviewStage: decision === 'approved' ? 'completed' : 'initial' };
     const success = await handleUpdateRequest(requestId, payload);
     if (success) {
         toast({ title: `Commission Decision: ${decision === 'approved' ? 'Approved' : 'Rejected'}`, description: `Request ${requestId} has been updated.` });
@@ -304,9 +404,9 @@ export default function LwopPage() {
                       <div><Label className="text-muted-foreground">ZSSF Number:</Label> <p className="font-semibold text-foreground">{employeeDetails.zssfNumber || 'N/A'}</p></div>
                       <div><Label className="text-muted-foreground">Department:</Label> <p className="font-semibold text-foreground">{employeeDetails.department || 'N/A'}</p></div>
                       <div><Label className="text-muted-foreground">Cadre/Position:</Label> <p className="font-semibold text-foreground">{employeeDetails.cadre || 'N/A'}</p></div>
-                      <div><Label className="text-muted-foreground">Employment Date:</Label> <p className="font-semibold text-foreground">{employeeDetails.employmentDate ? format(parseISO(employeeDetails.employmentDate), 'PPP') : 'N/A'}</p></div>
-                      <div><Label className="text-muted-foreground">Date of Birth:</Label> <p className="font-semibold text-foreground">{employeeDetails.dateOfBirth ? format(parseISO(employeeDetails.dateOfBirth), 'PPP') : 'N/A'}</p></div>
-                      <div className="lg:col-span-1"><Label className="text-muted-foreground">Institution:</Label> <p className="font-semibold text-foreground">{employeeDetails.institution || 'N/A'}</p></div>
+                      <div><Label className="text-muted-foreground">Employment Date:</Label> <p className="font-semibold text-foreground">{employeeDetails.employmentDate ? format(parseISO(String(employeeDetails.employmentDate)), 'PPP') : 'N/A'}</p></div>
+                      <div><Label className="text-muted-foreground">Date of Birth:</Label> <p className="font-semibold text-foreground">{employeeDetails.dateOfBirth ? format(parseISO(String(employeeDetails.dateOfBirth)), 'PPP') : 'N/A'}</p></div>
+                      <div className="lg:col-span-1"><Label className="text-muted-foreground">Institution:</Label> <p className="font-semibold text-foreground">{typeof employeeDetails.institution === 'object' && employeeDetails.institution !== null ? employeeDetails.institution.name : employeeDetails.institution || 'N/A'}</p></div>
                       <div className="md:col-span-2 lg:col-span-3"><Label className="text-muted-foreground">Current Status:</Label> <p className={`font-semibold ${isEmployeeOnProbation ? 'text-destructive' : 'text-green-600'}`}>{employeeDetails.status || 'N/A'}</p></div>
                     </div>
                   </div>
@@ -352,7 +452,7 @@ export default function LwopPage() {
         </Card>
       )}
 
-       {(role === ROLES.HHRMD || role === ROLES.HRMO) && (
+       {(role === ROLES.HHRMD || role === ROLES.HRMO || role === ROLES.HRO) && (
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Review LWOP Requests</CardTitle>
@@ -364,25 +464,32 @@ export default function LwopPage() {
             ) : paginatedRequests.length > 0 ? (
               paginatedRequests.map((request) => (
                 <div key={request.id} className="mb-4 border p-4 rounded-md space-y-2 shadow-sm bg-background hover:shadow-md transition-shadow">
-                  <h3 className="font-semibold text-base">LWOP Request for: {request.employee.name} (ZanID: {request.employee.zanId})</h3>
+                  <h3 className="font-semibold text-base">LWOP Request for: {request.employee?.name || 'N/A'} (ZanID: {request.employee?.zanId || 'N/A'})</h3>
                   <p className="text-sm text-muted-foreground">Duration: {request.duration}</p>
                   <p className="text-sm text-muted-foreground">Reason: {request.reason}</p>
-                  <p className="text-sm text-muted-foreground">Submitted: {request.createdAt ? format(parseISO(request.createdAt), 'PPP') : 'N/A'} by {request.submittedBy.name}</p>
+                  <p className="text-sm text-muted-foreground">Submitted: {request.createdAt ? format(parseISO(request.createdAt), 'PPP') : 'N/A'} by {request.submittedBy?.name || 'N/A'}</p>
                   <p className="text-sm"><span className="font-medium">Status:</span> <span className="text-primary">{request.status}</span></p>
                   {request.rejectionReason && <p className="text-sm text-destructive"><span className="font-medium">Rejection Reason:</span> {request.rejectionReason}</p>}
                   <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                     <Button size="sm" variant="outline" onClick={() => { setSelectedRequest(request); setIsDetailsModalOpen(true); }}>View Details</Button>
-                    {request.reviewStage === 'initial' && (request.status.startsWith(`Pending ${role} Review`)) && (
+                    {request.reviewStage === 'initial' && (
+                      (role === ROLES.HRMO && request.status.startsWith('Pending HRMO Review')) ||
+                      (role === ROLES.HHRMD && (request.status.startsWith('Pending HRMO Review') || request.status.startsWith('Pending HHRMD Review') || request.status === 'Resubmitted - Pending HHRMD Review'))
+                    ) && (
                       <>
                         <Button size="sm" onClick={() => handleInitialAction(request.id, 'forward')}>Verify &amp; Forward to Commission</Button>
                         <Button size="sm" variant="destructive" onClick={() => handleInitialAction(request.id, 'reject')}>Reject &amp; Return to HRO</Button>
                       </>
                     )}
-                    {request.reviewStage === 'commission_review' && request.status === 'Request Received – Awaiting Commission Decision' && (
+                    {(role === ROLES.HRMO || role === ROLES.HHRMD) && request.reviewStage === 'commission_review' && request.status === 'Request Received – Awaiting Commission Decision' && (
                         <>
                             <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => handleCommissionDecision(request.id, 'approved')}>Approved by Commission</Button>
                             <Button size="sm" variant="destructive" onClick={() => handleCommissionDecision(request.id, 'rejected')}>Rejected by Commission</Button>
                         </>
+                    )}
+
+                    {role === ROLES.HRO && (request.status === 'Rejected by HHRMD - Awaiting HRO Correction' || request.status === 'Rejected by HRMO - Awaiting HRO Correction' || request.status === 'Rejected by Commission - Awaiting HRO Correction') && (
+                      <Button size="sm" onClick={() => handleResubmit(request)}>Correct and Resubmit</Button>
                     )}
                   </div>
                 </div>
@@ -530,6 +637,70 @@ export default function LwopPage() {
             </DialogContent>
         </Dialog>
       )}
+
+    {/* Correction Modal */}
+    <Dialog open={isCorrectionModalOpen} onOpenChange={setIsCorrectionModalOpen}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Correct and Resubmit LWOP Request</DialogTitle>
+          <DialogDescription>
+            Update the details and re-upload documents for the LWOP request.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="duration" className="text-right">
+              Duration
+            </Label>
+            <Input
+              id="duration"
+              value={correctedDuration}
+              onChange={(e) => setCorrectedDuration(e.target.value)}
+              className="col-span-3"
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="reason" className="text-right">
+              Reason
+            </Label>
+            <Textarea
+              id="reason"
+              value={correctedReason}
+              onChange={(e) => setCorrectedReason(e.target.value)}
+              className="col-span-3"
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="letterOfRequest" className="text-right">
+              Letter of Request (PDF)
+            </Label>
+            <input
+              type="file"
+              onChange={(e) => setCorrectedLetterOfRequestFile(e.target.files)}
+              accept=".pdf"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="consentLetter" className="text-right">
+              Employee's Consent Letter (PDF)
+            </Label>
+            <input
+              type="file"
+              onChange={(e) => setCorrectedEmployeeConsentLetterFile(e.target.files)}
+              accept=".pdf"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setIsCorrectionModalOpen(false)}>
+            Cancel
+          </Button>
+          <Button onClick={() => handleConfirmResubmit(requestToCorrect)}>Confirm Resubmission</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
     </div>
   );
 }

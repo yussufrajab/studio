@@ -32,7 +32,7 @@ interface ConfirmationRequest {
 }
 
 export default function ConfirmationPage() {
-  const { role, user } = useAuth();
+  const { role, user, isLoading: isAuthLoading } = useAuth();
   const [zanId, setZanId] = useState('');
   const [employeeToConfirm, setEmployeeToConfirm] = useState<Employee | null>(null);
   const [isFetchingEmployee, setIsFetchingEmployee] = useState(false);
@@ -53,6 +53,12 @@ export default function ConfirmationPage() {
   const [rejectionReasonInput, setRejectionReasonInput] = useState('');
   const [currentRequestToAction, setCurrentRequestToAction] = useState<ConfirmationRequest | null>(null);
 
+  const [isCorrectionModalOpen, setIsCorrectionModalOpen] = useState(false);
+  const [requestToCorrect, setRequestToCorrect] = useState<ConfirmationRequest | null>(null);
+  const [correctedEvaluationFormFile, setCorrectedEvaluationFormFile] = useState<FileList | null>(null);
+  const [correctedIpaCertificateFile, setCorrectedIpaCertificateFile] = useState<FileList | null>(null);
+  const [correctedLetterOfRequestFile, setCorrectedLetterOfRequestFile] = useState<FileList | null>(null);
+
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -60,20 +66,57 @@ export default function ConfirmationPage() {
     if (!user || !role) return;
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/confirmations?userId=${user.id}&userRole=${role}&userInstitutionId=${user.institutionId || ''}`);
-      if (!response.ok) throw new Error('Failed to fetch confirmation requests');
-      const data = await response.json();
-      setPendingRequests(data);
-    } catch (error) {
-      toast({ title: "Error", description: "Could not load confirmation requests.", variant: "destructive" });
+      console.log('Fetching confirmation requests...');
+      // The backend consistently requires userId and userRole. Send both always.
+      // Client-side filtering will then handle role-specific display logic.
+      let url = `/api/confirmations?userId=${user.id}&userRole=${role}`;
+
+      const response = await fetch(url);
+      console.log('Response received:', response);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Failed to fetch confirmation requests. Status:', response.status, 'Error Text:', errorText);
+        throw new Error(`Failed to fetch confirmation requests: ${response.status} - ${errorText}`);
+      }
+
+      const allRequests = await response.json();
+      console.log('Fetched data (before client-side filter):', allRequests);
+
+      // Log the user and role to confirm they are correctly identified
+      console.log('Current user:', user);
+      console.log('Current role:', role);
+
+      allRequests.forEach((req: ConfirmationRequest) => {
+        console.log(`Request ID: ${req.id}, Status: ${req.status}, Review Stage: ${req.reviewStage}`);
+      });
+
+      const filteredData = allRequests.filter((req: ConfirmationRequest) => {
+        if (role === ROLES.HHRMD || role === ROLES.HRMO) {
+          return req.status !== 'Approved by Commission' &&
+                 req.status !== 'Rejected by Commission' &&
+                 req.reviewStage !== 'completed';
+        } else if (role === ROLES.HRO) {
+          return req.submittedById === user.id;
+        }
+        return true;
+      });
+
+      console.log('Filtered data:', filteredData);
+      setPendingRequests(filteredData);
+    } catch (error: any) {
+      console.error('Error in fetchRequests:', error);
+      toast({ title: "Error", description: `Could not load confirmation requests: ${error.message || error}`, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchRequests();
-  }, [user, role]);
+    if (!isAuthLoading && user && role) {
+      fetchRequests();
+    }
+  }, [user, role, isAuthLoading]);
 
   const isAlreadyConfirmed = employeeToConfirm?.status === 'Confirmed';
 
@@ -171,10 +214,10 @@ export default function ConfirmationPage() {
   
   const handleUpdateRequest = async (requestId: string, payload: any) => {
       try {
-          const response = await fetch(`/api/confirmations/${requestId}`, {
-              method: 'PUT',
+          const response = await fetch(`/api/confirmations`, {
+              method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({...payload, reviewedById: user?.id })
+              body: JSON.stringify({id: requestId, ...payload, reviewedById: user?.id })
           });
           if (!response.ok) throw new Error('Failed to update request');
           await fetchRequests();
@@ -185,6 +228,7 @@ export default function ConfirmationPage() {
       }
   };
 
+
   const handleInitialAction = async (requestId: string, action: 'forward' | 'reject') => {
     const request = pendingRequests.find(req => req.id === requestId);
     if (!request) return;
@@ -194,9 +238,16 @@ export default function ConfirmationPage() {
       setRejectionReasonInput('');
       setIsRejectionModalOpen(true);
     } else if (action === 'forward') {
-      const payload = { status: "Request Received – Awaiting Commission Decision", reviewStage: 'commission_review', decisionDate: new Date().toISOString() };
+      let payload;
+      if (role === ROLES.HRMO) {
+        payload = { status: "Pending HHRMD Review", reviewStage: 'HHRMD_review', decisionDate: new Date().toISOString() };
+      } else if (role === ROLES.HHRMD) {
+        payload = { status: "Request Received – Awaiting Commission Decision", reviewStage: 'commission_review', decisionDate: new Date().toISOString() };
+      } else {
+        return; // Should not happen based on UI logic
+      }
       const success = await handleUpdateRequest(requestId, payload);
-      if (success) toast({ title: "Request Forwarded", description: `Request for ${request.employee.name} forwarded to Commission.` });
+      if (success) toast({ title: "Request Forwarded", description: `Request for ${request.employee.name} forwarded.` });
     }
   };
 
@@ -218,11 +269,60 @@ export default function ConfirmationPage() {
   };
 
   const handleCommissionDecision = async (requestId: string, decision: 'approved' | 'rejected') => {
-    const finalStatus = decision === 'approved' ? "Approved by Commission" : "Rejected by Commission";
-    const payload = { status: finalStatus, reviewStage: 'completed', commissionDecisionDate: new Date().toISOString() };
+    const finalStatus = decision === 'approved' ? "Approved by Commission" : "Rejected by Commission - Awaiting HRO Correction";
+    const payload = { status: finalStatus, reviewStage: decision === 'approved' ? 'completed' : 'initial', commissionDecisionDate: new Date().toISOString() };
     const success = await handleUpdateRequest(requestId, payload);
      if (success) {
         toast({ title: `Commission Decision: ${decision === 'approved' ? 'Approved' : 'Rejected'}`, description: `Request ${requestId} has been updated.` });
+    }
+  };
+
+  const handleResubmit = (request: ConfirmationRequest) => {
+    setRequestToCorrect(request);
+    setCorrectedEvaluationFormFile(null);
+    setCorrectedIpaCertificateFile(null);
+    setCorrectedLetterOfRequestFile(null);
+    setIsCorrectionModalOpen(true);
+  };
+
+  const handleConfirmResubmit = async (request: ConfirmationRequest | null) => {
+    if (!request || !user) return;
+
+    if (!correctedEvaluationFormFile || !correctedLetterOfRequestFile || (requestToCorrect?.employee.employmentDate && isAfter(parseISO(requestToCorrect.employee.employmentDate), new Date('2014-05-01')) && !correctedIpaCertificateFile)) {
+      toast({ title: "Submission Error", description: "All required PDF documents must be attached.", variant: "destructive" });
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/confirmations`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: request.id,
+          status: 'Pending HRMO Review', // New status after HRO correction
+          reviewStage: 'initial',
+          documents: [
+            correctedEvaluationFormFile ? correctedEvaluationFormFile[0].name : '',
+            correctedIpaCertificateFile ? correctedIpaCertificateFile[0].name : '',
+            correctedLetterOfRequestFile ? correctedLetterOfRequestFile[0].name : '',
+          ].filter(Boolean),
+          rejectionReason: null, // Clear rejection reason on resubmission
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to resubmit confirmation request');
+      }
+
+      toast({ title: "Success", description: `Confirmation request ${request.id} resubmitted.` });
+      setIsCorrectionModalOpen(false);
+      setRequestToCorrect(null);
+      fetchRequests();
+    } catch (error) {
+      console.error("[RESUBMIT_CONFIRMATION]", error);
+      toast({ title: "Error", description: "Failed to resubmit confirmation request.", variant: "destructive" });
     }
   };
 
@@ -315,12 +415,15 @@ export default function ConfirmationPage() {
         </Card>
       )}
 
-      {(role === ROLES.HHRMD || role === ROLES.HRMO) && (
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle>Review Confirmation Requests</CardTitle>
-            <CardDescription>Review, approve, or reject pending employee confirmation requests.</CardDescription>
-          </CardHeader>
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle>
+            {role === ROLES.HRO ? "My Confirmation Requests" : "Review Confirmation Requests"}
+          </CardTitle>
+          <CardDescription>
+            {role === ROLES.HRO ? "View and manage your submitted confirmation requests." : "Review, approve, or reject pending employee confirmation requests."}
+          </CardDescription>
+        </CardHeader>
           <CardContent>
             {isLoading ? (
                <div className="flex justify-center items-center h-40"><Loader2 className="h-8 w-8 animate-spin" /></div>
@@ -332,21 +435,34 @@ export default function ConfirmationPage() {
                   <p className="text-sm text-muted-foreground">Submitted: {format(parseISO(request.createdAt), 'PPP')} by {request.submittedBy.name}</p>
                   {request.decisionDate && <p className="text-sm text-muted-foreground">Initial Review Date: {format(parseISO(request.decisionDate), 'PPP')}</p>}
                   {request.commissionDecisionDate && <p className="text-sm text-muted-foreground">Commission Decision Date: {format(parseISO(request.commissionDecisionDate), 'PPP')}</p>}
-                  <p className="text-sm"><span className="font-medium">Status:</span> <span className="text-primary">{request.status}</span></p>
+                  <p className="text-sm"><span className="font-medium">Status:</span> <span className="text-primary">
+                    {request.status === 'Rejected by Commission - Awaiting HRO Correction' 
+                      ? 'Rejected by Commission - Request Concluded' 
+                      : request.status}
+                  </span></p>
                   {request.rejectionReason && <p className="text-sm text-destructive"><span className="font-medium">Rejection Reason:</span> {request.rejectionReason}</p>}
                   <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                     <Button size="sm" variant="outline" onClick={() => { setSelectedRequest(request); setIsDetailsModalOpen(true); }}>View Details</Button>
-                     {request.reviewStage === 'initial' && (request.status.includes(role || '')) && (
+                     {(role === ROLES.HHRMD || role === ROLES.HRMO) && (
                       <>
-                        <Button size="sm" onClick={() => handleInitialAction(request.id, 'forward')}>Verify &amp; Forward to Commission</Button>
-                        <Button size="sm" variant="destructive" onClick={() => handleInitialAction(request.id, 'reject')}>Reject &amp; Return to HRO</Button>
+                        {request.reviewStage === 'initial' && (
+                          <>
+                            <Button size="sm" onClick={() => handleInitialAction(request.id, 'forward')}>Verify &amp; Forward to Commission</Button>
+                            <Button size="sm" variant="destructive" onClick={() => handleInitialAction(request.id, 'reject')}>Reject &amp; Return to HRO</Button>
+                          </>
+                        )}
+                        {request.reviewStage === 'commission_review' && request.status === 'Request Received – Awaiting Commission Decision' && (
+                          <>
+                              <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => handleCommissionDecision(request.id, 'approved')}>Approved by Commission</Button>
+                              <Button size="sm" variant="destructive" onClick={() => handleCommissionDecision(request.id, 'rejected')}>Rejected by Commission</Button>
+                          </>
+                        )}
                       </>
                     )}
-                    {request.reviewStage === 'commission_review' && request.status === 'Request Received – Awaiting Commission Decision' && (
-                        <>
-                            <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => handleCommissionDecision(request.id, 'approved')}>Approved by Commission</Button>
-                            <Button size="sm" variant="destructive" onClick={() => handleCommissionDecision(request.id, 'rejected')}>Rejected by Commission</Button>
-                        </>
+                    {role === ROLES.HRO && (request.status === 'Rejected by HRMO - Awaiting HRO Correction' || request.status === 'Rejected by HHRMD - Awaiting HRO Correction') && (
+                      <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => handleResubmit(request)}>
+                        Correct and Resubmit
+                      </Button>
                     )}
                   </div>
                 </div>
@@ -363,7 +479,6 @@ export default function ConfirmationPage() {
             />
           </CardContent>
         </Card>
-      )}
 
       {selectedRequest && (
         <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
@@ -392,7 +507,7 @@ export default function ConfirmationPage() {
                     <h4 className="font-semibold text-base text-foreground mb-2">Request Information</h4>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2"><Label className="text-right font-semibold">Submitted:</Label><p className="col-span-2">{format(parseISO(selectedRequest.createdAt), 'PPP')} by {selectedRequest.submittedBy.name}</p></div>
                      {selectedRequest.decisionDate && <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2"><Label className="text-right font-semibold">Initial Review:</Label><p className="col-span-2">{format(parseISO(selectedRequest.decisionDate), 'PPP')}</p></div>}
-                    {selectedRequest.commissionDecisionDate && <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2"><Label className="text-right font-semibold">Commission Date:</Label><p className="col-span-2">{format(parseISO(selectedRequest.commissionDecisionDate), 'PPP')}</p></div>}
+                    {selectedRequest.commissionDecisionDate && <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2"><Label className="text-right font-semibold">Commission Date:</Label><p className="col-span-2">{format(parseISO(typeof selectedRequest.commissionDecisionDate === 'string' ? selectedRequest.commissionDecisionDate : selectedRequest.commissionDecisionDate.toISOString()), 'PPP')}</p></div>}
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-2"><Label className="text-right font-semibold">Status:</Label><p className="col-span-2 text-primary">{selectedRequest.status}</p></div>
                     {selectedRequest.rejectionReason && <div className="grid grid-cols-3 items-start gap-x-4 gap-y-2"><Label className="text-right font-semibold text-destructive pt-1">Rejection Reason:</Label><p className="col-span-2 text-destructive">{selectedRequest.rejectionReason}</p></div>}
                 </div>
@@ -432,6 +547,48 @@ export default function ConfirmationPage() {
                     <Button variant="destructive" onClick={handleRejectionSubmit} disabled={!rejectionReasonInput.trim()}>Submit Rejection</Button>
                 </DialogFooter>
             </DialogContent>
+        </Dialog>
+      )}
+
+      {requestToCorrect && (
+        <Dialog open={isCorrectionModalOpen} onOpenChange={setIsCorrectionModalOpen}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Correct & Resubmit Confirmation Request</DialogTitle>
+              <DialogDescription>
+                Please upload the corrected documents for <strong>{requestToCorrect.employee.name}</strong> (ZanID: {requestToCorrect.employee.zanId}).
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4 space-y-4">
+              <Alert variant="default">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Important</AlertTitle>
+                <AlertDescription>
+                  All required PDF documents must be re-attached, even if only one needed correction.
+                </AlertDescription>
+              </Alert>
+              <div>
+                <Label htmlFor="correctedEvaluationForm" className="flex items-center mb-1"><FileText className="mr-2 h-4 w-4 text-primary" />Upload Corrected Evaluation Form</Label>
+                <Input id="correctedEvaluationForm" type="file" onChange={(e) => setCorrectedEvaluationFormFile(e.target.files)} accept=".pdf" />
+              </div>
+              {requestToCorrect.employee.employmentDate && isAfter(parseISO(requestToCorrect.employee.employmentDate), new Date('2014-05-01')) && (
+                <div>
+                  <Label htmlFor="correctedIpaCertificate" className="flex items-center mb-1"><Award className="mr-2 h-4 w-4 text-primary" />Upload Corrected IPA Certificate</Label>
+                  <Input id="correctedIpaCertificate" type="file" onChange={(e) => setCorrectedIpaCertificateFile(e.target.files)} accept=".pdf" />
+                </div>
+              )}
+              <div>
+                <Label htmlFor="correctedLetterOfRequest" className="flex items-center mb-1"><CheckCircle className="mr-2 h-4 w-4 text-primary" />Upload Corrected Letter of Request</Label>
+                <Input id="correctedLetterOfRequest" type="file" onChange={(e) => setCorrectedLetterOfRequestFile(e.target.files)} accept=".pdf" />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsCorrectionModalOpen(false)}>Cancel</Button>
+              <Button onClick={() => handleConfirmResubmit(requestToCorrect)}>
+                Resubmit Request
+              </Button>
+            </DialogFooter>
+          </DialogContent>
         </Dialog>
       )}
     </div>

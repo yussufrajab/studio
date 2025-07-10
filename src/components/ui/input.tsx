@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils"
 
 const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
   ({ className, type, ...props }, ref) => {
+    const inputProps = type === 'file' ? { ...props, value: undefined } : { ...props, value: props.value === null || props.value === undefined ? '' : props.value }; // Ensure value is always a string for non-file inputs, converting null/undefined to ''
     return (
       <input
         type={type}
@@ -12,7 +13,7 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
           className
         )}
         ref={ref}
-        {...props}
+        {...inputProps as React.ComponentProps<'input'>}
       />
     )
   }

@@ -9,6 +9,8 @@ export interface User {
   employeeId?: string; 
   institutionId?: string;
   institution?: { name: string };
+  zanId?: string; // Optional: for users who are also employees and have a ZanID
+  active?: boolean; // Optional: to indicate user account status
 }
 
 export interface EmployeeCertificate {

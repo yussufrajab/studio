@@ -1,5 +1,6 @@
 
 'use client';
+import React, { useState, useEffect } from 'react';
 import { PageHeader } from '@/components/shared/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import React, { useState, useEffect } from 'react';
+
 import { ROLES } from '@/lib/constants';
 import { Pencil, PlusCircle, Loader2, Trash2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
@@ -41,6 +42,7 @@ export default function UserManagementPage() {
   const [editingUser, setEditingUser] = useState<UserWithInstitutionName | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -74,6 +76,10 @@ export default function UserManagementPage() {
     fetchUsers();
     fetchInstitutions();
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userSchema),
@@ -166,8 +172,14 @@ export default function UserManagementPage() {
     }
   };
 
-  const totalPages = Math.ceil(users.length / itemsPerPage);
-  const paginatedUsers = users.slice(
+  const filteredUsers = users.filter(user =>
+    user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (user.zanId && user.zanId.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+  const paginatedUsers = filteredUsers.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
@@ -179,11 +191,18 @@ export default function UserManagementPage() {
         description="Create, update, and manage user accounts and access levels."
         actions={
           <Button onClick={openCreateDialog}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add New User
+            <PlusCircle className="mr-2 h-4 w-4" /> Add New User
           </Button>
         }
       />
+      <div className="flex justify-end mb-4">
+        <Input
+          placeholder="Search users by name, username, or ZanID..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="max-w-sm"
+        />
+      </div>
       <Card>
         <CardHeader>
           <CardTitle>Users List</CardTitle>
@@ -208,16 +227,20 @@ export default function UserManagementPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedUsers.map(user => (
+              {paginatedUsers.filter((user) =>
+                user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (user.zanId && user.zanId.toLowerCase().includes(searchQuery.toLowerCase()))
+              ).map((user) => (
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">{user.name}</TableCell>
                   <TableCell>{user.username}</TableCell>
                   <TableCell>{user.role}</TableCell>
                   <TableCell>{user.institution || 'N/A'}</TableCell>
-                   <TableCell>
-                      <Badge variant={user.active ? 'default' : 'secondary'}>
-                        {user.active ? 'Active' : 'Inactive'}
-                      </Badge>
+                  <TableCell>
+                    <Badge variant={user.active ? 'default' : 'secondary'}>
+                      {user.active ? 'Active' : 'Inactive'}
+                    </Badge>
                   </TableCell>
                   <TableCell className="text-right space-x-2">
                     <Switch
@@ -303,7 +326,7 @@ export default function UserManagementPage() {
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl><SelectTrigger>
                       <SelectValue placeholder={institutions.length > 0 ? "Select an institution" : "Loading institutions..."} />
-                    </Trigger></FormControl>
+                    </SelectTrigger></FormControl>
                     <SelectContent>
                       {institutions.length > 0 ? institutions.map(inst => (
                         <SelectItem key={inst.id} value={inst.id}>{inst.name}</SelectItem>

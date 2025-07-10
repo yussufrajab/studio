@@ -32,6 +32,7 @@ export default function InstitutionManagementPage() {
   const [editingInstitution, setEditingInstitution] = useState<Institution | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -54,7 +55,7 @@ export default function InstitutionManagementPage() {
 
   useEffect(() => {
     fetchInstitutions();
-  }, []);
+  }, [searchQuery]);
 
   const form = useForm<InstitutionFormValues>({
     resolver: zodResolver(institutionSchema),
@@ -124,8 +125,12 @@ export default function InstitutionManagementPage() {
       }
   };
 
-  const totalPages = Math.ceil(institutions.length / itemsPerPage);
-  const paginatedInstitutions = institutions.slice(
+  const filteredInstitutions = institutions.filter(institution =>
+    institution.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const totalPages = Math.ceil(filteredInstitutions.length / itemsPerPage);
+  const paginatedInstitutions = filteredInstitutions.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
@@ -141,6 +146,12 @@ export default function InstitutionManagementPage() {
             Add New Institution
           </Button>
         }
+      />
+      <Input
+        placeholder="Search institutions by name..."
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        className="max-w-sm mb-4"
       />
       <Card>
         <CardHeader>

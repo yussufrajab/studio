@@ -8,6 +8,7 @@ const confirmationSchema = z.object({
   documents: z.array(z.string()),
   submittedById: z.string().min(1),
   status: z.string(), // e.g., 'Pending HHRMD Review' or 'Pending HRMO Review'
+  rejectionReason: z.string().nullable().optional(),
 });
 
 export async function POST(req: Request) {
@@ -89,15 +90,14 @@ export async function GET(req: Request) {
     const whereClause: any = {};
     
     if (userRole === ROLES.HRO) {
-        if (!userInstitutionId) {
-             requests = []; // HRO with no institution sees no data
-        } else {
-             whereClause.employee = { institutionId: userInstitutionId };
-        }
-    } else if (userRole === ROLES.HHRMD) {
-      whereClause.status = { contains: 'HHRMD' };
-    } else if (userRole === ROLES.HRMO) {
-       whereClause.status = { contains: 'HRMO' };
+        // HRO should see all requests they submitted, regardless of institution
+        whereClause.submittedById = userId;
+    } else if (userRole === ROLES.HHRMD || userRole === ROLES.HRMO) {
+      // HHRMD and HRMO share the same review responsibility
+      // They should see requests that are in 'initial' or 'commission_review' stage
+      // and not yet completed (approved/rejected by commission).
+      whereClause.reviewStage = { in: ['initial', 'commission_review'] };
+      whereClause.status = { notIn: ['Approved by Commission', 'Rejected by Commission'] };
     } else {
         // Higher roles (CSCS, Admin) can see more
         whereClause.status = { notIn: ["Closed - Satisfied"] }; // Example filter
@@ -112,6 +112,40 @@ export async function GET(req: Request) {
     return NextResponse.json(requests);
   } catch (error) {
     console.error("[CONFIRMATIONS_GET]", error);
+    return new NextResponse('Internal Server Error', { status: 500 });
+  }
+}
+
+export async function PATCH(req: Request) {
+  try {
+    const body = await req.json();
+    const { id, status, reviewStage, rejectionReason, reviewedById, commissionDecisionDate } = body;
+
+    if (!id) {
+      return new NextResponse('Confirmation Request ID is required', { status: 400 });
+    }
+
+    const updateData: any = { status, reviewStage, reviewedById };
+
+    if (rejectionReason !== undefined) {
+      updateData.rejectionReason = rejectionReason;
+    }
+
+    if (commissionDecisionDate !== undefined) {
+      updateData.commissionDecisionDate = commissionDecisionDate;
+    }
+
+    const updatedRequest = await db.confirmationRequest.update({
+      where: { id },
+      data: updateData,
+    });
+
+    return NextResponse.json(updatedRequest);
+  } catch (error) {
+    console.error("[CONFIRMATIONS_PATCH]", error);
+    if (error instanceof z.ZodError) {
+      return new NextResponse(JSON.stringify(error.errors), { status: 400 });
+    }
     return new NextResponse('Internal Server Error', { status: 500 });
   }
 }
